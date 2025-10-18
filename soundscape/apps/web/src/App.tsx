@@ -170,6 +170,7 @@ const App: Component = () => {
                         tracks={recentTracks.tracks()}
                         isLoading={recentTracks.isLoading()}
                         error={recentTracks.error()}
+                        onArtistClick={handleArtistClick}
                       />
                     </Match>
                     <Match when={recentViewType() === 'artists'}>

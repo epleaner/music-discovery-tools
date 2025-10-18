@@ -82,7 +82,19 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                     />
                   </Show>
                   <div class='flex-1 min-w-0'>
-                    <div class='text-sm truncate'>{artist.name}</div>
+                    <div class='flex items-center gap-2'>
+                      <div class='text-sm truncate'>{artist.name}</div>
+                      <Show when={props.onArtistClick}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            props.onArtistClick?.(artist.name);
+                          }}
+                          class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'>
+                          →
+                        </button>
+                      </Show>
+                    </div>
                     <div class='text-xs text-fg-muted'>
                       {artist.trackCount}{' '}
                       {artist.trackCount === 1 ? 'track' : 'tracks'}
