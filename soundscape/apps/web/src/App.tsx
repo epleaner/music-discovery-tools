@@ -161,6 +161,7 @@ const App: Component = () => {
                         tracks={recentTracks.tracks()}
                         isLoading={recentTracks.isLoading()}
                         error={recentTracks.error()}
+                        onArtistClick={handleArtistClick}
                       />
                     </Match>
                     <Match when={recentViewType() === 'albums'}>
@@ -218,7 +219,9 @@ const App: Component = () => {
             <div class='p-4 border-b border-border'>
               <h2 class='text-sm font-medium'>Similar Artists</h2>
               <Show when={selectedArtist()}>
-                <div class='mt-1 text-xs text-fg-muted'>to {selectedArtist()}</div>
+                <div class='mt-1 text-xs text-fg-muted'>
+                  to {selectedArtist()}
+                </div>
               </Show>
             </div>
             <div class='p-2'>

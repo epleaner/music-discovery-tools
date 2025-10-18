@@ -5,6 +5,7 @@ interface TrackListProps {
   tracks: Track[];
   isLoading?: boolean;
   error?: Error | null;
+  onArtistClick?: (artistName: string) => void;
 }
 
 const TrackList: Component<TrackListProps> = (props) => {
@@ -51,8 +52,20 @@ const TrackList: Component<TrackListProps> = (props) => {
             </Show>
             <div class='flex-1 min-w-0'>
               <div class='text-sm truncate'>{track.name}</div>
-              <div class='text-xs truncate text-fg-muted'>
-                {track.artist['#text']}
+              <div class='flex items-center gap-2'>
+                <div class='text-xs truncate text-fg-muted'>
+                  {track.artist['#text']}
+                </div>
+                <Show when={props.onArtistClick}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      props.onArtistClick?.(track.artist['#text']);
+                    }}
+                    class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'>
+                    →
+                  </button>
+                </Show>
               </div>
             </div>
             <div class='text-xs text-fg-subtle whitespace-nowrap'>
