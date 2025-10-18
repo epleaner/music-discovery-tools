@@ -13,9 +13,7 @@
     "@soundscape/types": "workspace:*",
     "@soundscape/ui": "workspace:*",
     "@soundscape/utils": "workspace:*",
-    "immer": "^10.1.3",
-    "solid-js": "^1.9.3",
-    "zustand": "^5.0.8"
+    "solid-js": "^1.9.3"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

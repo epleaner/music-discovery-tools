@@ -1,4 +1,12 @@
-import { Component, Show, Switch, Match, For, createMemo } from 'solid-js';
+import {
+  Component,
+  createSignal,
+  Show,
+  Switch,
+  Match,
+  For,
+  createMemo,
+} from 'solid-js';
 import UsernameInput from './components/UsernameInput';
 import TrackList from './components/TrackList';
 import ArtistList from './components/ArtistList';
@@ -15,37 +23,21 @@ import {
   type RecentViewType,
 } from '@soundscape/types';
 import { groupTracksByAlbum, groupTracksByArtist } from '@soundscape/utils';
-import {
-  useUsername,
-  usePeriod,
-  useCurrentView,
-  useRecentViewType,
-  useSelectedArtist,
-  useUserActions,
-  useUIActions,
-  useDataActions,
-} from './store/hooks';
-import type { MainView } from './store/types';
+
+type View = 'recent' | 'top' | 'similar';
 
 const App: Component = () => {
-  // Store state
-  const username = useUsername;
-  const currentView = useCurrentView;
-  const recentViewType = useRecentViewType;
-  const period = usePeriod;
-  const selectedArtist = useSelectedArtist;
+  const [username, setUsername] = createSignal('');
+  const [currentView, setCurrentView] = createSignal<View>('recent');
+  const [recentViewType, setRecentViewType] =
+    createSignal<RecentViewType>('tracks');
+  const [period, setPeriod] = createSignal<TimePeriod>('7day');
+  const [selectedArtist, setSelectedArtist] = createSignal('');
 
-  // Store actions
-  const { setUsername, setPeriod } = useUserActions();
-  const { setCurrentView, setRecentViewType } = useUIActions();
-  const { setSelectedArtist } = useDataActions();
-
-  // Resources
   const recentTracks = createRecentTracksResource(username);
   const topArtists = createTopArtistsResource(username, period);
   const similarArtists = createSimilarArtistsResource(selectedArtist);
 
-  // Derived state
   const recentAlbums = createMemo(() =>
     groupTracksByAlbum(recentTracks.tracks())
   );
@@ -53,7 +45,6 @@ const App: Component = () => {
     groupTracksByArtist(recentTracks.tracks())
   );
 
-  // Handlers
   const handleUsernameSubmit = (newUsername: string) => {
     setUsername(newUsername);
     setCurrentView('recent');
@@ -65,7 +56,7 @@ const App: Component = () => {
     setCurrentView('similar');
   };
 
-  const tabs: { id: MainView; label: string }[] = [
+  const tabs: { id: View; label: string }[] = [
     { id: 'recent', label: 'Recent' },
     { id: 'top', label: 'Top' },
     { id: 'similar', label: 'Similar' },

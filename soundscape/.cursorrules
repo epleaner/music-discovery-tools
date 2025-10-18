@@ -73,7 +73,7 @@ const doubled = props.value * 2;
 const [count, setCount] = createSignal(0);
 
 // ✅ Good: Use createMemo for expensive computations
-const filtered = createMemo(() => items().filter(item => item.active));
+const filtered = createMemo(() => items().filter((item) => item.active));
 
 // ✅ Good: Use createResource for async data
 const [data] = createResource(userId, fetchUser);
@@ -178,7 +178,7 @@ const response = await fetch(`https://ws.audioscrobbler.com/...`);
 // ✅ Good: Return computed accessors
 export function createResource(username: () => string) {
   const [data] = createResource(username, fetchData);
-  
+
   return {
     items: () => data()?.items || [],
     isLoading: () => data.loading,
@@ -208,25 +208,21 @@ interface ComponentProps {
 const MyComponent: Component<ComponentProps> = (props) => {
   // 1. Local state
   const [isExpanded, setIsExpanded] = createSignal(false);
-  
+
   // 2. Derived values
   const itemCount = () => props.items.length;
-  
+
   // 3. Event handlers
   const handleClick = (item: ItemType) => {
     props.onItemClick?.(item);
   };
-  
+
   // 4. Render
   return (
     <div class='space-y-2'>
       <Show when={itemCount() > 0}>
         <For each={props.items}>
-          {(item) => (
-            <div onClick={() => handleClick(item)}>
-              {item.name}
-            </div>
-          )}
+          {(item) => <div onClick={() => handleClick(item)}>{item.name}</div>}
         </For>
       </Show>
     </div>
@@ -257,11 +253,11 @@ import { formatDate } from './lib/utils';
 
 ```typescript
 // ✅ Good: Named exports for utilities
-export function formatDate(date: Date): string { }
-export function parseDate(str: string): Date { }
+export function formatDate(date: Date): string {}
+export function parseDate(str: string): Date {}
 
 // ✅ Good: Default export for components
-const Component: Component = () => { };
+const Component: Component = () => {};
 export default Component;
 ```
 
@@ -301,9 +297,7 @@ throw new Error('Something went wrong');
 
 ```typescript
 // ✅ Good: Memoize expensive filtering/sorting
-const sortedItems = createMemo(() => 
-  items().sort((a, b) => a.date - b.date)
-);
+const sortedItems = createMemo(() => items().sort((a, b) => a.date - b.date));
 
 // ❌ Bad: Don't memoize simple accessors
 const itemName = createMemo(() => item().name);
@@ -419,4 +413,3 @@ export function groupTracksByAlbum(tracks: Track[]): RecentAlbum[] {
 4. **Design system first** - Use tokens, not arbitrary values
 5. **Test edge cases** - Empty states, errors, loading states
 6. **Read AGENTS.md** - Comprehensive project documentation
-
