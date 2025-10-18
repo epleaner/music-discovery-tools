@@ -111,7 +111,7 @@ const AlbumList: Component<AlbumListProps> = (props) => {
                           props.onArtistClick?.(album.artist);
                         }}
                         class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'>
-                        →
+                        similar →
                       </button>
                     </Show>
                   </div>
@@ -124,7 +124,9 @@ const AlbumList: Component<AlbumListProps> = (props) => {
                   <div class='text-xs text-fg-subtle whitespace-nowrap'>
                     {formatDate(album)}
                   </div>
-                  <div class='text-xs text-fg-subtle'>{expanded() ? '−' : '+'}</div>
+                  <div class='text-xs text-fg-subtle'>
+                    {expanded() ? '−' : '+'}
+                  </div>
                 </div>
               </div>
               <Show when={expanded()}>

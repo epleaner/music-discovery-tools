@@ -91,7 +91,7 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                             props.onArtistClick?.(artist.name);
                           }}
                           class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'>
-                          →
+                          similar →
                         </button>
                       </Show>
                     </div>

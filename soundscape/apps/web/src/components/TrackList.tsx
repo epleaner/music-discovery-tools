@@ -63,7 +63,7 @@ const TrackList: Component<TrackListProps> = (props) => {
                       props.onArtistClick?.(track.artist['#text']);
                     }}
                     class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'>
-                    →
+                    similar →
                   </button>
                 </Show>
               </div>
