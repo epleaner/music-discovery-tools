@@ -6,32 +6,36 @@ The web app persists all UI state in the URL hash, making it easy to share speci
 
 ## Persisted State
 
-| Key | Description | Example Values |
-|-----|-------------|----------------|
-| `username` | Last.fm username | `rj`, `johndoe` |
-| `view` | Active tab | `recent`, `top`, `similar` |
-| `subview` | Recent tab view type | `tracks`, `albums`, `artists` |
-| `period` | Top artists time period | `7day`, `1month`, `overall` |
-| `artist` | Selected artist (for similar view) | `Radiohead` |
+| Key        | Description                        | Example Values                |
+| ---------- | ---------------------------------- | ----------------------------- |
+| `username` | Last.fm username                   | `rj`, `johndoe`               |
+| `view`     | Active tab                         | `recent`, `top`, `similar`    |
+| `subview`  | Recent tab view type               | `tracks`, `albums`, `artists` |
+| `period`   | Top artists time period            | `7day`, `1month`, `overall`   |
+| `artist`   | Selected artist (for similar view) | `Radiohead`                   |
 
 ## Example URLs
 
 ### Recent tracks view
+
 ```
 http://localhost:3000/#username=rj&view=recent&subview=tracks
 ```
 
 ### Top artists (last month)
+
 ```
 http://localhost:3000/#username=rj&view=top&period=1month
 ```
 
 ### Albums view for a user
+
 ```
 http://localhost:3000/#username=johndoe&view=recent&subview=albums
 ```
 
 ### Similar artists for a specific artist
+
 ```
 http://localhost:3000/#username=rj&view=similar&artist=Radiohead
 ```
@@ -64,6 +68,7 @@ const [state, updateState] = useHashState<AppState>({
 ```
 
 **Features:**
+
 - Automatic URL sync on state changes
 - Browser back/forward navigation support
 - Type-safe state management
@@ -99,6 +104,7 @@ The hook automatically listens for `hashchange` events, so browser navigation (b
 ## Sharing URLs
 
 Users can copy the URL at any time and share it with others. When opened, the app will restore the exact state including:
+
 - Selected username
 - Active tab
 - Active sub-view
@@ -116,6 +122,7 @@ Users can copy the URL at any time and share it with others. When opened, the ap
 ### URL Format
 
 The hash uses standard URL search params format:
+
 ```
 #key1=value1&key2=value2&key3=value3
 ```
@@ -131,6 +138,7 @@ By default, state changes use `replaceState` to avoid polluting browser history.
 To add new state fields:
 
 1. Update `AppState` interface in `App.tsx`:
+
    ```typescript
    interface AppState extends Record<string, string> {
      username: string;
@@ -141,6 +149,7 @@ To add new state fields:
    ```
 
 2. Add default value in `useHashState` call:
+
    ```typescript
    const [state, updateState] = useHashState<AppState>({
      // ... existing defaults
@@ -155,4 +164,3 @@ To add new state fields:
    ```
 
 That's it! The field will automatically sync with the URL.
-

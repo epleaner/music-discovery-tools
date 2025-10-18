@@ -1,11 +1,4 @@
-import {
-  Component,
-  Show,
-  Switch,
-  Match,
-  For,
-  createMemo,
-} from 'solid-js';
+import { Component, Show, Switch, Match, For, createMemo } from 'solid-js';
 import UsernameInput from './components/UsernameInput';
 import TrackList from './components/TrackList';
 import ArtistList from './components/ArtistList';
@@ -85,7 +78,7 @@ const App: Component = () => {
 
   return (
     <div class='min-h-screen bg-bg'>
-      <div class='max-w-2xl mx-auto'>
+      <div class='mx-auto max-w-2xl'>
         {/* Header */}
         <div class='p-4 border-b border-border'>
           <h1 class='mb-3 text-base font-medium'>Soundscape</h1>
@@ -148,7 +141,7 @@ const App: Component = () => {
 
             {/* Period selector for top artists */}
             <Show when={currentView() === 'top'}>
-              <div class='flex gap-1 p-2 overflow-x-auto border-b border-border'>
+              <div class='flex overflow-x-auto gap-1 p-2 border-b border-border'>
                 <For each={Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]}>
                   {(p) => (
                     <button
@@ -205,7 +198,7 @@ const App: Component = () => {
                     <div class='p-4 text-center border-t border-border'>
                       <button
                         onClick={() => recentTracks.loadMore()}
-                        class='btn text-xs'>
+                        class='text-xs btn'>
                         Load More
                       </button>
                     </div>

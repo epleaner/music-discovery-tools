@@ -8,7 +8,10 @@ import { parseHash, updateHash } from '@soundscape/utils';
 export function useHashState<T extends Record<string, string>>(
   initialState: T
 ): [Accessor<T>, (newState: Partial<T>) => void] {
-  const [state, setState] = createSignal<T>({ ...initialState, ...parseHash() } as T);
+  const [state, setState] = createSignal<T>({
+    ...initialState,
+    ...parseHash(),
+  } as T);
 
   // Update URL when state changes
   createEffect(() => {
@@ -34,4 +37,3 @@ export function useHashState<T extends Record<string, string>>(
 
   return [state, updateState];
 }
-

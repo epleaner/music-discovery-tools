@@ -87,4 +87,3 @@ export function mergeHashState(
   const mergedState = { ...currentState, ...newState };
   updateHash(mergedState, replace);
 }
-
