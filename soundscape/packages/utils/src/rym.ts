@@ -5,20 +5,20 @@
 /**
  * Normalize a string for RYM URL slugs
  * - Convert to lowercase
- * - Replace spaces with underscores
+ * - Replace spaces with hyphens
  * - Remove or encode special characters
  */
 function normalizeForSlug(text: string): string {
   return text
     .toLowerCase()
-    .replace(/\s+/g, '_') // Replace spaces with underscores
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
     .replace(/[()[\]]/g, '') // Remove parentheses and brackets
     .replace(/[.,]/g, '') // Remove periods and commas
     .replace(/'/g, '') // Remove apostrophes
     .replace(/&/g, 'and') // Replace ampersand with 'and'
-    .replace(/[^a-z0-9_-]/g, '_') // Replace other special chars with underscore
-    .replace(/_+/g, '_') // Collapse multiple underscores
-    .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+    .replace(/[^a-z0-9-]/g, '-') // Replace other special chars with hyphen
+    .replace(/-+/g, '-') // Collapse multiple hyphens
+    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
 }
 
 /**
@@ -47,4 +47,3 @@ export function getRYMSearchUrl(query: string): string {
   const encodedQuery = encodeURIComponent(query);
   return `https://rateyourmusic.com/search?searchterm=${encodedQuery}`;
 }
-
