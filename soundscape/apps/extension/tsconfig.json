@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx"
+  }
+}
+
+
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "entrypoints/**/*",
+    "components/**/*",
+    "wxt.config.ts",
+    "../soundscape/apps/extension/entrypoints/popup",
+    "../soundscape/apps/extension/entrypoints/content.ts",
+    "../soundscape/apps/extension/entrypoints/background.ts"
+  ]
+}
