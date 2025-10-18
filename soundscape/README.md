@@ -9,7 +9,7 @@ This monorepo uses **Turborepo** for build orchestration and **pnpm** for packag
 ### Apps
 
 - **`apps/extension`** - WXT-based browser extension (Chrome, Firefox, Safari)
-- **`apps/web`** - Next.js web application
+- **`apps/web`** - SolidJS web application
 
 ### Packages
 
@@ -24,7 +24,7 @@ This monorepo uses **Turborepo** for build orchestration and **pnpm** for packag
 - ✅ **TypeScript throughout** - Full type safety across all packages
 - ✅ **TailwindCSS** - Consistent styling with design tokens
 - ✅ **Hot reload** - Fast development experience
-- ✅ **Modern tooling** - WXT, Next.js, Turborepo, pnpm
+- ✅ **Modern tooling** - WXT, SolidJS, Turborepo, pnpm
 
 ## Getting Started
 
@@ -86,7 +86,7 @@ Extension includes:
 
 ### Web App Development
 
-The web app is built with **Next.js**:
+The web app is built with **SolidJS**:
 
 ```bash
 cd apps/web
@@ -95,7 +95,7 @@ pnpm dev
 
 Web app includes:
 
-- Next.js App Router
+- SolidJS with fine-grained reactivity
 - TailwindCSS styling
 - Shared component compatibility
 
@@ -123,9 +123,9 @@ soundscape/
 │   │   │   └── content.ts
 │   │   ├── wxt.config.ts   # WXT configuration
 │   │   └── tailwind.config.js
-│   └── web/                # Next.js web app
-│       ├── app/            # App router
-│       ├── next.config.js
+│   └── web/                # SolidJS web app
+│       ├── src/            # App source
+│       ├── vite.config.ts
 │       └── tailwind.config.js
 ├── packages/
 │   ├── ui/                 # Shared React components
@@ -141,13 +141,13 @@ soundscape/
 
 ## Technology Stack
 
-- **Framework**: WXT (Extension), Next.js (Web)
+- **Framework**: WXT (Extension), SolidJS (Web)
 - **Language**: TypeScript
 - **Styling**: TailwindCSS with shared design tokens
 - **UI Components**: Ready for custom component library with class-variance-authority
 - **Build Tool**: Turborepo
 - **Package Manager**: pnpm
-- **Bundler**: Vite (WXT), Webpack (Next.js)
+- **Bundler**: Vite (WXT & Web)
 
 ## Infrastructure Ready
 
@@ -155,7 +155,7 @@ This setup provides a clean foundation with:
 
 - Cross-browser extension infrastructure
 - React-based popup with TailwindCSS
-- Next.js web app with shared styling
+- SolidJS web app with shared styling
 - Monorepo structure for shared packages
 - TypeScript configuration across all packages
 - Hot reload development experience
@@ -185,7 +185,7 @@ pnpm --filter @soundscape/ui build
 2. Define shared types in `packages/types/src/index.ts`
 3. Add utility functions to `packages/utils/src/index.ts`
 4. Build your extension popup in `apps/extension/entrypoints/popup/`
-5. Develop your web app in `apps/web/app/`
+5. Develop your web app in `apps/web/src/`
 
 ## License
 
