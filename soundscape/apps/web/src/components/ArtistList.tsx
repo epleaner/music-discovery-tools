@@ -1,5 +1,6 @@
 import { Component, For, Show } from 'solid-js';
 import type { Artist, SimilarArtist } from '@soundscape/types';
+import { getRYMArtistUrl } from '@soundscape/utils';
 
 interface ArtistListProps {
   artists: Artist[] | SimilarArtist[];
@@ -62,15 +63,26 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                 />
               </Show>
               <div class='flex-1 min-w-0'>
-                <div class='text-sm truncate'>{artist.name}</div>
+                <div class='flex items-center gap-2'>
+                  <div class='text-sm truncate'>{artist.name}</div>
+                  <a
+                    href={getRYMArtistUrl(artist.name)}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    onClick={(e) => e.stopPropagation()}
+                    class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'
+                    title='View on RateYourMusic'>
+                    rym
+                  </a>
+                </div>
                 <Show when={props.showPlaycount && getPlaycount(artist)}>
                   <div class='text-xs text-fg-muted'>
-                    {parseInt(getPlaycount(artist)!).toLocaleString()}
+                    {parseInt(getPlaycount(artist)!).toLocaleString()} plays
                   </div>
                 </Show>
                 <Show when={props.showMatch && getMatch(artist)}>
                   <div class='text-xs text-fg-muted'>
-                    {Math.round(parseFloat(getMatch(artist)!) * 100)}%
+                    {Math.round(parseFloat(getMatch(artist)!) * 100)}% match
                   </div>
                 </Show>
               </div>

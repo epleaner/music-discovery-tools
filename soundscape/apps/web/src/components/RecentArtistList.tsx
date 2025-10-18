@@ -1,5 +1,6 @@
 import { Component, For, Show, createSignal } from 'solid-js';
 import type { RecentArtist, Track } from '@soundscape/types';
+import { getRYMArtistUrl } from '@soundscape/utils';
 
 interface RecentArtistListProps {
   artists: RecentArtist[];
@@ -84,6 +85,15 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                   <div class='flex-1 min-w-0'>
                     <div class='flex items-center gap-2'>
                       <div class='text-sm truncate'>{artist.name}</div>
+                      <a
+                        href={getRYMArtistUrl(artist.name)}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        onClick={(e) => e.stopPropagation()}
+                        class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'
+                        title='View on RateYourMusic'>
+                        rym
+                      </a>
                       <Show when={props.onArtistClick}>
                         <button
                           onClick={(e) => {
