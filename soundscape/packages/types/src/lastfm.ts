@@ -103,3 +103,28 @@ export const TIME_PERIOD_LABELS = {
   '6month': 'Last 6 Months',
   '12month': 'Last Year',
 } as const;
+
+export interface RecentAlbum {
+  name: string;
+  artist: string;
+  image: Array<{
+    '#text': string;
+    size: string;
+  }>;
+  trackCount: number;
+  lastPlayed: string;
+  url: string;
+}
+
+export interface RecentArtist {
+  name: string;
+  image: Array<{
+    '#text': string;
+    size: string;
+  }>;
+  trackCount: number;
+  lastPlayed: string;
+  url: string;
+}
+
+export type RecentViewType = 'tracks' | 'albums' | 'artists';

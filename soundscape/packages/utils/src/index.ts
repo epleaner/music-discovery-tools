@@ -3,3 +3,4 @@ export const sleep = (ms: number): Promise<void> => {
 };
 
 export * from './lastfm';
+export * from './recent-grouping';

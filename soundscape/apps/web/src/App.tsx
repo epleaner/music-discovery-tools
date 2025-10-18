@@ -1,25 +1,49 @@
-import { Component, createSignal, Show, Switch, Match, For } from 'solid-js';
+import {
+  Component,
+  createSignal,
+  Show,
+  Switch,
+  Match,
+  For,
+  createMemo,
+} from 'solid-js';
 import UsernameInput from './components/UsernameInput';
 import TrackList from './components/TrackList';
 import ArtistList from './components/ArtistList';
+import AlbumList from './components/AlbumList';
+import RecentArtistList from './components/RecentArtistList';
 import {
   createRecentTracksResource,
   createTopArtistsResource,
   createSimilarArtistsResource,
 } from './lib/lastfm-resource';
-import { TIME_PERIOD_LABELS, type TimePeriod } from '@soundscape/types';
+import {
+  TIME_PERIOD_LABELS,
+  type TimePeriod,
+  type RecentViewType,
+} from '@soundscape/types';
+import { groupTracksByAlbum, groupTracksByArtist } from '@soundscape/utils';
 
 type View = 'recent' | 'top' | 'similar';
 
 const App: Component = () => {
   const [username, setUsername] = createSignal('');
   const [currentView, setCurrentView] = createSignal<View>('recent');
+  const [recentViewType, setRecentViewType] =
+    createSignal<RecentViewType>('tracks');
   const [period, setPeriod] = createSignal<TimePeriod>('7day');
   const [selectedArtist, setSelectedArtist] = createSignal('');
 
   const recentTracks = createRecentTracksResource(username);
   const topArtists = createTopArtistsResource(username, period);
   const similarArtists = createSimilarArtistsResource(selectedArtist);
+
+  const recentAlbums = createMemo(() =>
+    groupTracksByAlbum(recentTracks.tracks())
+  );
+  const recentArtists = createMemo(() =>
+    groupTracksByArtist(recentTracks.tracks())
+  );
 
   const handleUsernameSubmit = (newUsername: string) => {
     setUsername(newUsername);
@@ -75,6 +99,32 @@ const App: Component = () => {
               </For>
             </div>
 
+            {/* View type selector for recent */}
+            <Show when={currentView() === 'recent'}>
+              <div class='flex gap-1 p-2 border-b border-border'>
+                <For
+                  each={
+                    [
+                      { id: 'tracks', label: 'Tracks' },
+                      { id: 'albums', label: 'Albums' },
+                      { id: 'artists', label: 'Artists' },
+                    ] as { id: RecentViewType; label: string }[]
+                  }>
+                  {(view) => (
+                    <button
+                      onClick={() => setRecentViewType(view.id)}
+                      class={`px-2 py-1 text-xs whitespace-nowrap ${
+                        recentViewType() === view.id
+                          ? 'bg-accent text-white'
+                          : 'text-fg-muted hover:text-fg'
+                      }`}>
+                      {view.label}
+                    </button>
+                  )}
+                </For>
+              </div>
+            </Show>
+
             {/* Period selector for top artists */}
             <Show when={currentView() === 'top'}>
               <div class='flex gap-1 p-2 overflow-x-auto border-b border-border'>
@@ -98,13 +148,35 @@ const App: Component = () => {
             <Switch>
               <Match when={currentView() === 'recent'}>
                 <div>
-                  <TrackList
-                    tracks={recentTracks.tracks()}
-                    isLoading={recentTracks.isLoading()}
-                    error={recentTracks.error()}
-                  />
+                  <Switch>
+                    <Match when={recentViewType() === 'tracks'}>
+                      <TrackList
+                        tracks={recentTracks.tracks()}
+                        isLoading={recentTracks.isLoading()}
+                        error={recentTracks.error()}
+                      />
+                    </Match>
+                    <Match when={recentViewType() === 'albums'}>
+                      <AlbumList
+                        albums={recentAlbums()}
+                        tracks={recentTracks.tracks()}
+                        isLoading={recentTracks.isLoading()}
+                        error={recentTracks.error()}
+                      />
+                    </Match>
+                    <Match when={recentViewType() === 'artists'}>
+                      <RecentArtistList
+                        artists={recentArtists()}
+                        tracks={recentTracks.tracks()}
+                        isLoading={recentTracks.isLoading()}
+                        error={recentTracks.error()}
+                        onArtistClick={handleArtistClick}
+                      />
+                    </Match>
+                  </Switch>
                   <Show
                     when={
+                      recentViewType() === 'tracks' &&
                       !recentTracks.isLoading() &&
                       parseInt(recentTracks.currentPage().toString()) <
                         parseInt(recentTracks.totalPages())

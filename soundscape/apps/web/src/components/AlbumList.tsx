@@ -1,0 +1,146 @@
+import { Component, For, Show, createSignal } from 'solid-js';
+import type { RecentAlbum, Track } from '@soundscape/types';
+
+interface AlbumListProps {
+  albums: RecentAlbum[];
+  tracks: Track[];
+  isLoading?: boolean;
+  error?: Error | null;
+}
+
+const AlbumList: Component<AlbumListProps> = (props) => {
+  const [expandedAlbums, setExpandedAlbums] = createSignal<Set<string>>(
+    new Set()
+  );
+
+  const getImageUrl = (album: RecentAlbum) => {
+    const image = album.image?.find(
+      (img) => img.size === 'small' || img.size === 'medium'
+    );
+    return image?.['#text'] || '';
+  };
+
+  const formatDate = (album: RecentAlbum) => {
+    const date = new Date(parseInt(album.lastPlayed) * 1000);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
+    return `${Math.floor(diffMins / 1440)}d ago`;
+  };
+
+  const formatTrackDate = (track: Track) => {
+    if (!track.date) return 'Now';
+    const date = new Date(parseInt(track.date.uts) * 1000);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
+    return `${Math.floor(diffMins / 1440)}d ago`;
+  };
+
+  const toggleAlbum = (albumKey: string) => {
+    setExpandedAlbums((prev) => {
+      const next = new Set(prev);
+      if (next.has(albumKey)) {
+        next.delete(albumKey);
+      } else {
+        next.add(albumKey);
+      }
+      return next;
+    });
+  };
+
+  const getAlbumKey = (album: RecentAlbum) => `${album.name}::${album.artist}`;
+
+  const getTracksForAlbum = (album: RecentAlbum) => {
+    return props.tracks.filter(
+      (track) =>
+        track.album['#text'] === album.name &&
+        track.artist['#text'] === album.artist
+    );
+  };
+
+  const isExpanded = (albumKey: string) => expandedAlbums().has(albumKey);
+
+  return (
+    <div class='space-y-px'>
+      <Show when={props.error}>
+        <div class='p-2 text-xs bg-bg-muted border border-border'>
+          {props.error?.message}
+        </div>
+      </Show>
+
+      <Show when={props.isLoading && props.albums.length === 0}>
+        <div class='py-8 text-xs text-center text-fg-muted'>Loading...</div>
+      </Show>
+
+      <For each={props.albums}>
+        {(album) => {
+          const albumKey = getAlbumKey(album);
+          const expanded = () => isExpanded(albumKey);
+          const albumTracks = () => getTracksForAlbum(album);
+
+          return (
+            <div class='border-b border-border'>
+              <div
+                class='flex items-center gap-2 p-2 transition-colors cursor-pointer hover:bg-bg-subtle'
+                onClick={() => toggleAlbum(albumKey)}>
+                <Show when={getImageUrl(album)}>
+                  <img
+                    src={getImageUrl(album)}
+                    alt={album.name}
+                    class='w-8 h-8'
+                  />
+                </Show>
+                <div class='flex-1 min-w-0'>
+                  <div class='text-sm truncate'>{album.name}</div>
+                  <div class='text-xs truncate text-fg-muted'>
+                    {album.artist}
+                  </div>
+                </div>
+                <div class='flex items-center gap-2'>
+                  <div class='text-xs text-fg-subtle'>
+                    {album.trackCount}{' '}
+                    {album.trackCount === 1 ? 'track' : 'tracks'}
+                  </div>
+                  <div class='text-xs text-fg-subtle whitespace-nowrap'>
+                    {formatDate(album)}
+                  </div>
+                  <div class='text-xs text-fg-subtle'>{expanded() ? '−' : '+'}</div>
+                </div>
+              </div>
+              <Show when={expanded()}>
+                <div class='bg-bg-subtle'>
+                  <For each={albumTracks()}>
+                    {(track) => (
+                      <div class='flex items-center gap-2 px-2 py-1 pl-12 border-t border-border'>
+                        <div class='flex-1 min-w-0'>
+                          <div class='text-xs truncate'>{track.name}</div>
+                        </div>
+                        <div class='text-xs text-fg-subtle whitespace-nowrap'>
+                          {formatTrackDate(track)}
+                        </div>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </Show>
+            </div>
+          );
+        }}
+      </For>
+
+      <Show
+        when={props.albums.length === 0 && !props.isLoading && !props.error}>
+        <div class='py-8 text-xs text-center text-fg-muted'>No albums</div>
+      </Show>
+    </div>
+  );
+};
+
+export default AlbumList;
