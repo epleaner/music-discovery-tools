@@ -11,6 +11,9 @@
     "lint": "eslint src/",
     "type-check": "tsc --noEmit"
   },
+  "dependencies": {
+    "@soundscape/types": "workspace:*"
+  },
   "devDependencies": {
     "eslint": "^8.56.0",
     "tsup": "^8.0.1",

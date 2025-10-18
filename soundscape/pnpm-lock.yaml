@@ -151,6 +151,10 @@ importers:
         version: 5.9.2
 
   packages/utils:
+    dependencies:
+      '@soundscape/types':
+        specifier: workspace:*
+        version: link:../types
     devDependencies:
       eslint:
         specifier: ^8.56.0
