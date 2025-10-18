@@ -13,7 +13,7 @@ interface ArtistListProps {
 const ArtistList: Component<ArtistListProps> = (props) => {
   const getImageUrl = (artist: Artist | SimilarArtist) => {
     const image = artist.image?.find(
-      (img) => img.size === 'medium' || img.size === 'large'
+      (img) => img.size === 'small' || img.size === 'medium'
     );
     return image?.['#text'] || '';
   };
@@ -37,44 +37,40 @@ const ArtistList: Component<ArtistListProps> = (props) => {
   };
 
   return (
-    <div class='w-full'>
+    <div>
       <Show when={props.error}>
-        <div class='p-4 bg-destructive/10 text-destructive rounded-lg mb-4'>
+        <div class='p-2 mb-2 text-xs bg-bg-muted border border-border'>
           {props.error?.message}
         </div>
       </Show>
 
       <Show when={props.isLoading && props.artists.length === 0}>
-        <div class='text-center py-8 text-muted-foreground'>
-          Loading artists...
-        </div>
+        <div class='py-8 text-xs text-center text-fg-muted'>Loading...</div>
       </Show>
 
-      <div class='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+      <div class='grid grid-cols-2 gap-px bg-border'>
         <For each={props.artists}>
           {(artist) => (
             <div
-              class='flex items-center gap-3 p-3 bg-card rounded-lg hover:bg-accent transition-colors cursor-pointer'
+              class='flex items-center gap-2 p-2 transition-colors cursor-pointer bg-bg hover:bg-bg-subtle'
               onClick={() => props.onArtistClick?.(artist.name)}>
               <Show when={getImageUrl(artist)}>
                 <img
                   src={getImageUrl(artist)}
                   alt={artist.name}
-                  class='w-16 h-16 rounded object-cover'
+                  class='w-8 h-8'
                 />
               </Show>
               <div class='flex-1 min-w-0'>
-                <div class='font-medium text-foreground truncate'>
-                  {artist.name}
-                </div>
+                <div class='text-sm truncate'>{artist.name}</div>
                 <Show when={props.showPlaycount && getPlaycount(artist)}>
-                  <div class='text-sm text-muted-foreground'>
-                    {parseInt(getPlaycount(artist)!).toLocaleString()} plays
+                  <div class='text-xs text-fg-muted'>
+                    {parseInt(getPlaycount(artist)!).toLocaleString()}
                   </div>
                 </Show>
                 <Show when={props.showMatch && getMatch(artist)}>
-                  <div class='text-sm text-muted-foreground'>
-                    {Math.round(parseFloat(getMatch(artist)!) * 100)}% match
+                  <div class='text-xs text-fg-muted'>
+                    {Math.round(parseFloat(getMatch(artist)!) * 100)}%
                   </div>
                 </Show>
               </div>
@@ -85,9 +81,7 @@ const ArtistList: Component<ArtistListProps> = (props) => {
 
       <Show
         when={props.artists.length === 0 && !props.isLoading && !props.error}>
-        <div class='text-center py-8 text-muted-foreground'>
-          No artists found
-        </div>
+        <div class='py-8 text-xs text-center text-fg-muted'>No artists</div>
       </Show>
     </div>
   );

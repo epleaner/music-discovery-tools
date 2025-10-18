@@ -33,22 +33,17 @@ const App: Component = () => {
   };
 
   const tabs: { id: View; label: string }[] = [
-    { id: 'recent', label: 'Recent Tracks' },
-    { id: 'top', label: 'Top Artists' },
-    { id: 'similar', label: 'Similar Artists' },
+    { id: 'recent', label: 'Recent' },
+    { id: 'top', label: 'Top' },
+    { id: 'similar', label: 'Similar' },
   ];
 
   return (
-    <div class='min-h-screen bg-background text-foreground'>
-      <div class='container px-4 py-8 mx-auto max-w-6xl'>
-        <header class='mb-8 text-center'>
-          <h1 class='mb-2 text-4xl font-bold'>Soundscape</h1>
-          <p class='text-lg text-muted-foreground'>
-            Explore your Last.fm listening history
-          </p>
-        </header>
-
-        <div class='mb-8'>
+    <div class='min-h-screen bg-bg'>
+      <div class='max-w-2xl mx-auto'>
+        {/* Header */}
+        <div class='p-4 border-b border-border'>
+          <h1 class='mb-3 text-base font-medium'>Soundscape</h1>
           <UsernameInput
             onSubmit={handleUsernameSubmit}
             initialUsername={username()}
@@ -56,22 +51,24 @@ const App: Component = () => {
         </div>
 
         <Show when={username()}>
-          <div class='space-y-6'>
+          <div>
             {/* Tabs */}
-            <div class='flex gap-2 border-b border-border'>
+            <div class='flex border-b border-border'>
               <For each={tabs}>
                 {(tab) => (
                   <button
                     onClick={() => setCurrentView(tab.id)}
-                    class={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                    class={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                       currentView() === tab.id
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                        ? 'border-accent'
+                        : 'border-transparent text-fg-muted hover:text-fg'
                     }`}
                     disabled={tab.id === 'similar' && !selectedArtist()}>
                     {tab.label}
                     <Show when={tab.id === 'similar' && selectedArtist()}>
-                      <span class='ml-2 text-xs'>({selectedArtist()})</span>
+                      <span class='ml-1 text-xs text-fg-subtle'>
+                        ({selectedArtist()})
+                      </span>
                     </Show>
                   </button>
                 )}
@@ -80,15 +77,15 @@ const App: Component = () => {
 
             {/* Period selector for top artists */}
             <Show when={currentView() === 'top'}>
-              <div class='flex flex-wrap gap-2'>
+              <div class='flex gap-1 p-2 overflow-x-auto border-b border-border'>
                 <For each={Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]}>
                   {(p) => (
                     <button
                       onClick={() => setPeriod(p)}
-                      class={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                      class={`px-2 py-1 text-xs whitespace-nowrap ${
                         period() === p
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                          ? 'bg-accent text-white'
+                          : 'text-fg-muted hover:text-fg'
                       }`}>
                       {TIME_PERIOD_LABELS[p]}
                     </button>
@@ -100,7 +97,7 @@ const App: Component = () => {
             {/* Content */}
             <Switch>
               <Match when={currentView() === 'recent'}>
-                <div class='space-y-4'>
+                <div>
                   <TrackList
                     tracks={recentTracks.tracks()}
                     isLoading={recentTracks.isLoading()}
@@ -112,10 +109,10 @@ const App: Component = () => {
                       parseInt(recentTracks.currentPage().toString()) <
                         parseInt(recentTracks.totalPages())
                     }>
-                    <div class='text-center'>
+                    <div class='p-4 text-center border-t border-border'>
                       <button
                         onClick={() => recentTracks.loadMore()}
-                        class='px-6 py-2 rounded-lg transition-colors bg-secondary text-secondary-foreground hover:bg-secondary/80'>
+                        class='btn text-xs'>
                         Load More
                       </button>
                     </div>
@@ -124,38 +121,39 @@ const App: Component = () => {
               </Match>
 
               <Match when={currentView() === 'top'}>
-                <ArtistList
-                  artists={topArtists.artists()}
-                  isLoading={topArtists.isLoading()}
-                  error={topArtists.error()}
-                  onArtistClick={handleArtistClick}
-                  showPlaycount={true}
-                />
+                <div class='p-2'>
+                  <ArtistList
+                    artists={topArtists.artists()}
+                    isLoading={topArtists.isLoading()}
+                    error={topArtists.error()}
+                    onArtistClick={handleArtistClick}
+                    showPlaycount={true}
+                  />
+                </div>
               </Match>
 
               <Match when={currentView() === 'similar'}>
                 <Show
                   when={selectedArtist()}
                   fallback={
-                    <div class='py-8 text-center text-muted-foreground'>
-                      Click on an artist from the Top Artists tab to see similar
-                      artists
+                    <div class='py-8 text-xs text-center text-fg-muted'>
+                      Select an artist to see similar artists
                     </div>
                   }>
-                  <div class='mb-4'>
+                  <div class='p-2'>
                     <button
                       onClick={() => setCurrentView('top')}
-                      class='text-sm text-primary hover:underline'>
-                      ← Back to Top Artists
+                      class='mb-2 text-xs text-fg-muted hover:text-fg'>
+                      ← Back
                     </button>
+                    <ArtistList
+                      artists={similarArtists.artists()}
+                      isLoading={similarArtists.isLoading()}
+                      error={similarArtists.error()}
+                      onArtistClick={handleArtistClick}
+                      showMatch={true}
+                    />
                   </div>
-                  <ArtistList
-                    artists={similarArtists.artists()}
-                    isLoading={similarArtists.isLoading()}
-                    error={similarArtists.error()}
-                    onArtistClick={handleArtistClick}
-                    showMatch={true}
-                  />
                 </Show>
               </Match>
             </Switch>
@@ -163,8 +161,8 @@ const App: Component = () => {
         </Show>
 
         <Show when={!username()}>
-          <div class='py-12 text-center text-muted-foreground'>
-            Enter a Last.fm username to get started
+          <div class='py-12 text-xs text-center text-fg-muted'>
+            Enter a username to start
           </div>
         </Show>
       </div>
