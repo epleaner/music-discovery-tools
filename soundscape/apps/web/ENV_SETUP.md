@@ -12,5 +12,3 @@ VITE_LASTFM_API_KEY=your_actual_api_key_here
 3. Restart the dev server if it's already running
 
 The app will not work without a valid LastFM API key.
-
-
