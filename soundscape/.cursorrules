@@ -1,0 +1,422 @@
+# Cursor Rules for Soundscape
+
+## General Principles
+
+- Prioritize simplicity, readability, and maintainability above all
+- Write minimal, focused code without unnecessary abstractions
+- Use TypeScript strictly - never use `any` without explicit justification
+- Follow established patterns in the codebase
+- Keep components small and focused on a single responsibility
+
+## Code Style
+
+### TypeScript
+
+- Use explicit types for all function parameters and return values
+- Prefer `interface` over `type` for object shapes
+- Use `type` for unions, intersections, and primitives
+- Always enable strict mode
+- Use optional chaining (`?.`) and nullish coalescing (`??`)
+
+```typescript
+// ✅ Good
+interface User {
+  id: string;
+  name: string;
+  email?: string;
+}
+
+function getUser(id: string): Promise<User> {
+  // ...
+}
+
+// ❌ Bad
+function getUser(id) {
+  // ...
+}
+```
+
+### Naming Conventions
+
+- **Files**: kebab-case (`user-profile.tsx`, `fetch-data.ts`)
+- **Components**: PascalCase (`UserProfile`, `TrackList`)
+- **Functions**: camelCase (`fetchRecentTracks`, `formatDate`)
+- **Constants**: UPPER_SNAKE_CASE (`API_BASE_URL`, `MAX_RETRIES`)
+- **Types/Interfaces**: PascalCase (`User`, `RecentTracksResponse`)
+
+## SolidJS Specific Rules
+
+### Reactivity
+
+```typescript
+// ✅ Good: Access props directly
+const Component: Component<Props> = (props) => {
+  return <div>{props.value}</div>;
+};
+
+// ❌ Bad: Destructuring breaks reactivity
+const Component: Component<Props> = ({ value }) => {
+  return <div>{value}</div>;
+};
+
+// ✅ Good: Use getters for derived values
+const doubled = () => props.value * 2;
+
+// ❌ Bad: Computed values break reactivity
+const doubled = props.value * 2;
+```
+
+### Signals and State
+
+```typescript
+// ✅ Good: Use createSignal for local state
+const [count, setCount] = createSignal(0);
+
+// ✅ Good: Use createMemo for expensive computations
+const filtered = createMemo(() => items().filter(item => item.active));
+
+// ✅ Good: Use createResource for async data
+const [data] = createResource(userId, fetchUser);
+```
+
+### Control Flow
+
+```typescript
+// ✅ Good: Use SolidJS control flow components
+<Show when={user()}>
+  <div>{user()!.name}</div>
+</Show>
+
+<For each={items()}>
+  {(item) => <div>{item.name}</div>}
+</For>
+
+// ❌ Bad: Don't use ternaries for conditional rendering
+{user() ? <div>{user()!.name}</div> : null}
+
+// ❌ Bad: Don't use .map() for lists
+{items().map(item => <div>{item.name}</div>)}
+```
+
+## React (Extension Only)
+
+- Extension popup uses React due to WXT requirements
+- Use functional components with hooks
+- Minimize state complexity in extension UI
+
+```typescript
+// ✅ Good
+const Popup: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  return <div onClick={() => setIsOpen(!isOpen)}>...</div>;
+};
+```
+
+## Styling with Tailwind
+
+### Use Design System Tokens
+
+```typescript
+// ✅ Good: Use design system colors
+<div class='bg-bg text-fg border-border'>
+
+// ❌ Bad: Arbitrary colors
+<div class='bg-white text-black border-gray-200'>
+```
+
+### Compose Utilities
+
+```typescript
+// ✅ Good: Compose utilities inline
+<div class='flex items-center gap-2 p-2 border-b border-border hover:bg-bg-subtle'>
+
+// ✅ Good: Extract complex patterns to @layer components
+// In globals.css
+@layer components {
+  .btn {
+    @apply px-3 py-1.5 text-sm font-medium transition-colors rounded;
+    @apply hover:bg-bg-muted focus:outline-none focus:ring-1 focus:ring-border-hover;
+  }
+}
+```
+
+### Responsive Design
+
+- Design mobile-first
+- Use responsive prefixes sparingly
+- Keep layouts simple and adaptive
+
+```typescript
+// ✅ Good
+<div class='grid grid-cols-1 md:grid-cols-2 gap-2'>
+```
+
+## Data Fetching & APIs
+
+### Last.fm Integration
+
+```typescript
+// ✅ Good: Use shared utils
+import { fetchRecentTracks } from '@soundscape/utils';
+
+// ✅ Good: Handle errors explicitly
+try {
+  const data = await fetchRecentTracks(username, page);
+  return data;
+} catch (error) {
+  console.error('Failed to fetch:', error);
+  throw error;
+}
+
+// ❌ Bad: Direct fetch calls
+const response = await fetch(`https://ws.audioscrobbler.com/...`);
+```
+
+### Resource Factories (SolidJS)
+
+```typescript
+// ✅ Good: Return computed accessors
+export function createResource(username: () => string) {
+  const [data] = createResource(username, fetchData);
+  
+  return {
+    items: () => data()?.items || [],
+    isLoading: () => data.loading,
+    error: () => data.error,
+  };
+}
+
+// ❌ Bad: Return raw resource
+export function createResource(username: () => string) {
+  return createResource(username, fetchData);
+}
+```
+
+## Component Structure
+
+### SolidJS Components
+
+```typescript
+import { Component, createSignal, Show, For } from 'solid-js';
+import type { ItemType } from '@soundscape/types';
+
+interface ComponentProps {
+  items: ItemType[];
+  onItemClick?: (item: ItemType) => void;
+}
+
+const MyComponent: Component<ComponentProps> = (props) => {
+  // 1. Local state
+  const [isExpanded, setIsExpanded] = createSignal(false);
+  
+  // 2. Derived values
+  const itemCount = () => props.items.length;
+  
+  // 3. Event handlers
+  const handleClick = (item: ItemType) => {
+    props.onItemClick?.(item);
+  };
+  
+  // 4. Render
+  return (
+    <div class='space-y-2'>
+      <Show when={itemCount() > 0}>
+        <For each={props.items}>
+          {(item) => (
+            <div onClick={() => handleClick(item)}>
+              {item.name}
+            </div>
+          )}
+        </For>
+      </Show>
+    </div>
+  );
+};
+
+export default MyComponent;
+```
+
+## File Organization
+
+### Import Order
+
+```typescript
+// 1. External dependencies
+import { Component, createSignal } from 'solid-js';
+
+// 2. Internal shared packages
+import type { Track } from '@soundscape/types';
+import { fetchTracks } from '@soundscape/utils';
+
+// 3. Local imports
+import TrackList from './components/TrackList';
+import { formatDate } from './lib/utils';
+```
+
+### Export Pattern
+
+```typescript
+// ✅ Good: Named exports for utilities
+export function formatDate(date: Date): string { }
+export function parseDate(str: string): Date { }
+
+// ✅ Good: Default export for components
+const Component: Component = () => { };
+export default Component;
+```
+
+## Error Handling
+
+```typescript
+// ✅ Good: Specific error messages
+if (!username?.trim()) {
+  throw new Error('Username is required');
+}
+
+if (!response.ok) {
+  throw new Error(`Failed to fetch: ${response.statusText}`);
+}
+
+// ✅ Good: Let errors propagate to UI error boundaries
+const [data] = createResource(fetchData); // Automatically handles errors
+
+// ❌ Bad: Silent failures
+try {
+  await doSomething();
+} catch {
+  // nothing
+}
+
+// ❌ Bad: Generic errors
+throw new Error('Something went wrong');
+```
+
+## Performance
+
+### SolidJS is Fast by Default
+
+- Don't optimize prematurely
+- SolidJS only updates what changes
+- Use `createMemo` for expensive computations only
+
+```typescript
+// ✅ Good: Memoize expensive filtering/sorting
+const sortedItems = createMemo(() => 
+  items().sort((a, b) => a.date - b.date)
+);
+
+// ❌ Bad: Don't memoize simple accessors
+const itemName = createMemo(() => item().name);
+```
+
+## Testing
+
+- Write tests for utility functions
+- Write tests for complex data transformations
+- Use Playwright MCP for UI testing
+- Test error cases and edge cases
+
+```typescript
+// Example test structure
+describe('formatDate', () => {
+  it('formats recent dates as minutes', () => {
+    const result = formatDate(Date.now() - 60000);
+    expect(result).toBe('1m ago');
+  });
+});
+```
+
+## Monorepo Best Practices
+
+### Package Dependencies
+
+- Shared packages should have minimal dependencies
+- Apps can depend on multiple shared packages
+- Shared packages should not depend on apps
+
+```json
+// ✅ Good: App depends on shared packages
+{
+  "dependencies": {
+    "@soundscape/types": "workspace:*",
+    "@soundscape/utils": "workspace:*"
+  }
+}
+```
+
+### Building & Caching
+
+- Always build shared packages before apps
+- Turborepo handles this automatically
+- Use `pnpm --filter` for targeted development
+
+```bash
+# ✅ Good: Let Turborepo handle dependencies
+pnpm build
+
+# ✅ Good: Develop specific package
+pnpm --filter @soundscape/web dev
+```
+
+## Git Commit Messages
+
+```bash
+# ✅ Good: Descriptive commits with context
+feat: add expandable tracks in albums view
+fix: resolve LastFM API pagination issue
+refactor: simplify track grouping logic
+docs: update AGENTS.md with new patterns
+
+# ❌ Bad: Vague commits
+update files
+fix bug
+wip
+```
+
+## Documentation
+
+- Update `AGENTS.md` when adding new patterns
+- Add JSDoc comments for complex utility functions
+- Document non-obvious behavior inline
+- Keep README.md up to date
+
+```typescript
+// ✅ Good: Document complex logic
+/**
+ * Groups tracks by album, preserving the most recent play time.
+ * Tracks without album info are grouped under an empty string key.
+ */
+export function groupTracksByAlbum(tracks: Track[]): RecentAlbum[] {
+  // ...
+}
+```
+
+## What to Avoid
+
+- ❌ Over-engineering simple solutions
+- ❌ Adding dependencies without careful consideration
+- ❌ Breaking reactivity by destructuring props
+- ❌ Using `any` type
+- ❌ Inline styles (use Tailwind)
+- ❌ Large components (split into smaller ones)
+- ❌ Premature optimization
+- ❌ Magic numbers (use named constants)
+- ❌ Nested ternaries (use `<Show>` and `<Switch>`)
+
+## When to Refactor
+
+- When you find yourself copying code
+- When a component exceeds ~150 lines
+- When a function has more than 3 parameters
+- When logic becomes hard to understand
+- When tests become difficult to write
+
+## Final Reminders
+
+1. **Simplicity over cleverness** - Write obvious code
+2. **Type everything** - Types are documentation
+3. **Follow SolidJS patterns** - Don't fight the framework
+4. **Design system first** - Use tokens, not arbitrary values
+5. **Test edge cases** - Empty states, errors, loading states
+6. **Read AGENTS.md** - Comprehensive project documentation
+
