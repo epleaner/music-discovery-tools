@@ -66,30 +66,29 @@ const App: Component = () => {
   const handleArtistClick = (artistName: string) => {
     updateState({
       artist: artistName,
-      view: 'similar',
     });
   };
 
   const tabs: { id: View; label: string }[] = [
     { id: 'recent', label: 'Recent' },
     { id: 'top', label: 'Top' },
-    { id: 'similar', label: 'Similar' },
   ];
 
   return (
     <div class='min-h-screen bg-bg'>
-      <div class='mx-auto max-w-2xl'>
-        {/* Header */}
-        <div class='p-4 border-b border-border'>
-          <h1 class='mb-3 text-base font-medium'>Soundscape</h1>
-          <UsernameInput
-            onSubmit={handleUsernameSubmit}
-            initialUsername={username()}
-          />
-        </div>
+      {/* Header */}
+      <div class='p-4 border-b border-border'>
+        <h1 class='mb-3 text-base font-medium'>Soundscape</h1>
+        <UsernameInput
+          onSubmit={handleUsernameSubmit}
+          initialUsername={username()}
+        />
+      </div>
 
-        <Show when={username()}>
-          <div>
+      <Show when={username()}>
+        <div class='flex'>
+          {/* Left Column - Main Content */}
+          <div class='flex-1 border-r border-border'>
             {/* Tabs */}
             <div class='flex border-b border-border'>
               <For each={tabs}>
@@ -100,14 +99,8 @@ const App: Component = () => {
                       currentView() === tab.id
                         ? 'border-accent'
                         : 'border-transparent text-fg-muted hover:text-fg'
-                    }`}
-                    disabled={tab.id === 'similar' && !selectedArtist()}>
+                    }`}>
                     {tab.label}
-                    <Show when={tab.id === 'similar' && selectedArtist()}>
-                      <span class='ml-1 text-xs text-fg-subtle'>
-                        ({selectedArtist()})
-                      </span>
-                    </Show>
                   </button>
                 )}
               </For>
@@ -217,41 +210,43 @@ const App: Component = () => {
                   />
                 </div>
               </Match>
-
-              <Match when={currentView() === 'similar'}>
-                <Show
-                  when={selectedArtist()}
-                  fallback={
-                    <div class='py-8 text-xs text-center text-fg-muted'>
-                      Select an artist to see similar artists
-                    </div>
-                  }>
-                  <div class='p-2'>
-                    <button
-                      onClick={() => updateState({ view: 'top' })}
-                      class='mb-2 text-xs text-fg-muted hover:text-fg'>
-                      ← Back
-                    </button>
-                    <ArtistList
-                      artists={similarArtists.artists()}
-                      isLoading={similarArtists.isLoading()}
-                      error={similarArtists.error()}
-                      onArtistClick={handleArtistClick}
-                      showMatch={true}
-                    />
-                  </div>
-                </Show>
-              </Match>
             </Switch>
           </div>
-        </Show>
 
-        <Show when={!username()}>
-          <div class='py-12 text-xs text-center text-fg-muted'>
-            Enter a username to start
+          {/* Right Column - Similar Artists */}
+          <div class='w-96'>
+            <div class='p-4 border-b border-border'>
+              <h2 class='text-sm font-medium'>Similar Artists</h2>
+              <Show when={selectedArtist()}>
+                <div class='mt-1 text-xs text-fg-muted'>to {selectedArtist()}</div>
+              </Show>
+            </div>
+            <div class='p-2'>
+              <Show
+                when={selectedArtist()}
+                fallback={
+                  <div class='py-8 text-xs text-center text-fg-muted'>
+                    Click any artist to see similar artists
+                  </div>
+                }>
+                <ArtistList
+                  artists={similarArtists.artists()}
+                  isLoading={similarArtists.isLoading()}
+                  error={similarArtists.error()}
+                  onArtistClick={handleArtistClick}
+                  showMatch={true}
+                />
+              </Show>
+            </div>
           </div>
-        </Show>
-      </div>
+        </div>
+      </Show>
+
+      <Show when={!username()}>
+        <div class='py-12 text-xs text-center text-fg-muted'>
+          Enter a username to start
+        </div>
+      </Show>
     </div>
   );
 };
