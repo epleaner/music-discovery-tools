@@ -1,6 +1,5 @@
 import {
   Component,
-  createSignal,
   Show,
   Switch,
   Match,
@@ -23,16 +22,33 @@ import {
   type RecentViewType,
 } from '@soundscape/types';
 import { groupTracksByAlbum, groupTracksByArtist } from '@soundscape/utils';
+import { useHashState } from './lib/use-hash-state';
 
 type View = 'recent' | 'top' | 'similar';
 
+interface AppState extends Record<string, string> {
+  username: string;
+  view: string;
+  subview: string;
+  period: string;
+  artist: string;
+}
+
 const App: Component = () => {
-  const [username, setUsername] = createSignal('');
-  const [currentView, setCurrentView] = createSignal<View>('recent');
-  const [recentViewType, setRecentViewType] =
-    createSignal<RecentViewType>('tracks');
-  const [period, setPeriod] = createSignal<TimePeriod>('7day');
-  const [selectedArtist, setSelectedArtist] = createSignal('');
+  const [state, updateState] = useHashState<AppState>({
+    username: '',
+    view: 'recent',
+    subview: 'tracks',
+    period: '7day',
+    artist: '',
+  });
+
+  // Getters for reactive access
+  const username = () => state().username;
+  const currentView = () => state().view;
+  const recentViewType = () => state().subview;
+  const period = () => state().period as TimePeriod;
+  const selectedArtist = () => state().artist;
 
   const recentTracks = createRecentTracksResource(username);
   const topArtists = createTopArtistsResource(username, period);
@@ -46,14 +62,19 @@ const App: Component = () => {
   );
 
   const handleUsernameSubmit = (newUsername: string) => {
-    setUsername(newUsername);
-    setCurrentView('recent');
+    updateState({
+      username: newUsername,
+      view: 'recent',
+      subview: 'tracks',
+    });
     recentTracks.reset();
   };
 
   const handleArtistClick = (artistName: string) => {
-    setSelectedArtist(artistName);
-    setCurrentView('similar');
+    updateState({
+      artist: artistName,
+      view: 'similar',
+    });
   };
 
   const tabs: { id: View; label: string }[] = [
@@ -81,7 +102,7 @@ const App: Component = () => {
               <For each={tabs}>
                 {(tab) => (
                   <button
-                    onClick={() => setCurrentView(tab.id)}
+                    onClick={() => updateState({ view: tab.id })}
                     class={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                       currentView() === tab.id
                         ? 'border-accent'
@@ -112,7 +133,7 @@ const App: Component = () => {
                   }>
                   {(view) => (
                     <button
-                      onClick={() => setRecentViewType(view.id)}
+                      onClick={() => updateState({ subview: view.id })}
                       class={`px-2 py-1 text-xs whitespace-nowrap ${
                         recentViewType() === view.id
                           ? 'bg-accent text-white'
@@ -131,7 +152,7 @@ const App: Component = () => {
                 <For each={Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]}>
                   {(p) => (
                     <button
-                      onClick={() => setPeriod(p)}
+                      onClick={() => updateState({ period: p })}
                       class={`px-2 py-1 text-xs whitespace-nowrap ${
                         period() === p
                           ? 'bg-accent text-white'
@@ -214,7 +235,7 @@ const App: Component = () => {
                   }>
                   <div class='p-2'>
                     <button
-                      onClick={() => setCurrentView('top')}
+                      onClick={() => updateState({ view: 'top' })}
                       class='mb-2 text-xs text-fg-muted hover:text-fg'>
                       ← Back
                     </button>
