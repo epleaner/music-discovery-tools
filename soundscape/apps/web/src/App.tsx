@@ -16,6 +16,7 @@ import {
 } from '@soundscape/types';
 import { groupTracksByAlbum, groupTracksByArtist } from '@soundscape/utils';
 import { useHashState } from './lib/use-hash-state';
+import { useTheme } from './lib/use-theme';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -35,6 +36,8 @@ const App: Component = () => {
     period: '7day',
     artist: '',
   });
+
+  const { theme, toggleTheme } = useTheme();
 
   // Getters for reactive access
   const username = () => state().username;
@@ -74,11 +77,26 @@ const App: Component = () => {
     { id: 'top', label: 'Top' },
   ];
 
+  const getThemeIcon = () => {
+    const t = theme();
+    if (t === 'light') return '☀';
+    if (t === 'dark') return '☾';
+    return '◐';
+  };
+
   return (
     <div class='min-h-screen bg-bg'>
       {/* Header */}
       <div class='p-4 border-b border-border'>
-        <h1 class='mb-3 text-base font-medium'>Soundscape</h1>
+        <div class='flex items-center justify-between mb-3'>
+          <h1 class='text-base font-medium'>Soundscape</h1>
+          <button
+            onClick={toggleTheme}
+            class='text-sm text-fg-subtle hover:text-fg transition-colors'
+            title={`Theme: ${theme()}`}>
+            {getThemeIcon()}
+          </button>
+        </div>
         <UsernameInput
           onSubmit={handleUsernameSubmit}
           initialUsername={username()}

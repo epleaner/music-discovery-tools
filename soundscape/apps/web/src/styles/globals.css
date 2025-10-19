@@ -3,6 +3,47 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bg: 0 0% 100%;
+    --bg-subtle: 0 0% 98%;
+    --bg-muted: 0 0% 96%;
+    --fg: 0 0% 9%;
+    --fg-muted: 0 0% 45%;
+    --fg-subtle: 0 0% 60%;
+    --border: 0 0% 90%;
+    --border-hover: 0 0% 80%;
+    --accent: 0 0% 9%;
+    --accent-hover: 0 0% 20%;
+  }
+
+  .dark {
+    --bg: 0 0% 9%;
+    --bg-subtle: 0 0% 11%;
+    --bg-muted: 0 0% 13%;
+    --fg: 0 0% 98%;
+    --fg-muted: 0 0% 65%;
+    --fg-subtle: 0 0% 50%;
+    --border: 0 0% 20%;
+    --border-hover: 0 0% 30%;
+    --accent: 0 0% 98%;
+    --accent-hover: 0 0% 80%;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      --bg: 0 0% 9%;
+      --bg-subtle: 0 0% 11%;
+      --bg-muted: 0 0% 13%;
+      --fg: 0 0% 98%;
+      --fg-muted: 0 0% 65%;
+      --fg-subtle: 0 0% 50%;
+      --border: 0 0% 20%;
+      --border-hover: 0 0% 30%;
+      --accent: 0 0% 98%;
+      --accent-hover: 0 0% 80%;
+    }
+  }
+
   * {
     @apply border-border;
   }

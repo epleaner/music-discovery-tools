@@ -1,26 +1,27 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: ['class'],
   theme: {
     extend: {
       colors: {
-        // Monochrome palette
+        // Monochrome palette with CSS variables for dark mode
         bg: {
-          DEFAULT: '#ffffff',
-          subtle: '#fafafa',
-          muted: '#f5f5f5',
+          DEFAULT: 'hsl(var(--bg))',
+          subtle: 'hsl(var(--bg-subtle))',
+          muted: 'hsl(var(--bg-muted))',
         },
         fg: {
-          DEFAULT: '#000000',
-          muted: '#737373',
-          subtle: '#a3a3a3',
+          DEFAULT: 'hsl(var(--fg))',
+          muted: 'hsl(var(--fg-muted))',
+          subtle: 'hsl(var(--fg-subtle))',
         },
         border: {
-          DEFAULT: '#e5e5e5',
-          hover: '#d4d4d4',
+          DEFAULT: 'hsl(var(--border))',
+          hover: 'hsl(var(--border-hover))',
         },
         accent: {
-          DEFAULT: '#000000',
-          hover: '#262626',
+          DEFAULT: 'hsl(var(--accent))',
+          hover: 'hsl(var(--accent-hover))',
         },
       },
       spacing: {
