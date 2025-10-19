@@ -4,6 +4,7 @@ import TrackList from './components/TrackList';
 import ArtistList from './components/ArtistList';
 import AlbumList from './components/AlbumList';
 import RecentArtistList from './components/RecentArtistList';
+import SiteViewer from './components/SiteViewer';
 import {
   createRecentTracksResource,
   createTopArtistsResource,
@@ -83,6 +84,20 @@ const App: Component = () => {
     if (t === 'dark') return '☾';
     return '◐';
   };
+
+  // Music sites configuration
+  const musicSites = [
+    {
+      id: 'secret-ambient',
+      name: 'Secret Ambient Club',
+      url: 'https://secretambient.club/',
+    },
+    {
+      id: 'blank',
+      name: 'Blank',
+      url: '',
+    },
+  ];
 
   return (
     <div class='min-h-screen bg-bg'>
@@ -272,6 +287,9 @@ const App: Component = () => {
           Enter a username to start
         </div>
       </Show>
+
+      {/* Bottom Music Sites Section */}
+      <SiteViewer sites={musicSites} />
     </div>
   );
 };
