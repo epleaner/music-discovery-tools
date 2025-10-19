@@ -49,24 +49,24 @@ const ResizableBottom: Component<ResizableBottomProps> = (props) => {
   });
 
   return (
-    <div ref={containerRef} class='h-full flex flex-col'>
+    <div ref={containerRef} class='flex flex-col flex-1 overflow-hidden'>
       {/* Top Panel */}
-      <div
-        class='overflow-hidden'
-        style={{ height: `calc(100% - ${bottomHeight()}px - 4px)` }}>
+      <div class='overflow-hidden' style={{ flex: '1 1 auto', 'min-height': '0' }}>
         {props.topPanel}
       </div>
 
       {/* Resize Handle */}
       <div
         onMouseDown={handleMouseDown}
-        class={`h-1 cursor-row-resize hover:bg-border-hover transition-colors ${
+        class={`h-1 flex-shrink-0 cursor-row-resize hover:bg-border-hover transition-colors ${
           isDragging() ? 'bg-border-hover' : ''
         }`}
       />
 
       {/* Bottom Panel */}
-      <div class='overflow-hidden' style={{ height: `${bottomHeight()}px` }}>
+      <div
+        class='flex-shrink-0 overflow-hidden'
+        style={{ height: `${bottomHeight()}px` }}>
         {props.bottomPanel}
       </div>
     </div>

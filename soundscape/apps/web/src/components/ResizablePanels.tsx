@@ -63,7 +63,8 @@ const ResizablePanels: Component<ResizablePanelsProps> = (props) => {
       <div
         onMouseDown={handleMouseDown}
         class={`w-1 cursor-col-resize hover:bg-border-hover transition-colors ${
-          isDragging() ? 'bg-border-hover' : ''}`}
+          isDragging() ? 'bg-border-hover' : ''
+        }`}
       />
 
       {/* Right Panel */}
