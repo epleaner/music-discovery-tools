@@ -1,4 +1,9 @@
-import { createResource, createSignal, createEffect, onCleanup } from 'solid-js';
+import {
+  createResource,
+  createSignal,
+  createEffect,
+  onCleanup,
+} from 'solid-js';
 import type {
   RecentTracksResponse,
   TopArtistsResponse,
