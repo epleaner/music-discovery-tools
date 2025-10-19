@@ -118,6 +118,14 @@ const App: Component = () => {
     updateState({ sites: JSON.stringify(sites) });
   };
 
+  // Memoize the bottom panel to prevent iframe reloads
+  const bottomPanel = createMemo(() => (
+    <SiteViewer
+      sites={musicSites()}
+      onSitesChange={handleSitesChange}
+    />
+  ));
+
   // RYM dropdown state
   const [showRYMDropdown, setShowRYMDropdown] = createSignal(false);
   const [rymSearchTerm, setRYMSearchTerm] = createSignal('Psychedelic Folk');
