@@ -37,15 +37,25 @@ interface AppState extends Record<string, string> {
   subview: string;
   period: string;
   artist: string;
+  sites: string; // JSON-encoded array of sites
 }
 
 const App: Component = () => {
+  const defaultSites = [
+    {
+      id: 'secret-ambient',
+      name: 'Secret Ambient Club',
+      url: 'https://secretambient.club/',
+    },
+  ];
+
   const [state, updateState] = useHashState<AppState>({
     username: '',
     view: 'recent',
     subview: 'tracks',
     period: '7day',
     artist: '',
+    sites: JSON.stringify(defaultSites),
   });
 
   const { theme, toggleTheme } = useTheme();
@@ -56,6 +66,13 @@ const App: Component = () => {
   const recentViewType = () => state().subview;
   const period = () => state().period as TimePeriod;
   const selectedArtist = () => state().artist;
+  const musicSites = createMemo(() => {
+    try {
+      return JSON.parse(state().sites || JSON.stringify(defaultSites));
+    } catch {
+      return defaultSites;
+    }
+  });
 
   const recentTracks = createRecentTracksResource(username);
   const topArtists = createTopArtistsResource(username, period);
@@ -95,14 +112,9 @@ const App: Component = () => {
     return '◐';
   };
 
-  // Music sites configuration
-  const musicSites = [
-    {
-      id: 'secret-ambient',
-      name: 'Secret Ambient Club',
-      url: 'https://secretambient.club/',
-    },
-  ];
+  const handleSitesChange = (sites: Array<{ id: string; name: string; url: string }>) => {
+    updateState({ sites: JSON.stringify(sites) });
+  };
 
   // RYM dropdown state
   const [showRYMDropdown, setShowRYMDropdown] = createSignal(false);
