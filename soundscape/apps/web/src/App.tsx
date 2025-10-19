@@ -1,4 +1,12 @@
-import { Component, Show, Switch, Match, For, createMemo, createSignal } from 'solid-js';
+import {
+  Component,
+  Show,
+  Switch,
+  Match,
+  For,
+  createMemo,
+  createSignal,
+} from 'solid-js';
 import UsernameInput from './components/UsernameInput';
 import TrackList from './components/TrackList';
 import ArtistList from './components/ArtistList';
@@ -100,7 +108,9 @@ const App: Component = () => {
   const [showRYMDropdown, setShowRYMDropdown] = createSignal(false);
   const [rymSearchTerm, setRYMSearchTerm] = createSignal('Psychedelic Folk');
   const [rymYear, setRYMYear] = createSignal(2025);
-  const [rymTimeRange, setRYMTimeRange] = createSignal<'year' | 'decade'>('year');
+  const [rymTimeRange, setRYMTimeRange] = createSignal<'year' | 'decade'>(
+    'year'
+  );
 
   const formatGenreForURL = (genre: string) => {
     return genre
@@ -131,27 +141,29 @@ const App: Component = () => {
     <div class='flex flex-col h-screen bg-bg'>
       {/* Header */}
       <div class='flex-shrink-0 p-4 border-b border-border'>
-        <div class='flex justify-between items-start mb-3 gap-4'>
+        <div class='flex items-center gap-3'>
           <UsernameInput
             onSubmit={handleUsernameSubmit}
             initialUsername={username()}
           />
-          
+
           {/* RYM Dropdown */}
-          <div class='relative'>
+          <div class='relative flex-shrink-0'>
             <button
               onClick={() => setShowRYMDropdown(!showRYMDropdown())}
               class='text-xs px-3 py-2 border border-border hover:bg-bg-subtle transition-colors whitespace-nowrap'
               title='RateYourMusic Charts'>
               RYM Charts
             </button>
-            
+
             <Show when={showRYMDropdown()}>
               <div class='absolute right-0 mt-1 w-80 bg-bg border border-border p-3 z-30 shadow-lg'>
                 <div class='space-y-3'>
                   {/* Genre Input */}
                   <div>
-                    <label class='text-xs text-fg-muted mb-1 block'>Genre</label>
+                    <label class='text-xs text-fg-muted mb-1 block'>
+                      Genre
+                    </label>
                     <input
                       type='text'
                       value={rymSearchTerm()}
@@ -164,7 +176,9 @@ const App: Component = () => {
                   {/* Time Range & Year */}
                   <div class='flex gap-2'>
                     <div class='flex-1'>
-                      <label class='text-xs text-fg-muted mb-1 block'>Range</label>
+                      <label class='text-xs text-fg-muted mb-1 block'>
+                        Range
+                      </label>
                       <div class='flex gap-1'>
                         <button
                           onClick={() => setRYMTimeRange('year')}
@@ -193,7 +207,9 @@ const App: Component = () => {
                       </label>
                       <select
                         value={rymYear()}
-                        onChange={(e) => setRYMYear(parseInt(e.currentTarget.value))}
+                        onChange={(e) =>
+                          setRYMYear(parseInt(e.currentTarget.value))
+                        }
                         class='input text-xs w-full'>
                         <For each={rymYears}>
                           {(year) => (
@@ -224,7 +240,7 @@ const App: Component = () => {
 
           <button
             onClick={toggleTheme}
-            class='text-sm transition-colors text-fg-subtle hover:text-fg'
+            class='flex-shrink-0 p-2 text-lg transition-colors text-fg-subtle hover:text-fg'
             title={`Theme: ${theme()}`}>
             {getThemeIcon()}
           </button>
