@@ -107,67 +107,70 @@ const App: Component = () => {
         <div class='flex'>
           {/* Left Column - Main Content */}
           <div class='flex-1 border-r border-border'>
-            {/* Tabs */}
-            <div class='flex border-b border-border'>
-              <For each={tabs}>
-                {(tab) => (
-                  <button
-                    onClick={() => updateState({ view: tab.id })}
-                    class={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                      currentView() === tab.id
-                        ? 'border-accent'
-                        : 'border-transparent text-fg-muted hover:text-fg'
-                    }`}>
-                    {tab.label}
-                  </button>
-                )}
-              </For>
+            {/* Sticky Header */}
+            <div class='sticky top-0 z-10 bg-bg'>
+              {/* Tabs */}
+              <div class='flex border-b border-border'>
+                <For each={tabs}>
+                  {(tab) => (
+                    <button
+                      onClick={() => updateState({ view: tab.id })}
+                      class={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        currentView() === tab.id
+                          ? 'border-accent'
+                          : 'border-transparent text-fg-muted hover:text-fg'
+                      }`}>
+                      {tab.label}
+                    </button>
+                  )}
+                </For>
+              </div>
+
+              {/* View type selector for recent */}
+              <Show when={currentView() === 'recent'}>
+                <div class='flex gap-1 p-2 border-b border-border'>
+                  <For
+                    each={
+                      [
+                        { id: 'tracks', label: 'Tracks' },
+                        { id: 'albums', label: 'Albums' },
+                        { id: 'artists', label: 'Artists' },
+                      ] as { id: RecentViewType; label: string }[]
+                    }>
+                    {(view) => (
+                      <button
+                        onClick={() => updateState({ subview: view.id })}
+                        class={`px-2 py-1 text-xs whitespace-nowrap ${
+                          recentViewType() === view.id
+                            ? 'bg-accent text-bg'
+                            : 'text-fg-muted hover:text-fg'
+                        }`}>
+                        {view.label}
+                      </button>
+                    )}
+                  </For>
+                </div>
+              </Show>
+
+              {/* Period selector for top artists */}
+              <Show when={currentView() === 'top'}>
+                <div class='flex overflow-x-auto gap-1 p-2 border-b border-border'>
+                  <For each={Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]}>
+                    {(p) => (
+                      <button
+                        onClick={() => updateState({ period: p })}
+                        class={`px-2 py-1 text-xs whitespace-nowrap ${
+                          period() === p
+                            ? 'bg-accent text-bg'
+                            : 'text-fg-muted hover:text-fg'
+                        }`}>
+                        {TIME_PERIOD_LABELS[p]}
+                      </button>
+                    )}
+                  </For>
+                </div>
+              </Show>
             </div>
-
-            {/* View type selector for recent */}
-            <Show when={currentView() === 'recent'}>
-              <div class='flex gap-1 p-2 border-b border-border'>
-                <For
-                  each={
-                    [
-                      { id: 'tracks', label: 'Tracks' },
-                      { id: 'albums', label: 'Albums' },
-                      { id: 'artists', label: 'Artists' },
-                    ] as { id: RecentViewType; label: string }[]
-                  }>
-                  {(view) => (
-                    <button
-                      onClick={() => updateState({ subview: view.id })}
-                      class={`px-2 py-1 text-xs whitespace-nowrap ${
-                        recentViewType() === view.id
-                          ? 'bg-accent text-bg'
-                          : 'text-fg-muted hover:text-fg'
-                      }`}>
-                      {view.label}
-                    </button>
-                  )}
-                </For>
-              </div>
-            </Show>
-
-            {/* Period selector for top artists */}
-            <Show when={currentView() === 'top'}>
-              <div class='flex overflow-x-auto gap-1 p-2 border-b border-border'>
-                <For each={Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]}>
-                  {(p) => (
-                    <button
-                      onClick={() => updateState({ period: p })}
-                      class={`px-2 py-1 text-xs whitespace-nowrap ${
-                        period() === p
-                          ? 'bg-accent text-bg'
-                          : 'text-fg-muted hover:text-fg'
-                      }`}>
-                      {TIME_PERIOD_LABELS[p]}
-                    </button>
-                  )}
-                </For>
-              </div>
-            </Show>
 
             {/* Content */}
             <Switch>
@@ -235,7 +238,7 @@ const App: Component = () => {
 
           {/* Right Column - Similar Artists */}
           <div class='w-96'>
-            <div class='p-4 border-b border-border'>
+            <div class='sticky top-0 z-10 bg-bg p-4 border-b border-border'>
               <h2 class='text-sm font-medium'>Similar Artists</h2>
               <Show when={selectedArtist()}>
                 <div class='mt-1 text-xs text-fg-muted'>
