@@ -1614,10 +1614,12 @@ const RYMChart: Component = () => {
           </div>
           <div class='mb-6'>
             <div class='text-xs text-fg-muted mb-2'>Current selection:</div>
-            <div class='text-sm font-medium mb-1'>{searchTerm() || 'psychedelic-folk'}</div>
+            <div class='text-sm font-medium mb-1'>
+              {searchTerm() || 'psychedelic-folk'}
+            </div>
             <div class='text-xs text-fg-subtle'>
-              {timeRange() === 'year' 
-                ? selectedYear() 
+              {timeRange() === 'year'
+                ? selectedYear()
                 : `${Math.floor(selectedYear() / 10) * 10}s`}
             </div>
           </div>

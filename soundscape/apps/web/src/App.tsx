@@ -1,11 +1,10 @@
-import { Component, Show, Switch, Match, For, createMemo } from 'solid-js';
+import { Component, Show, Switch, Match, For, createMemo, createSignal } from 'solid-js';
 import UsernameInput from './components/UsernameInput';
 import TrackList from './components/TrackList';
 import ArtistList from './components/ArtistList';
 import AlbumList from './components/AlbumList';
 import RecentArtistList from './components/RecentArtistList';
 import SiteViewer from './components/SiteViewer';
-import RYMChart from './components/RYMChart';
 import ResizablePanels from './components/ResizablePanels';
 import ResizableBottom from './components/ResizableBottom';
 import {
@@ -88,25 +87,141 @@ const App: Component = () => {
     return '◐';
   };
 
-  // Music sites configuration - now includes custom components
+  // Music sites configuration
   const musicSites = [
     {
       id: 'secret-ambient',
       name: 'Secret Ambient Club',
       url: 'https://secretambient.club/',
     },
-    {
-      id: 'rym-charts',
-      name: 'RYM Charts',
-      component: <RYMChart />,
-    },
   ];
+
+  // RYM dropdown state
+  const [showRYMDropdown, setShowRYMDropdown] = createSignal(false);
+  const [rymSearchTerm, setRYMSearchTerm] = createSignal('Psychedelic Folk');
+  const [rymYear, setRYMYear] = createSignal(2025);
+  const [rymTimeRange, setRYMTimeRange] = createSignal<'year' | 'decade'>('year');
+
+  const formatGenreForURL = (genre: string) => {
+    return genre
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[']/g, '')
+      .replace(/&/g, 'and')
+      .replace(/[^a-z0-9-]/g, '');
+  };
+
+  const getRYMUrl = () => {
+    const genreSlug = formatGenreForURL(rymSearchTerm());
+    if (rymTimeRange() === 'year') {
+      return `https://rateyourmusic.com/charts/top/album/${rymYear()}/ge:${genreSlug}/`;
+    } else {
+      const decade = Math.floor(rymYear() / 10) * 10;
+      return `https://rateyourmusic.com/charts/top/album/${decade}s/ge:${genreSlug}/`;
+    }
+  };
+
+  const currentYear = new Date().getFullYear();
+  const rymYears = Array.from(
+    { length: currentYear - 1949 },
+    (_, i) => currentYear - i
+  );
 
   return (
     <div class='flex flex-col h-screen bg-bg'>
       {/* Header */}
       <div class='flex-shrink-0 p-4 border-b border-border'>
-        <div class='flex justify-end items-center mb-3'>
+        <div class='flex justify-between items-start mb-3 gap-4'>
+          <UsernameInput
+            onSubmit={handleUsernameSubmit}
+            initialUsername={username()}
+          />
+          
+          {/* RYM Dropdown */}
+          <div class='relative'>
+            <button
+              onClick={() => setShowRYMDropdown(!showRYMDropdown())}
+              class='text-xs px-3 py-2 border border-border hover:bg-bg-subtle transition-colors whitespace-nowrap'
+              title='RateYourMusic Charts'>
+              RYM Charts
+            </button>
+            
+            <Show when={showRYMDropdown()}>
+              <div class='absolute right-0 mt-1 w-80 bg-bg border border-border p-3 z-30 shadow-lg'>
+                <div class='space-y-3'>
+                  {/* Genre Input */}
+                  <div>
+                    <label class='text-xs text-fg-muted mb-1 block'>Genre</label>
+                    <input
+                      type='text'
+                      value={rymSearchTerm()}
+                      onInput={(e) => setRYMSearchTerm(e.currentTarget.value)}
+                      placeholder='Search genre...'
+                      class='input w-full text-xs'
+                    />
+                  </div>
+
+                  {/* Time Range & Year */}
+                  <div class='flex gap-2'>
+                    <div class='flex-1'>
+                      <label class='text-xs text-fg-muted mb-1 block'>Range</label>
+                      <div class='flex gap-1'>
+                        <button
+                          onClick={() => setRYMTimeRange('year')}
+                          class={`flex-1 px-2 py-1 text-xs ${
+                            rymTimeRange() === 'year'
+                              ? 'bg-accent text-bg'
+                              : 'text-fg-muted hover:text-fg border border-border'
+                          }`}>
+                          Year
+                        </button>
+                        <button
+                          onClick={() => setRYMTimeRange('decade')}
+                          class={`flex-1 px-2 py-1 text-xs ${
+                            rymTimeRange() === 'decade'
+                              ? 'bg-accent text-bg'
+                              : 'text-fg-muted hover:text-fg border border-border'
+                          }`}>
+                          Decade
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class='flex-1'>
+                      <label class='text-xs text-fg-muted mb-1 block'>
+                        {rymTimeRange() === 'year' ? 'Year' : 'Decade'}
+                      </label>
+                      <select
+                        value={rymYear()}
+                        onChange={(e) => setRYMYear(parseInt(e.currentTarget.value))}
+                        class='input text-xs w-full'>
+                        <For each={rymYears}>
+                          {(year) => (
+                            <option value={year}>
+                              {rymTimeRange() === 'decade'
+                                ? `${Math.floor(year / 10) * 10}s`
+                                : year}
+                            </option>
+                          )}
+                        </For>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Open Button */}
+                  <button
+                    onClick={() => {
+                      window.open(getRYMUrl(), '_blank');
+                      setShowRYMDropdown(false);
+                    }}
+                    class='w-full btn-primary text-xs py-2'>
+                    Open in RateYourMusic →
+                  </button>
+                </div>
+              </div>
+            </Show>
+          </div>
+
           <button
             onClick={toggleTheme}
             class='text-sm transition-colors text-fg-subtle hover:text-fg'
@@ -114,10 +229,6 @@ const App: Component = () => {
             {getThemeIcon()}
           </button>
         </div>
-        <UsernameInput
-          onSubmit={handleUsernameSubmit}
-          initialUsername={username()}
-        />
       </div>
 
       <Show when={username()}>
