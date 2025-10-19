@@ -72,7 +72,9 @@ const App: Component = () => {
   const musicSites = createMemo((prev) => {
     const currentSitesString = sitesString();
     try {
-      const parsed = JSON.parse(currentSitesString || JSON.stringify(defaultSites));
+      const parsed = JSON.parse(
+        currentSitesString || JSON.stringify(defaultSites)
+      );
       // Return previous value if stringified version is the same (deep equality check)
       if (prev && JSON.stringify(prev) === JSON.stringify(parsed)) {
         return prev;
@@ -332,7 +334,7 @@ const App: Component = () => {
 
                     {/* Period selector for top artists */}
                     <Show when={currentView() === 'top'}>
-                      <div class='flex overflow-x-auto gap-1 p-2 border-b border-border'>
+                      <div class='flex overflow-x-auto gap-1 p-2 border-b border-border items-center'>
                         <For
                           each={
                             Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]
@@ -349,6 +351,11 @@ const App: Component = () => {
                             </button>
                           )}
                         </For>
+                        <Show when={topArtists.isLoading()}>
+                          <div class='ml-1 text-xs text-fg-muted animate-spin'>
+                            ◐
+                          </div>
+                        </Show>
                       </div>
                     </Show>
                   </div>
