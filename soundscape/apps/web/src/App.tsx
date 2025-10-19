@@ -66,9 +66,12 @@ const App: Component = () => {
   const recentViewType = () => state().subview;
   const period = () => state().period as TimePeriod;
   const selectedArtist = () => state().artist;
+  const sitesString = () => state().sites;
+  
+  // Parse sites only when the sites string actually changes
   const musicSites = createMemo(() => {
     try {
-      return JSON.parse(state().sites || JSON.stringify(defaultSites));
+      return JSON.parse(sitesString() || JSON.stringify(defaultSites));
     } catch {
       return defaultSites;
     }
@@ -120,10 +123,7 @@ const App: Component = () => {
 
   // Memoize the bottom panel to prevent iframe reloads
   const bottomPanel = createMemo(() => (
-    <SiteViewer
-      sites={musicSites()}
-      onSitesChange={handleSitesChange}
-    />
+    <SiteViewer sites={musicSites()} onSitesChange={handleSitesChange} />
   ));
 
   // RYM dropdown state
