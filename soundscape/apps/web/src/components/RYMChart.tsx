@@ -1596,17 +1596,37 @@ const RYMChart: Component = () => {
               )}
             </For>
           </select>
+
+          {/* Open Button */}
+          <button
+            onClick={() => window.open(getRYMUrl(), '_blank')}
+            class='px-3 py-1 text-xs btn-primary whitespace-nowrap'>
+            Open in RYM →
+          </button>
         </div>
       </div>
 
-      {/* Iframe */}
-      <div class='flex-1 overflow-hidden'>
-        <iframe
-          src={getRYMUrl()}
-          class='w-full h-full border-0'
-          title='RateYourMusic Charts'
-          sandbox='allow-same-origin allow-scripts allow-popups allow-forms'
-        />
+      {/* Info */}
+      <div class='flex-1 flex items-center justify-center p-8'>
+        <div class='text-center max-w-md'>
+          <div class='text-sm mb-4 text-fg-muted'>
+            RateYourMusic doesn't allow embedding in iframes.
+          </div>
+          <div class='mb-6'>
+            <div class='text-xs text-fg-muted mb-2'>Current selection:</div>
+            <div class='text-sm font-medium mb-1'>{searchTerm() || 'psychedelic-folk'}</div>
+            <div class='text-xs text-fg-subtle'>
+              {timeRange() === 'year' 
+                ? selectedYear() 
+                : `${Math.floor(selectedYear() / 10) * 10}s`}
+            </div>
+          </div>
+          <button
+            onClick={() => window.open(getRYMUrl(), '_blank')}
+            class='btn-primary text-sm px-4 py-2'>
+            View Charts on RateYourMusic →
+          </button>
+        </div>
       </div>
     </div>
   );
