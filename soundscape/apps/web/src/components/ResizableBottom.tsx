@@ -51,9 +51,7 @@ const ResizableBottom: Component<ResizableBottomProps> = (props) => {
   return (
     <div ref={containerRef} class='flex flex-col flex-1'>
       {/* Top Panel */}
-      <div style={{ flex: '1 1 0', 'min-height': '0' }}>
-        {props.topPanel}
-      </div>
+      <div style={{ flex: '1 1 0', 'min-height': '0' }}>{props.topPanel}</div>
 
       {/* Resize Handle */}
       <div

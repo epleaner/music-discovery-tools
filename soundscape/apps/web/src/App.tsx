@@ -131,9 +131,7 @@ const App: Component = () => {
               minLeftWidth={30}
               maxLeftWidth={80}
               leftPanel={
-                <div
-                  class='flex flex-col overflow-hidden'
-                  style={{ height: '100%' }}>
+                <div class='flex flex-col h-full'>
                   {/* Sticky Header */}
                   <div class='flex-shrink-0 bg-bg'>
                     {/* Tabs */}
@@ -269,9 +267,7 @@ const App: Component = () => {
                 </div>
               }
               rightPanel={
-                <div
-                  class='flex flex-col overflow-hidden'
-                  style={{ height: '100%' }}>
+                <div class='flex flex-col h-full'>
                   <div class='flex-shrink-0 bg-bg p-4 border-b border-border'>
                     <h2 class='text-sm font-medium'>Similar Artists</h2>
                     <Show when={selectedArtist()}>
