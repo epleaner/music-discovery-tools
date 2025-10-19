@@ -26,7 +26,7 @@ const ResizableBottom: Component<ResizableBottomProps> = (props) => {
 
     const containerRect = containerRef.getBoundingClientRect();
     const offsetY = containerRect.bottom - e.clientY;
-    
+
     const minHeight = props.minBottomHeight || 150;
     const maxHeight = props.maxBottomHeight || containerRect.height - 100;
 
@@ -74,4 +74,3 @@ const ResizableBottom: Component<ResizableBottomProps> = (props) => {
 };
 
 export default ResizableBottom;
-

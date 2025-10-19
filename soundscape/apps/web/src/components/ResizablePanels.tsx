@@ -29,7 +29,10 @@ const ResizablePanels: Component<ResizablePanelsProps> = (props) => {
     const minWidth = props.minLeftWidth || 20;
     const maxWidth = props.maxLeftWidth || 80;
 
-    const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidthPercent));
+    const clampedWidth = Math.max(
+      minWidth,
+      Math.min(maxWidth, newWidthPercent)
+    );
     setLeftWidth(clampedWidth);
   };
 
@@ -51,8 +54,8 @@ const ResizablePanels: Component<ResizablePanelsProps> = (props) => {
     <div ref={containerRef} class='flex flex-1 overflow-hidden'>
       {/* Left Panel */}
       <div
-        class='border-r border-border flex flex-col overflow-hidden'
-        style={{ width: `${leftWidth()}%` }}>
+        class='border-r border-border'
+        style={{ width: `${leftWidth()}%`, 'min-width': '0' }}>
         {props.leftPanel}
       </div>
 
@@ -65,10 +68,11 @@ const ResizablePanels: Component<ResizablePanelsProps> = (props) => {
       />
 
       {/* Right Panel */}
-      <div class='flex-1 flex flex-col overflow-hidden'>{props.rightPanel}</div>
+      <div class='flex-1' style={{ 'min-width': '0' }}>
+        {props.rightPanel}
+      </div>
     </div>
   );
 };
 
 export default ResizablePanels;
-
