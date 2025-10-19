@@ -67,7 +67,7 @@ const App: Component = () => {
   const period = () => state().period as TimePeriod;
   const selectedArtist = () => state().artist;
   const sitesString = () => state().sites;
-  
+
   // Parse sites only when the sites string actually changes
   const musicSites = createMemo(() => {
     try {
@@ -448,7 +448,12 @@ const App: Component = () => {
               }
             />
           }
-          bottomPanel={bottomPanel()}
+          bottomPanel={
+            <SiteViewer
+              sites={musicSites()}
+              onSitesChange={handleSitesChange}
+            />
+          }
         />
       </Show>
 
@@ -464,7 +469,12 @@ const App: Component = () => {
               </div>
             </div>
           }
-          bottomPanel={bottomPanel()}
+          bottomPanel={
+            <SiteViewer
+              sites={musicSites()}
+              onSitesChange={handleSitesChange}
+            />
+          }
         />
       </Show>
     </div>
