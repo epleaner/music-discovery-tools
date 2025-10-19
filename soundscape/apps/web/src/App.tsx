@@ -5,6 +5,7 @@ import ArtistList from './components/ArtistList';
 import AlbumList from './components/AlbumList';
 import RecentArtistList from './components/RecentArtistList';
 import SiteViewer from './components/SiteViewer';
+import RYMChart from './components/RYMChart';
 import ResizablePanels from './components/ResizablePanels';
 import ResizableBottom from './components/ResizableBottom';
 import {
@@ -87,7 +88,7 @@ const App: Component = () => {
     return '◐';
   };
 
-  // Music sites configuration
+  // Music sites configuration - now includes custom components
   const musicSites = [
     {
       id: 'secret-ambient',
@@ -95,9 +96,9 @@ const App: Component = () => {
       url: 'https://secretambient.club/',
     },
     {
-      id: 'blank',
-      name: 'Blank',
-      url: '',
+      id: 'rym-charts',
+      name: 'RYM Charts',
+      component: <RYMChart />,
     },
   ];
 

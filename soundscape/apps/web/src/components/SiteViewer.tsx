@@ -1,9 +1,10 @@
-import { Component, createSignal, For, Show } from 'solid-js';
+import { Component, createSignal, For, Show, JSX } from 'solid-js';
 
 interface Site {
   id: string;
   name: string;
-  url: string;
+  url?: string;
+  component?: JSX.Element;
 }
 
 interface SiteViewerProps {
@@ -33,24 +34,30 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
         </For>
       </div>
 
-      {/* Iframe Content */}
+      {/* Content */}
       <div class='relative flex-1 overflow-hidden'>
         <For each={props.sites}>
           {(site, index) => (
             <Show when={activeTab() === index()}>
               <Show
-                when={site.url}
+                when={site.component}
                 fallback={
-                  <div class='flex items-center justify-center h-full text-xs text-fg-muted'>
-                    No URL configured
-                  </div>
+                  <Show
+                    when={site.url}
+                    fallback={
+                      <div class='flex items-center justify-center h-full text-xs text-fg-muted'>
+                        No URL configured
+                      </div>
+                    }>
+                    <iframe
+                      src={site.url}
+                      class='w-full h-full border-0'
+                      title={site.name}
+                      sandbox='allow-same-origin allow-scripts allow-popups allow-forms'
+                    />
+                  </Show>
                 }>
-                <iframe
-                  src={site.url}
-                  class='w-full h-full border-0'
-                  title={site.name}
-                  sandbox='allow-same-origin allow-scripts allow-popups allow-forms'
-                />
+                {site.component}
               </Show>
             </Show>
           )}
