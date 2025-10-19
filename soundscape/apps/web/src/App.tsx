@@ -69,9 +69,15 @@ const App: Component = () => {
   const sitesString = () => state().sites;
 
   // Parse sites only when the sites string actually changes
-  const musicSites = createMemo(() => {
+  const musicSites = createMemo((prev) => {
+    const currentSitesString = sitesString();
     try {
-      return JSON.parse(sitesString() || JSON.stringify(defaultSites));
+      const parsed = JSON.parse(currentSitesString || JSON.stringify(defaultSites));
+      // Return previous value if stringified version is the same (deep equality check)
+      if (prev && JSON.stringify(prev) === JSON.stringify(parsed)) {
+        return prev;
+      }
+      return parsed;
     } catch {
       return defaultSites;
     }
@@ -93,6 +99,7 @@ const App: Component = () => {
       username: newUsername,
       view: 'recent',
       subview: 'tracks',
+      artist: '', // Reset selected artist when username changes
     });
     recentTracks.reset();
   };
@@ -120,11 +127,6 @@ const App: Component = () => {
   ) => {
     updateState({ sites: JSON.stringify(sites) });
   };
-
-  // Memoize the bottom panel to prevent iframe reloads
-  const bottomPanel = createMemo(() => (
-    <SiteViewer sites={musicSites()} onSitesChange={handleSitesChange} />
-  ));
 
   // RYM dropdown state
   const [showRYMDropdown, setShowRYMDropdown] = createSignal(false);
