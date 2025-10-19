@@ -11,7 +11,7 @@ interface ResizablePanelsProps {
 const ResizablePanels: Component<ResizablePanelsProps> = (props) => {
   const [leftWidth, setLeftWidth] = createSignal(props.initialLeftWidth || 70);
   const [isDragging, setIsDragging] = createSignal(false);
-  let containerRef: HTMLDivElement | undefined;
+  let containerRef!: HTMLDivElement;
 
   const handleMouseDown = (e: MouseEvent) => {
     e.preventDefault();
