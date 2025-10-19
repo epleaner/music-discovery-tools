@@ -88,11 +88,11 @@ const App: Component = () => {
     <div class='min-h-screen bg-bg'>
       {/* Header */}
       <div class='p-4 border-b border-border'>
-        <div class='flex items-center justify-between mb-3'>
+        <div class='flex justify-between items-center mb-3'>
           <h1 class='text-base font-medium'>Soundscape</h1>
           <button
             onClick={toggleTheme}
-            class='text-sm text-fg-subtle hover:text-fg transition-colors'
+            class='text-sm transition-colors text-fg-subtle hover:text-fg'
             title={`Theme: ${theme()}`}>
             {getThemeIcon()}
           </button>

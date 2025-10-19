@@ -26,7 +26,7 @@ export function useTheme() {
 
   const applyTheme = (theme: Theme) => {
     const root = document.documentElement;
-    
+
     if (theme === 'system') {
       root.classList.remove('light', 'dark');
     } else {
@@ -49,4 +49,3 @@ export function useTheme() {
     toggleTheme,
   };
 }
-
