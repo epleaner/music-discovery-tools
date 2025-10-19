@@ -15,9 +15,7 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
   const [activeTab, setActiveTab] = createSignal(0);
 
   return (
-    <div
-      class='border-t border-border bg-bg flex flex-col'
-      style={{ height: '300px' }}>
+    <div class='border-t border-border bg-bg flex flex-col h-full'>
       {/* Tabs */}
       <div class='flex border-b border-border overflow-x-auto flex-shrink-0'>
         <For each={props.sites}>
