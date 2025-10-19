@@ -23,9 +23,13 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
       name: 'New Tab',
       url: '',
     };
+    const newIndex = props.sites.length;
     props.onSitesChange?.([...props.sites, newSite]);
-    setActiveTab(props.sites.length);
-    startEditing(props.sites.length);
+    setActiveTab(newIndex);
+    // Set editing state immediately before props update
+    setEditingTab(newIndex);
+    setEditName('New Tab');
+    setEditUrl('');
   };
 
   const removeTab = (index: number, e: MouseEvent) => {
@@ -39,8 +43,8 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
 
   const startEditing = (index: number) => {
     setEditingTab(index);
-    setEditName(props.sites[index].name);
-    setEditUrl(props.sites[index].url);
+    setEditName(props.sites[index]?.name || '');
+    setEditUrl(props.sites[index]?.url || '');
   };
 
   const saveEdit = () => {
