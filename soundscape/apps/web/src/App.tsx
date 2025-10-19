@@ -140,7 +140,7 @@ const App: Component = () => {
                       onClick={() => updateState({ subview: view.id })}
                       class={`px-2 py-1 text-xs whitespace-nowrap ${
                         recentViewType() === view.id
-                          ? 'bg-accent text-white'
+                          ? 'bg-accent text-bg'
                           : 'text-fg-muted hover:text-fg'
                       }`}>
                       {view.label}
@@ -159,7 +159,7 @@ const App: Component = () => {
                       onClick={() => updateState({ period: p })}
                       class={`px-2 py-1 text-xs whitespace-nowrap ${
                         period() === p
-                          ? 'bg-accent text-white'
+                          ? 'bg-accent text-bg'
                           : 'text-fg-muted hover:text-fg'
                       }`}>
                       {TIME_PERIOD_LABELS[p]}
