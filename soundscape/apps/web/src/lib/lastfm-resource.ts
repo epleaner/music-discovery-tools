@@ -1,4 +1,4 @@
-import { createResource, createSignal } from 'solid-js';
+import { createResource, createSignal, createEffect, onCleanup } from 'solid-js';
 import type {
   RecentTracksResponse,
   TopArtistsResponse,
@@ -12,8 +12,10 @@ import {
   fetchSimilarArtists,
 } from '@soundscape/utils';
 
+const POLLING_INTERVAL = 3 * 60 * 1000; // 3 minutes
+
 /**
- * Create a resource for fetching recent tracks with pagination
+ * Create a resource for fetching recent tracks with pagination and automatic polling
  */
 export function createRecentTracksResource(username: () => string) {
   const [page, setPage] = createSignal(1);
@@ -41,6 +43,21 @@ export function createRecentTracksResource(username: () => string) {
       return response;
     }
   );
+
+  // Set up polling for recent tracks
+  createEffect(() => {
+    const user = username();
+    if (!user?.trim()) return;
+
+    const intervalId = setInterval(() => {
+      // Only refetch page 1 if not currently loading
+      if (!data.loading && page() === 1) {
+        refetch();
+      }
+    }, POLLING_INTERVAL);
+
+    onCleanup(() => clearInterval(intervalId));
+  });
 
   const loadMore = () => {
     if (data() && !data.loading) {
