@@ -440,12 +440,7 @@ const App: Component = () => {
               }
             />
           }
-          bottomPanel={
-            <SiteViewer
-              sites={musicSites()}
-              onSitesChange={handleSitesChange}
-            />
-          }
+          bottomPanel={bottomPanel()}
         />
       </Show>
 
@@ -461,12 +456,7 @@ const App: Component = () => {
               </div>
             </div>
           }
-          bottomPanel={
-            <SiteViewer
-              sites={musicSites()}
-              onSitesChange={handleSitesChange}
-            />
-          }
+          bottomPanel={bottomPanel()}
         />
       </Show>
     </div>
