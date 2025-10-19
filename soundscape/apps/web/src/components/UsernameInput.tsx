@@ -19,7 +19,7 @@ const UsernameInput: Component<UsernameInputProps> = (props) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} class='flex gap-2 max-w-sm'>
+    <form onSubmit={handleSubmit} class='flex gap-2 flex-1'>
       <input
         type='text'
         value={localUsername()}
@@ -27,7 +27,7 @@ const UsernameInput: Component<UsernameInputProps> = (props) => {
         placeholder='Last.fm username'
         class='input flex-1'
       />
-      <button type='submit' class='btn btn-primary'>
+      <button type='submit' class='btn btn-primary whitespace-nowrap'>
         Load
       </button>
     </form>
