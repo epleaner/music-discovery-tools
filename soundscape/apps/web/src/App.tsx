@@ -141,109 +141,111 @@ const App: Component = () => {
     <div class='flex flex-col h-screen bg-bg'>
       {/* Header */}
       <div class='flex-shrink-0 p-4 border-b border-border'>
-        <div class='flex items-center gap-3'>
+        <div class='flex gap-3 justify-between items-center'>
           <UsernameInput
             onSubmit={handleUsernameSubmit}
             initialUsername={username()}
           />
 
-          {/* RYM Dropdown */}
-          <div class='relative flex-shrink-0'>
-            <button
-              onClick={() => setShowRYMDropdown(!showRYMDropdown())}
-              class='text-xs px-3 py-2 border border-border hover:bg-bg-subtle transition-colors whitespace-nowrap'
-              title='RateYourMusic Charts'>
-              RYM Charts
-            </button>
+          <div class='flex flex-1 gap-3 justify-end items-center w-full'>
+            {/* RYM Dropdown */}
+            <div class='relative flex-shrink-0'>
+              <button
+                onClick={() => setShowRYMDropdown(!showRYMDropdown())}
+                class='px-3 py-2 text-xs whitespace-nowrap border transition-colors border-border hover:bg-bg-subtle'
+                title='RateYourMusic Charts'>
+                RYM Charts
+              </button>
 
-            <Show when={showRYMDropdown()}>
-              <div class='absolute right-0 mt-1 w-80 bg-bg border border-border p-3 z-30 shadow-lg'>
-                <div class='space-y-3'>
-                  {/* Genre Input */}
-                  <div>
-                    <label class='text-xs text-fg-muted mb-1 block'>
-                      Genre
-                    </label>
-                    <input
-                      type='text'
-                      value={rymSearchTerm()}
-                      onInput={(e) => setRYMSearchTerm(e.currentTarget.value)}
-                      placeholder='Search genre...'
-                      class='input w-full text-xs'
-                    />
-                  </div>
-
-                  {/* Time Range & Year */}
-                  <div class='flex gap-2'>
-                    <div class='flex-1'>
-                      <label class='text-xs text-fg-muted mb-1 block'>
-                        Range
+              <Show when={showRYMDropdown()}>
+                <div class='absolute right-0 z-30 p-3 mt-1 w-80 border shadow-lg bg-bg border-border'>
+                  <div class='space-y-3'>
+                    {/* Genre Input */}
+                    <div>
+                      <label class='block mb-1 text-xs text-fg-muted'>
+                        Genre
                       </label>
-                      <div class='flex gap-1'>
-                        <button
-                          onClick={() => setRYMTimeRange('year')}
-                          class={`flex-1 px-2 py-1 text-xs ${
-                            rymTimeRange() === 'year'
-                              ? 'bg-accent text-bg'
-                              : 'text-fg-muted hover:text-fg border border-border'
-                          }`}>
-                          Year
-                        </button>
-                        <button
-                          onClick={() => setRYMTimeRange('decade')}
-                          class={`flex-1 px-2 py-1 text-xs ${
-                            rymTimeRange() === 'decade'
-                              ? 'bg-accent text-bg'
-                              : 'text-fg-muted hover:text-fg border border-border'
-                          }`}>
-                          Decade
-                        </button>
+                      <input
+                        type='text'
+                        value={rymSearchTerm()}
+                        onInput={(e) => setRYMSearchTerm(e.currentTarget.value)}
+                        placeholder='Search genre...'
+                        class='w-full text-xs input'
+                      />
+                    </div>
+
+                    {/* Time Range & Year */}
+                    <div class='flex gap-2'>
+                      <div class='flex-1'>
+                        <label class='block mb-1 text-xs text-fg-muted'>
+                          Range
+                        </label>
+                        <div class='flex gap-1'>
+                          <button
+                            onClick={() => setRYMTimeRange('year')}
+                            class={`flex-1 px-2 py-1 text-xs ${
+                              rymTimeRange() === 'year'
+                                ? 'bg-accent text-bg'
+                                : 'text-fg-muted hover:text-fg border border-border'
+                            }`}>
+                            Year
+                          </button>
+                          <button
+                            onClick={() => setRYMTimeRange('decade')}
+                            class={`flex-1 px-2 py-1 text-xs ${
+                              rymTimeRange() === 'decade'
+                                ? 'bg-accent text-bg'
+                                : 'text-fg-muted hover:text-fg border border-border'
+                            }`}>
+                            Decade
+                          </button>
+                        </div>
+                      </div>
+
+                      <div class='flex-1'>
+                        <label class='block mb-1 text-xs text-fg-muted'>
+                          {rymTimeRange() === 'year' ? 'Year' : 'Decade'}
+                        </label>
+                        <select
+                          value={rymYear()}
+                          onChange={(e) =>
+                            setRYMYear(parseInt(e.currentTarget.value))
+                          }
+                          class='w-full text-xs input'>
+                          <For each={rymYears}>
+                            {(year) => (
+                              <option value={year}>
+                                {rymTimeRange() === 'decade'
+                                  ? `${Math.floor(year / 10) * 10}s`
+                                  : year}
+                              </option>
+                            )}
+                          </For>
+                        </select>
                       </div>
                     </div>
 
-                    <div class='flex-1'>
-                      <label class='text-xs text-fg-muted mb-1 block'>
-                        {rymTimeRange() === 'year' ? 'Year' : 'Decade'}
-                      </label>
-                      <select
-                        value={rymYear()}
-                        onChange={(e) =>
-                          setRYMYear(parseInt(e.currentTarget.value))
-                        }
-                        class='input text-xs w-full'>
-                        <For each={rymYears}>
-                          {(year) => (
-                            <option value={year}>
-                              {rymTimeRange() === 'decade'
-                                ? `${Math.floor(year / 10) * 10}s`
-                                : year}
-                            </option>
-                          )}
-                        </For>
-                      </select>
-                    </div>
+                    {/* Open Button */}
+                    <button
+                      onClick={() => {
+                        window.open(getRYMUrl(), '_blank');
+                        setShowRYMDropdown(false);
+                      }}
+                      class='py-2 w-full text-xs btn-primary'>
+                      Open in RateYourMusic →
+                    </button>
                   </div>
-
-                  {/* Open Button */}
-                  <button
-                    onClick={() => {
-                      window.open(getRYMUrl(), '_blank');
-                      setShowRYMDropdown(false);
-                    }}
-                    class='w-full btn-primary text-xs py-2'>
-                    Open in RateYourMusic →
-                  </button>
                 </div>
-              </div>
-            </Show>
-          </div>
+              </Show>
+            </div>
 
-          <button
-            onClick={toggleTheme}
-            class='flex-shrink-0 p-2 text-lg transition-colors text-fg-subtle hover:text-fg'
-            title={`Theme: ${theme()}`}>
-            {getThemeIcon()}
-          </button>
+            <button
+              onClick={toggleTheme}
+              class='flex-shrink-0 p-2 text-lg transition-colors text-fg-subtle hover:text-fg'
+              title={`Theme: ${theme()}`}>
+              {getThemeIcon()}
+            </button>
+          </div>
         </div>
       </div>
 
