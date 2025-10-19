@@ -54,8 +54,8 @@ const ResizablePanels: Component<ResizablePanelsProps> = (props) => {
     <div ref={containerRef} class='flex flex-1 overflow-hidden'>
       {/* Left Panel */}
       <div
-        class='border-r border-border'
-        style={{ width: `${leftWidth()}%`, 'min-width': '0' }}>
+        class='border-r border-border overflow-hidden'
+        style={{ width: `${leftWidth()}%`, 'min-width': '0', height: '100%' }}>
         {props.leftPanel}
       </div>
 
@@ -68,7 +68,7 @@ const ResizablePanels: Component<ResizablePanelsProps> = (props) => {
       />
 
       {/* Right Panel */}
-      <div class='flex-1' style={{ 'min-width': '0' }}>
+      <div class='flex-1 overflow-hidden' style={{ 'min-width': '0', height: '100%' }}>
         {props.rightPanel}
       </div>
     </div>
