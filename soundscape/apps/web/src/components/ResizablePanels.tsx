@@ -51,7 +51,7 @@ const ResizablePanels: Component<ResizablePanelsProps> = (props) => {
   });
 
   return (
-    <div ref={containerRef} class='flex overflow-hidden flex-1'>
+    <div ref={containerRef} class='flex overflow-scroll flex-1 h-full'>
       {/* Left Panel */}
       <div
         class='overflow-hidden border-r border-border'
@@ -63,8 +63,7 @@ const ResizablePanels: Component<ResizablePanelsProps> = (props) => {
       <div
         onMouseDown={handleMouseDown}
         class={`w-1 cursor-col-resize hover:bg-border-hover transition-colors ${
-          isDragging() ? 'bg-border-hover' : ''
-        }`}
+          isDragging() ? 'bg-border-hover' : ''}`}
       />
 
       {/* Right Panel */}
