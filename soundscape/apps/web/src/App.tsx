@@ -117,11 +117,11 @@ const App: Component = () => {
     { id: 'top', label: 'Top' },
   ];
 
-  const getThemeIcon = () => {
+  const getThemeRotation = () => {
     const t = theme();
-    if (t === 'light') return '☀';
-    if (t === 'dark') return '☾';
-    return '◐';
+    // Rotate 180deg for dark mode, 0deg for light mode
+    if (t === 'dark') return '180deg';
+    return '0deg';
   };
 
   const handleSitesChange = (
@@ -267,9 +267,10 @@ const App: Component = () => {
 
             <button
               onClick={toggleTheme}
-              class='flex-shrink-0 p-2 text-lg transition-colors text-fg-subtle hover:text-fg'
+              class='flex-shrink-0 p-2 text-lg transition-all text-fg-subtle hover:text-fg'
+              style={{ transform: `rotate(${getThemeRotation()})` }}
               title={`Theme: ${theme()}`}>
-              {getThemeIcon()}
+              ◐
             </button>
           </div>
         </div>
