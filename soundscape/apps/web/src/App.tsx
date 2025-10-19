@@ -149,13 +149,13 @@ const App: Component = () => {
 
           <div class='flex flex-1 gap-3 justify-end items-center w-full'>
             {/* RYM Dropdown */}
-             <div class='relative flex-shrink-0'>
-               <button
-                 onClick={() => setShowRYMDropdown(!showRYMDropdown())}
-                 class='btn-secondary'
-                 title='RateYourMusic Charts'>
-                 RYM Charts
-               </button>
+            <div class='relative flex-shrink-0'>
+              <button
+                onClick={() => setShowRYMDropdown(!showRYMDropdown())}
+                class='btn-secondary'
+                title='RateYourMusic Charts'>
+                RYM Charts
+              </button>
 
               <Show when={showRYMDropdown()}>
                 <div class='absolute right-0 z-30 p-3 mt-1 w-80 border shadow-lg bg-bg border-border'>
