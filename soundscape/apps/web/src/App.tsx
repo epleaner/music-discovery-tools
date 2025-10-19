@@ -112,7 +112,9 @@ const App: Component = () => {
     return '◐';
   };
 
-  const handleSitesChange = (sites: Array<{ id: string; name: string; url: string }>) => {
+  const handleSitesChange = (
+    sites: Array<{ id: string; name: string; url: string }>
+  ) => {
     updateState({ sites: JSON.stringify(sites) });
   };
 
@@ -438,7 +440,12 @@ const App: Component = () => {
               }
             />
           }
-          bottomPanel={<SiteViewer sites={musicSites} />}
+          bottomPanel={
+            <SiteViewer
+              sites={musicSites()}
+              onSitesChange={handleSitesChange}
+            />
+          }
         />
       </Show>
 
@@ -454,7 +461,12 @@ const App: Component = () => {
               </div>
             </div>
           }
-          bottomPanel={<SiteViewer sites={musicSites} />}
+          bottomPanel={
+            <SiteViewer
+              sites={musicSites()}
+              onSitesChange={handleSitesChange}
+            />
+          }
         />
       </Show>
     </div>
