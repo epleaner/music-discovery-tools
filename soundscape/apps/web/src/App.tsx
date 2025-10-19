@@ -5,6 +5,8 @@ import ArtistList from './components/ArtistList';
 import AlbumList from './components/AlbumList';
 import RecentArtistList from './components/RecentArtistList';
 import SiteViewer from './components/SiteViewer';
+import ResizablePanels from './components/ResizablePanels';
+import ResizableBottom from './components/ResizableBottom';
 import {
   createRecentTracksResource,
   createTopArtistsResource,
@@ -119,11 +121,19 @@ const App: Component = () => {
       </div>
 
       <Show when={username()}>
-        <div class='flex flex-1 overflow-hidden'>
-          {/* Left Column - Main Content */}
-          <div class='flex-1 border-r border-border flex flex-col overflow-hidden'>
-            {/* Sticky Header */}
-            <div class='flex-shrink-0 bg-bg'>
+        <ResizableBottom
+          initialBottomHeight={300}
+          minBottomHeight={150}
+          maxBottomHeight={600}
+          topPanel={
+            <ResizablePanels
+              initialLeftWidth={70}
+              minLeftWidth={30}
+              maxLeftWidth={80}
+              leftPanel={
+                <div class='flex flex-col h-full'>
+                  {/* Sticky Header */}
+                  <div class='flex-shrink-0 bg-bg'>
               {/* Tabs */}
               <div class='flex border-b border-border'>
                 <For each={tabs}>
@@ -184,86 +194,86 @@ const App: Component = () => {
                     )}
                   </For>
                 </div>
-              </Show>
-            </div>
+                    </Show>
+                  </div>
 
-            {/* Content */}
-            <div class='flex-1 overflow-y-auto'>
-              <Switch>
-              <Match when={currentView() === 'recent'}>
-                <div>
-                  <Switch>
-                    <Match when={recentViewType() === 'tracks'}>
-                      <TrackList
-                        tracks={recentTracks.tracks()}
-                        isLoading={recentTracks.isLoading()}
-                        error={recentTracks.error()}
-                        onArtistClick={handleArtistClick}
-                      />
-                    </Match>
-                    <Match when={recentViewType() === 'albums'}>
-                      <AlbumList
-                        albums={recentAlbums()}
-                        tracks={recentTracks.tracks()}
-                        isLoading={recentTracks.isLoading()}
-                        error={recentTracks.error()}
-                        onArtistClick={handleArtistClick}
-                      />
-                    </Match>
-                    <Match when={recentViewType() === 'artists'}>
-                      <RecentArtistList
-                        artists={recentArtists()}
-                        tracks={recentTracks.tracks()}
-                        isLoading={recentTracks.isLoading()}
-                        error={recentTracks.error()}
-                        onArtistClick={handleArtistClick}
-                      />
-                    </Match>
-                  </Switch>
-                  <Show
-                    when={
-                      recentViewType() === 'tracks' &&
-                      !recentTracks.isLoading() &&
-                      parseInt(recentTracks.currentPage().toString()) <
-                        parseInt(recentTracks.totalPages())
-                    }>
-                    <div class='p-4 text-center border-t border-border'>
-                      <button
-                        onClick={() => recentTracks.loadMore()}
-                        class='text-xs btn'>
-                        Load More
-                      </button>
-                    </div>
-                  </Show>
+                  {/* Content */}
+                  <div class='flex-1 overflow-y-auto'>
+                    <Switch>
+                <Match when={currentView() === 'recent'}>
+                  <div>
+                    <Switch>
+                      <Match when={recentViewType() === 'tracks'}>
+                        <TrackList
+                          tracks={recentTracks.tracks()}
+                          isLoading={recentTracks.isLoading()}
+                          error={recentTracks.error()}
+                          onArtistClick={handleArtistClick}
+                        />
+                      </Match>
+                      <Match when={recentViewType() === 'albums'}>
+                        <AlbumList
+                          albums={recentAlbums()}
+                          tracks={recentTracks.tracks()}
+                          isLoading={recentTracks.isLoading()}
+                          error={recentTracks.error()}
+                          onArtistClick={handleArtistClick}
+                        />
+                      </Match>
+                      <Match when={recentViewType() === 'artists'}>
+                        <RecentArtistList
+                          artists={recentArtists()}
+                          tracks={recentTracks.tracks()}
+                          isLoading={recentTracks.isLoading()}
+                          error={recentTracks.error()}
+                          onArtistClick={handleArtistClick}
+                        />
+                      </Match>
+                    </Switch>
+                    <Show
+                      when={
+                        recentViewType() === 'tracks' &&
+                        !recentTracks.isLoading() &&
+                        parseInt(recentTracks.currentPage().toString()) <
+                          parseInt(recentTracks.totalPages())
+                      }>
+                      <div class='p-4 text-center border-t border-border'>
+                        <button
+                          onClick={() => recentTracks.loadMore()}
+                          class='text-xs btn'>
+                          Load More
+                        </button>
+                      </div>
+                    </Show>
+                  </div>
+                </Match>
+
+                <Match when={currentView() === 'top'}>
+                  <div class='p-2'>
+                    <ArtistList
+                      artists={topArtists.artists()}
+                      isLoading={topArtists.isLoading()}
+                      error={topArtists.error()}
+                      onArtistClick={handleArtistClick}
+                      showPlaycount={true}
+                    />
+                  </div>
+                      </Match>
+                    </Switch>
+                  </div>
                 </div>
-              </Match>
-
-              <Match when={currentView() === 'top'}>
-                <div class='p-2'>
-                  <ArtistList
-                    artists={topArtists.artists()}
-                    isLoading={topArtists.isLoading()}
-                    error={topArtists.error()}
-                    onArtistClick={handleArtistClick}
-                    showPlaycount={true}
-                  />
-                </div>
-              </Match>
-              </Switch>
-            </div>
-          </div>
-
-          {/* Right Column - Similar Artists */}
-          <div class='w-96 flex flex-col overflow-hidden'>
-            <div class='flex-shrink-0 bg-bg p-4 border-b border-border'>
+              }
+              rightPanel={
+                <div class='flex flex-col h-full'>
+                  <div class='flex-shrink-0 bg-bg p-4 border-b border-border'>
               <h2 class='text-sm font-medium'>Similar Artists</h2>
               <Show when={selectedArtist()}>
                 <div class='mt-1 text-xs text-fg-muted'>
                   to {selectedArtist()}
                 </div>
-              </Show>
-            </div>
-            <div class='flex-1 overflow-y-auto p-2'>
+                    </Show>
+                  </div>
+                  <div class='flex-1 overflow-y-auto p-2'>
               <Show
                 when={selectedArtist()}
                 fallback={
@@ -278,24 +288,31 @@ const App: Component = () => {
                   onArtistClick={handleArtistClick}
                   showMatch={true}
                 />
-              </Show>
-            </div>
-          </div>
-        </div>
+                    </Show>
+                  </div>
+                </div>
+              }
+            />
+          }
+          bottomPanel={<SiteViewer sites={musicSites} />}
+        />
       </Show>
 
       <Show when={!username()}>
-        <div class='flex-1 flex items-center justify-center'>
-          <div class='text-xs text-center text-fg-muted'>
-            Enter a username to start
-          </div>
-        </div>
+        <ResizableBottom
+          initialBottomHeight={300}
+          minBottomHeight={150}
+          maxBottomHeight={600}
+          topPanel={
+            <div class='flex items-center justify-center h-full'>
+              <div class='text-xs text-center text-fg-muted'>
+                Enter a username to start
+              </div>
+            </div>
+          }
+          bottomPanel={<SiteViewer sites={musicSites} />}
+        />
       </Show>
-
-      {/* Bottom Music Sites Section - Always visible */}
-      <div class='flex-shrink-0'>
-        <SiteViewer sites={musicSites} />
-      </div>
     </div>
   );
 };
