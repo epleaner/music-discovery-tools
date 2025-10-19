@@ -100,9 +100,9 @@ const App: Component = () => {
   ];
 
   return (
-    <div class='min-h-screen bg-bg'>
+    <div class='h-screen bg-bg flex flex-col'>
       {/* Header */}
-      <div class='p-4 border-b border-border'>
+      <div class='flex-shrink-0 p-4 border-b border-border'>
         <div class='flex justify-between items-center mb-3'>
           <h1 class='text-base font-medium'>Soundscape</h1>
           <button
@@ -119,11 +119,11 @@ const App: Component = () => {
       </div>
 
       <Show when={username()}>
-        <div class='flex'>
+        <div class='flex flex-1 overflow-hidden'>
           {/* Left Column - Main Content */}
-          <div class='flex-1 border-r border-border'>
+          <div class='flex-1 border-r border-border flex flex-col overflow-hidden'>
             {/* Sticky Header */}
-            <div class='sticky top-0 z-10 bg-bg'>
+            <div class='flex-shrink-0 bg-bg'>
               {/* Tabs */}
               <div class='flex border-b border-border'>
                 <For each={tabs}>
@@ -188,7 +188,8 @@ const App: Component = () => {
             </div>
 
             {/* Content */}
-            <Switch>
+            <div class='flex-1 overflow-y-auto'>
+              <Switch>
               <Match when={currentView() === 'recent'}>
                 <div>
                   <Switch>
@@ -248,12 +249,13 @@ const App: Component = () => {
                   />
                 </div>
               </Match>
-            </Switch>
+              </Switch>
+            </div>
           </div>
 
           {/* Right Column - Similar Artists */}
-          <div class='w-96'>
-            <div class='sticky top-0 z-10 bg-bg p-4 border-b border-border'>
+          <div class='w-96 flex flex-col overflow-hidden'>
+            <div class='flex-shrink-0 bg-bg p-4 border-b border-border'>
               <h2 class='text-sm font-medium'>Similar Artists</h2>
               <Show when={selectedArtist()}>
                 <div class='mt-1 text-xs text-fg-muted'>
@@ -261,7 +263,7 @@ const App: Component = () => {
                 </div>
               </Show>
             </div>
-            <div class='p-2'>
+            <div class='flex-1 overflow-y-auto p-2'>
               <Show
                 when={selectedArtist()}
                 fallback={
@@ -283,13 +285,17 @@ const App: Component = () => {
       </Show>
 
       <Show when={!username()}>
-        <div class='py-12 text-xs text-center text-fg-muted'>
-          Enter a username to start
+        <div class='flex-1 flex items-center justify-center'>
+          <div class='text-xs text-center text-fg-muted'>
+            Enter a username to start
+          </div>
         </div>
       </Show>
 
-      {/* Bottom Music Sites Section */}
-      <SiteViewer sites={musicSites} />
+      {/* Bottom Music Sites Section - Always visible */}
+      <div class='flex-shrink-0'>
+        <SiteViewer sites={musicSites} />
+      </div>
     </div>
   );
 };
