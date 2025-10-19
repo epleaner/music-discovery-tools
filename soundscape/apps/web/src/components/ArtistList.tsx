@@ -12,13 +12,6 @@ interface ArtistListProps {
 }
 
 const ArtistList: Component<ArtistListProps> = (props) => {
-  const getImageUrl = (artist: Artist | SimilarArtist) => {
-    const image = artist.image?.find(
-      (img) => img.size === 'small' || img.size === 'medium'
-    );
-    return image?.['#text'] || '';
-  };
-
   const isArtist = (artist: Artist | SimilarArtist): artist is Artist => {
     return 'playcount' in artist;
   };
@@ -40,7 +33,7 @@ const ArtistList: Component<ArtistListProps> = (props) => {
   return (
     <div>
       <Show when={props.error}>
-        <div class='p-2 mb-2 text-xs bg-bg-muted border border-border'>
+        <div class='p-2 mb-2 text-xs border bg-bg-muted border-border'>
           {props.error?.message}
         </div>
       </Show>
@@ -53,24 +46,17 @@ const ArtistList: Component<ArtistListProps> = (props) => {
         <For each={props.artists}>
           {(artist) => (
             <div
-              class='flex items-center gap-2 p-2 transition-colors cursor-pointer bg-bg hover:bg-bg-subtle'
+              class='flex gap-2 items-center p-2 transition-colors cursor-pointer bg-bg hover:bg-bg-subtle'
               onClick={() => props.onArtistClick?.(artist.name)}>
-              <Show when={getImageUrl(artist)}>
-                <img
-                  src={getImageUrl(artist)}
-                  alt={artist.name}
-                  class='w-8 h-8'
-                />
-              </Show>
               <div class='flex-1 min-w-0'>
-                <div class='flex items-center gap-2'>
+                <div class='flex gap-2 items-center'>
                   <div class='text-sm truncate'>{artist.name}</div>
                   <a
                     href={getRYMArtistUrl(artist.name)}
                     target='_blank'
                     rel='noopener noreferrer'
                     onClick={(e) => e.stopPropagation()}
-                    class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'
+                    class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
                     title='View on RateYourMusic'>
                     rym
                   </a>

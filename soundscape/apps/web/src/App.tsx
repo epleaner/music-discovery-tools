@@ -102,11 +102,10 @@ const App: Component = () => {
   ];
 
   return (
-    <div class='h-screen bg-bg flex flex-col'>
+    <div class='flex flex-col h-screen bg-bg'>
       {/* Header */}
       <div class='flex-shrink-0 p-4 border-b border-border'>
-        <div class='flex justify-between items-center mb-3'>
-          <h1 class='text-base font-medium'>Soundscape</h1>
+        <div class='flex justify-end items-center mb-3'>
           <button
             onClick={toggleTheme}
             class='text-sm transition-colors text-fg-subtle hover:text-fg'
@@ -201,7 +200,7 @@ const App: Component = () => {
                   </div>
 
                   {/* Content */}
-                  <div class='flex-1 overflow-y-auto'>
+                  <div class='overflow-y-auto flex-1'>
                     <Switch>
                       <Match when={currentView() === 'recent'}>
                         <div>
@@ -268,7 +267,7 @@ const App: Component = () => {
               }
               rightPanel={
                 <div class='flex flex-col h-full'>
-                  <div class='flex-shrink-0 bg-bg p-4 border-b border-border'>
+                  <div class='flex-shrink-0 p-4 border-b bg-bg border-border'>
                     <h2 class='text-sm font-medium'>Similar Artists</h2>
                     <Show when={selectedArtist()}>
                       <div class='mt-1 text-xs text-fg-muted'>
@@ -276,7 +275,7 @@ const App: Component = () => {
                       </div>
                     </Show>
                   </div>
-                  <div class='flex-1 overflow-y-auto p-2'>
+                  <div class='overflow-y-auto flex-1 p-2'>
                     <Show
                       when={selectedArtist()}
                       fallback={
@@ -307,7 +306,7 @@ const App: Component = () => {
           minBottomHeight={150}
           maxBottomHeight={600}
           topPanel={
-            <div class='flex items-center justify-center h-full'>
+            <div class='flex justify-center items-center h-full'>
               <div class='text-xs text-center text-fg-muted'>
                 Enter a username to start
               </div>
