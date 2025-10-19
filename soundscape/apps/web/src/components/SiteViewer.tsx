@@ -95,83 +95,95 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
         </button>
       </div>
 
-      {/* Content */}
+      {/* Content - All tabs stay mounted, visibility toggled with CSS */}
       <div class='relative flex-1 overflow-hidden'>
         <For each={props.sites}>
           {(site, index) => (
-            <Show when={activeTab() === index()}>
-              <Show
-                when={editingTab() === index()}
-                fallback={
-                  <Show
-                    when={site.url}
-                    fallback={
-                      <div class='flex flex-col items-center justify-center h-full p-8 gap-4'>
-                        <div class='text-xs text-center text-fg-muted'>
-                          No URL configured for this tab
-                        </div>
-                        <button
-                          onClick={() => startEditing(index())}
-                          class='btn-secondary'>
-                          Configure Tab
-                        </button>
-                      </div>
-                    }>
-                    <div class='relative h-full'>
-                      <iframe
-                        src={site.url}
-                        class='w-full h-full border-0'
-                        title={site.name}
-                        sandbox='allow-same-origin allow-scripts allow-popups allow-forms'
-                      />
-                      <button
-                        onClick={() => startEditing(index())}
-                        class='absolute top-2 right-2 px-2 py-1 text-xs bg-bg border border-border hover:bg-bg-subtle transition-colors'
-                        title='Edit tab'>
-                        Edit
-                      </button>
-                    </div>
-                  </Show>
-                }>
-                {/* Edit Form */}
-                <div class='flex flex-col items-center justify-center h-full p-8'>
-                  <div class='w-full max-w-md space-y-4'>
-                    <div>
-                      <label class='block mb-1 text-xs text-fg-muted'>
-                        Tab Name
-                      </label>
-                      <input
-                        type='text'
-                        value={editName()}
-                        onInput={(e) => setEditName(e.currentTarget.value)}
-                        placeholder='Enter tab name...'
-                        class='w-full input'
-                      />
-                    </div>
-                    <div>
-                      <label class='block mb-1 text-xs text-fg-muted'>
-                        URL
-                      </label>
-                      <input
-                        type='url'
-                        value={editUrl()}
-                        onInput={(e) => setEditUrl(e.currentTarget.value)}
-                        placeholder='https://example.com'
-                        class='w-full input'
-                      />
-                    </div>
-                    <div class='flex gap-2'>
-                      <button onClick={saveEdit} class='flex-1 btn-primary'>
-                        Save
-                      </button>
-                      <button onClick={cancelEdit} class='flex-1 btn-secondary'>
-                        Cancel
-                      </button>
-                    </div>
+            <>
+              {/* Edit Form */}
+              <div
+                class='absolute inset-0 flex flex-col items-center justify-center p-8 bg-bg'
+                style={{
+                  display: editingTab() === index() ? 'flex' : 'none',
+                }}>
+                <div class='w-full max-w-md space-y-4'>
+                  <div>
+                    <label class='block mb-1 text-xs text-fg-muted'>
+                      Tab Name
+                    </label>
+                    <input
+                      type='text'
+                      value={editName()}
+                      onInput={(e) => setEditName(e.currentTarget.value)}
+                      placeholder='Enter tab name...'
+                      class='w-full input'
+                      autofocus={editingTab() === index()}
+                    />
+                  </div>
+                  <div>
+                    <label class='block mb-1 text-xs text-fg-muted'>URL</label>
+                    <input
+                      type='url'
+                      value={editUrl()}
+                      onInput={(e) => setEditUrl(e.currentTarget.value)}
+                      placeholder='https://example.com'
+                      class='w-full input'
+                    />
+                  </div>
+                  <div class='flex gap-2'>
+                    <button onClick={saveEdit} class='flex-1 btn-primary'>
+                      Save
+                    </button>
+                    <button onClick={cancelEdit} class='flex-1 btn-secondary'>
+                      Cancel
+                    </button>
                   </div>
                 </div>
+              </div>
+
+              {/* Empty state */}
+              <Show when={!site.url && editingTab() !== index()}>
+                <div
+                  class='absolute inset-0 flex flex-col items-center justify-center p-8 gap-4 bg-bg'
+                  style={{
+                    display: activeTab() === index() ? 'flex' : 'none',
+                  }}>
+                  <div class='text-xs text-center text-fg-muted'>
+                    No URL configured for this tab
+                  </div>
+                  <button
+                    onClick={() => startEditing(index())}
+                    class='btn-secondary'>
+                    Configure Tab
+                  </button>
+                </div>
               </Show>
-            </Show>
+
+              {/* Iframe content */}
+              <Show when={site.url}>
+                <div
+                  class='absolute inset-0'
+                  style={{
+                    display:
+                      activeTab() === index() && editingTab() !== index()
+                        ? 'block'
+                        : 'none',
+                  }}>
+                  <iframe
+                    src={site.url}
+                    class='w-full h-full border-0'
+                    title={site.name}
+                    sandbox='allow-same-origin allow-scripts allow-popups allow-forms'
+                  />
+                  <button
+                    onClick={() => startEditing(index())}
+                    class='absolute top-2 right-2 px-2 py-1 text-xs bg-bg border border-border hover:bg-bg-subtle transition-colors'
+                    title='Edit tab'>
+                    Edit
+                  </button>
+                </div>
+              </Show>
+            </>
           )}
         </For>
       </div>
