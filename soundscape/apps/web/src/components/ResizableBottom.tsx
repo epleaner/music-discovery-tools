@@ -49,9 +49,11 @@ const ResizableBottom: Component<ResizableBottomProps> = (props) => {
   });
 
   return (
-    <div ref={containerRef} class='flex-1 flex flex-col overflow-hidden'>
+    <div ref={containerRef} class='h-full flex flex-col'>
       {/* Top Panel */}
-      <div class='flex-1 overflow-hidden' style={{ 'min-height': '0' }}>
+      <div
+        class='overflow-hidden'
+        style={{ height: `calc(100% - ${bottomHeight()}px - 4px)` }}>
         {props.topPanel}
       </div>
 
@@ -64,9 +66,7 @@ const ResizableBottom: Component<ResizableBottomProps> = (props) => {
       />
 
       {/* Bottom Panel */}
-      <div
-        class='flex-shrink-0 overflow-hidden'
-        style={{ height: `${bottomHeight()}px` }}>
+      <div class='overflow-hidden' style={{ height: `${bottomHeight()}px` }}>
         {props.bottomPanel}
       </div>
     </div>
