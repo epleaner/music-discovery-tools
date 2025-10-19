@@ -27,7 +27,7 @@ const UsernameInput: Component<UsernameInputProps> = (props) => {
         placeholder='Last.fm username'
         class='flex-1 input'
       />
-      <button type='submit' class='whitespace-nowrap btn btn-primary'>
+      <button type='submit' class='btn-secondary'>
         Load
       </button>
     </form>

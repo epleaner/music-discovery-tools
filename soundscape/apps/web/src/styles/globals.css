@@ -88,6 +88,10 @@
     @apply hover:bg-accent-hover;
   }
 
+  .btn-secondary {
+    @apply px-3 py-2 text-xs font-medium border border-border hover:bg-bg-subtle transition-colors whitespace-nowrap;
+  }
+
   .input {
     @apply px-3 py-1.5 text-sm bg-bg border border-border rounded;
     @apply placeholder:text-fg-subtle;
