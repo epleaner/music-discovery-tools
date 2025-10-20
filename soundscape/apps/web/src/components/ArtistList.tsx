@@ -12,9 +12,6 @@ interface ArtistListProps {
 }
 
 const ArtistList: Component<ArtistListProps> = (props) => {
-  const [expandedArtistName, setExpandedArtistName] = createSignal<
-    string | null
-  >(null);
   const [artistInfoCache, setArtistInfoCache] = createSignal<
     Record<string, ArtistInfo>
   >({});
@@ -30,15 +27,6 @@ const ArtistList: Component<ArtistListProps> = (props) => {
       } catch (err) {
         console.error('Failed to fetch artist info:', err);
       }
-    }
-  };
-
-  const toggleArtistInfo = (artistName: string, e: MouseEvent) => {
-    e.stopPropagation();
-    if (expandedArtistName() === artistName) {
-      setExpandedArtistName(null);
-    } else {
-      setExpandedArtistName(artistName);
     }
   };
 
@@ -80,7 +68,6 @@ const ArtistList: Component<ArtistListProps> = (props) => {
               fetchArtistInfoForName(artist.name);
             });
 
-            const isExpanded = () => expandedArtistName() === artist.name;
             const info = () => artistInfoCache()[artist.name];
 
             return (
@@ -132,18 +119,7 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                       </Show>
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => toggleArtistInfo(artist.name, e)}
-                    class='text-xs text-fg-subtle hover:text-fg px-1'
-                    title='Toggle artist info'>
-                    {isExpanded() ? '−' : 'ⓘ'}
-                  </button>
                 </div>
-                <Show when={isExpanded() && info()?.ontour === '1'}>
-                  <div class='px-4 py-2 bg-bg-subtle text-xs'>
-                    <div class='text-fg'>Currently on tour</div>
-                  </div>
-                </Show>
               </div>
             );
           }}

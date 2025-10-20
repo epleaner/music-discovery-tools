@@ -1,4 +1,4 @@
-import { Component, For, Show, createSignal } from 'solid-js';
+import { Component, For, Show, createSignal, createEffect } from 'solid-js';
 import type { RecentAlbum, Track, AlbumInfo } from '@soundscape/types';
 import { getRYMAlbumUrl, fetchAlbumInfo } from '@soundscape/utils';
 
@@ -14,30 +14,14 @@ const AlbumList: Component<AlbumListProps> = (props) => {
   const [expandedAlbums, setExpandedAlbums] = createSignal<Set<string>>(
     new Set()
   );
-  const [albumInfoExpanded, setAlbumInfoExpanded] = createSignal<Set<string>>(
-    new Set()
-  );
   const [albumInfoCache, setAlbumInfoCache] = createSignal<
     Record<string, AlbumInfo>
   >({});
 
-  const toggleAlbumInfo = async (album: RecentAlbum, e: MouseEvent) => {
-    e.stopPropagation();
-    const key = getAlbumKey(album);
-
-    setAlbumInfoExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-
+  const fetchAlbumInfoForKey = async (key: string, artistName: string, albumName: string) => {
     if (!albumInfoCache()[key]) {
       try {
-        const response = await fetchAlbumInfo(album.artist, album.name);
+        const response = await fetchAlbumInfo(artistName, albumName);
         setAlbumInfoCache({ ...albumInfoCache(), [key]: response.album });
       } catch (err) {
         console.error('Failed to fetch album info:', err);
@@ -114,8 +98,15 @@ const AlbumList: Component<AlbumListProps> = (props) => {
       <For each={props.albums}>
         {(album) => {
           const albumKey = getAlbumKey(album);
+          
+          // Fetch album info automatically
+          createEffect(() => {
+            fetchAlbumInfoForKey(albumKey, album.artist, album.name);
+          });
+
           const expanded = () => isExpanded(albumKey);
           const albumTracks = () => getTracksForAlbum(album);
+          const info = () => albumInfoCache()[albumKey];
 
           return (
             <div class='border-b border-border'>
@@ -157,6 +148,18 @@ const AlbumList: Component<AlbumListProps> = (props) => {
                       </button>
                     </Show>
                   </div>
+                  <Show when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
+                    <div class='flex gap-1 text-xs text-fg-muted'>
+                      <For each={info()!.tags.tag.slice(0, 3)}>
+                        {(tag, index) => (
+                          <span>
+                            {tag.name}
+                            {index() < Math.min(2, info()!.tags.tag.length - 1) ? ',' : ''}
+                          </span>
+                        )}
+                      </For>
+                    </div>
+                  </Show>
                 </div>
                 <div class='flex items-center gap-2'>
                   <div class='text-xs text-fg-subtle'>
@@ -169,12 +172,6 @@ const AlbumList: Component<AlbumListProps> = (props) => {
                   <div class='text-xs text-fg-subtle'>
                     {expanded() ? '−' : '+'}
                   </div>
-                  <button
-                    onClick={(e) => toggleAlbumInfo(album, e)}
-                    class='text-xs text-fg-subtle hover:text-fg px-1'
-                    title='Toggle album info'>
-                    {albumInfoExpanded().has(albumKey) ? '−' : 'ⓘ'}
-                  </button>
                 </div>
               </div>
               <Show when={expanded()}>
@@ -191,29 +188,6 @@ const AlbumList: Component<AlbumListProps> = (props) => {
                       </div>
                     )}
                   </For>
-                </div>
-              </Show>
-              <Show
-                when={
-                  albumInfoExpanded().has(albumKey) &&
-                  albumInfoCache()[albumKey]
-                }>
-                <div class='px-4 py-2 bg-bg-subtle border-t border-border text-xs'>
-                  <Show
-                    when={
-                      albumInfoCache()[albumKey]?.tags?.tag &&
-                      albumInfoCache()[albumKey]!.tags.tag.length > 0
-                    }>
-                    <div class='flex gap-1 flex-wrap'>
-                      <span class='text-fg-muted'>Tags:</span>
-                      <For
-                        each={albumInfoCache()[albumKey]!.tags.tag.slice(0, 5)}>
-                        {(tag) => (
-                          <span class='text-fg-subtle'>{tag.name}</span>
-                        )}
-                      </For>
-                    </div>
-                  </Show>
                 </div>
               </Show>
             </div>

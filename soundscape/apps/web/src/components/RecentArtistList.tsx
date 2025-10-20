@@ -14,9 +14,6 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
   const [expandedArtists, setExpandedArtists] = createSignal<Set<string>>(
     new Set()
   );
-  const [artistInfoExpanded, setArtistInfoExpanded] = createSignal<Set<string>>(
-    new Set()
-  );
   const [artistInfoCache, setArtistInfoCache] = createSignal<
     Record<string, ArtistInfo>
   >({});
@@ -33,20 +30,6 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
         console.error('Failed to fetch artist info:', err);
       }
     }
-  };
-
-  const toggleArtistInfo = (artistName: string, e: MouseEvent) => {
-    e.stopPropagation();
-
-    setArtistInfoExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(artistName)) {
-        next.delete(artistName);
-      } else {
-        next.add(artistName);
-      }
-      return next;
-    });
   };
 
   const getImageUrl = (artist: RecentArtist) => {
@@ -168,16 +151,8 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                       </Show>
                     </div>
                   </div>
-                  <div class='flex items-center gap-2'>
-                    <div class='text-xs text-fg-subtle'>
-                      {expanded() ? '−' : '+'}
-                    </div>
-                    <button
-                      onClick={(e) => toggleArtistInfo(artist.name, e)}
-                      class='text-xs text-fg-subtle hover:text-fg px-1'
-                      title='Toggle artist info'>
-                      {artistInfoExpanded().has(artist.name) ? '−' : 'ⓘ'}
-                    </button>
+                  <div class='text-xs text-fg-subtle'>
+                    {expanded() ? '−' : '+'}
                   </div>
                 </div>
                 <Show when={expanded()}>
@@ -207,15 +182,6 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                         View Similar Artists →
                       </button>
                     </Show>
-                  </div>
-                </Show>
-                <Show
-                  when={
-                    artistInfoExpanded().has(artist.name) &&
-                    artistInfoCache()[artist.name]?.ontour === '1'
-                  }>
-                  <div class='px-4 py-2 bg-bg-subtle border-t border-border text-xs'>
-                    <div class='text-fg'>Currently on tour</div>
                   </div>
                 </Show>
               </div>
