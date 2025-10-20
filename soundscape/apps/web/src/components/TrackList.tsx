@@ -1,4 +1,4 @@
-import { Component, For, Show, createSignal, createEffect } from 'solid-js';
+import { Component, For, Show, createSignal } from 'solid-js';
 import type { Track, TrackInfo } from '@soundscape/types';
 import { fetchTrackInfo } from '@soundscape/utils';
 
@@ -13,19 +13,37 @@ const TrackList: Component<TrackListProps> = (props) => {
   const [trackInfoCache, setTrackInfoCache] = createSignal<
     Record<string, TrackInfo>
   >({});
+  const [loadingInfo, setLoadingInfo] = createSignal<Set<string>>(new Set());
 
   const getTrackKey = (track: Track) =>
     `${track.artist['#text']}-${track.name}`;
 
-  const fetchTrackInfoForKey = async (key: string, artistName: string, trackName: string) => {
+  const fetchTrackInfoForKey = async (
+    key: string,
+    artistName: string,
+    trackName: string
+  ) => {
     if (!trackInfoCache()[key]) {
+      setLoadingInfo((prev) => new Set(prev).add(key));
       try {
         const response = await fetchTrackInfo(artistName, trackName);
         setTrackInfoCache({ ...trackInfoCache(), [key]: response.track });
       } catch (err) {
         console.error('Failed to fetch track info:', err);
+      } finally {
+        setLoadingInfo((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
       }
     }
+  };
+
+  const handleInfoClick = (track: Track, e: MouseEvent) => {
+    e.stopPropagation();
+    const key = getTrackKey(track);
+    fetchTrackInfoForKey(key, track.artist['#text'], track.name);
   };
 
   const getImageUrl = (track: Track) => {
@@ -62,13 +80,8 @@ const TrackList: Component<TrackListProps> = (props) => {
       <For each={props.tracks}>
         {(track) => {
           const key = getTrackKey(track);
-          
-          // Fetch track info automatically
-          createEffect(() => {
-            fetchTrackInfoForKey(key, track.artist['#text'], track.name);
-          });
-
           const info = () => trackInfoCache()[key];
+          const isLoading = () => loadingInfo().has(key);
 
           return (
             <div class='flex items-center gap-2 p-2 transition-colors border-b border-border hover:bg-bg-subtle'>
@@ -96,13 +109,16 @@ const TrackList: Component<TrackListProps> = (props) => {
                     </button>
                   </Show>
                 </div>
-                <Show when={info()?.toptags?.tag && info()!.toptags.tag.length > 0}>
+                <Show
+                  when={info()?.toptags?.tag && info()!.toptags.tag.length > 0}>
                   <div class='flex gap-1 text-xs text-fg-muted'>
                     <For each={info()!.toptags.tag.slice(0, 3)}>
                       {(tag, index) => (
                         <span>
                           {tag.name}
-                          {index() < Math.min(2, info()!.toptags.tag.length - 1) ? ',' : ''}
+                          {index() < Math.min(2, info()!.toptags.tag.length - 1)
+                            ? ','
+                            : ''}
                         </span>
                       )}
                     </For>
@@ -112,6 +128,12 @@ const TrackList: Component<TrackListProps> = (props) => {
               <div class='text-xs text-fg-subtle whitespace-nowrap'>
                 {formatDate(track)}
               </div>
+              <button
+                onClick={(e) => handleInfoClick(track, e)}
+                class='text-xs text-fg-subtle hover:text-fg px-1'
+                title='Fetch track info'>
+                {isLoading() ? '◐' : info() ? '✓' : 'ⓘ'}
+              </button>
             </div>
           );
         }}

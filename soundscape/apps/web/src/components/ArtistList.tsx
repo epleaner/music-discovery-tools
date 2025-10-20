@@ -1,4 +1,4 @@
-import { Component, For, Show, createSignal, createEffect } from 'solid-js';
+import { Component, For, Show, createSignal } from 'solid-js';
 import type { Artist, SimilarArtist, ArtistInfo } from '@soundscape/types';
 import { getRYMArtistUrl, fetchArtistInfo } from '@soundscape/utils';
 
@@ -15,9 +15,11 @@ const ArtistList: Component<ArtistListProps> = (props) => {
   const [artistInfoCache, setArtistInfoCache] = createSignal<
     Record<string, ArtistInfo>
   >({});
+  const [loadingInfo, setLoadingInfo] = createSignal<Set<string>>(new Set());
 
   const fetchArtistInfoForName = async (artistName: string) => {
     if (!artistInfoCache()[artistName]) {
+      setLoadingInfo((prev) => new Set(prev).add(artistName));
       try {
         const response = await fetchArtistInfo(artistName);
         setArtistInfoCache({
@@ -26,8 +28,19 @@ const ArtistList: Component<ArtistListProps> = (props) => {
         });
       } catch (err) {
         console.error('Failed to fetch artist info:', err);
+      } finally {
+        setLoadingInfo((prev) => {
+          const next = new Set(prev);
+          next.delete(artistName);
+          return next;
+        });
       }
     }
+  };
+
+  const handleInfoClick = (artistName: string, e: MouseEvent) => {
+    e.stopPropagation();
+    fetchArtistInfoForName(artistName);
   };
 
   const isArtist = (artist: Artist | SimilarArtist): artist is Artist => {
@@ -63,12 +76,8 @@ const ArtistList: Component<ArtistListProps> = (props) => {
       <div class='grid grid-cols-2 gap-px bg-border'>
         <For each={props.artists}>
           {(artist) => {
-            // Fetch artist info automatically
-            createEffect(() => {
-              fetchArtistInfoForName(artist.name);
-            });
-
             const info = () => artistInfoCache()[artist.name];
+            const isLoading = () => loadingInfo().has(artist.name);
 
             return (
               <div class='bg-bg'>
@@ -119,6 +128,12 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                       </Show>
                     </div>
                   </div>
+                  <button
+                    onClick={(e) => handleInfoClick(artist.name, e)}
+                    class='text-xs text-fg-subtle hover:text-fg px-1'
+                    title='Fetch artist info'>
+                    {isLoading() ? '◐' : info() ? '✓' : 'ⓘ'}
+                  </button>
                 </div>
               </div>
             );

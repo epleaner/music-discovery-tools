@@ -1,4 +1,4 @@
-import { Component, Show, For, createSignal, createEffect } from 'solid-js';
+import { Component, Show, For, createSignal } from 'solid-js';
 import type { TopAlbum, AlbumInfo } from '@soundscape/types';
 import { getRYMAlbumUrl, fetchAlbumInfo } from '@soundscape/utils';
 
@@ -13,18 +13,36 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
   const [albumInfoCache, setAlbumInfoCache] = createSignal<
     Record<string, AlbumInfo>
   >({});
+  const [loadingInfo, setLoadingInfo] = createSignal<Set<string>>(new Set());
 
   const getAlbumKey = (album: TopAlbum) => `${album.artist.name}-${album.name}`;
 
-  const fetchAlbumInfoForKey = async (key: string, artistName: string, albumName: string) => {
+  const fetchAlbumInfoForKey = async (
+    key: string,
+    artistName: string,
+    albumName: string
+  ) => {
     if (!albumInfoCache()[key]) {
+      setLoadingInfo((prev) => new Set(prev).add(key));
       try {
         const response = await fetchAlbumInfo(artistName, albumName);
         setAlbumInfoCache({ ...albumInfoCache(), [key]: response.album });
       } catch (err) {
         console.error('Failed to fetch album info:', err);
+      } finally {
+        setLoadingInfo((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
       }
     }
+  };
+
+  const handleInfoClick = (album: TopAlbum, e: MouseEvent) => {
+    e.stopPropagation();
+    const key = getAlbumKey(album);
+    fetchAlbumInfoForKey(key, album.artist.name, album.name);
   };
 
   return (
@@ -48,13 +66,8 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
         <For each={props.albums}>
           {(album) => {
             const key = getAlbumKey(album);
-            
-            // Fetch album info automatically
-            createEffect(() => {
-              fetchAlbumInfoForKey(key, album.artist.name, album.name);
-            });
-
             const info = () => albumInfoCache()[key];
+            const isLoading = () => loadingInfo().has(key);
 
             return (
               <div class='flex items-center gap-2 p-2 text-xs border-b border-border hover:bg-bg-subtle'>
@@ -89,7 +102,9 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
                         {(tag, index) => (
                           <span>
                             {tag.name}
-                            {index() < Math.min(2, info()!.tags.tag.length - 1) ? ',' : ''}
+                            {index() < Math.min(2, info()!.tags.tag.length - 1)
+                              ? ','
+                              : ''}
                           </span>
                         )}
                       </For>
@@ -99,6 +114,12 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
                 <div class='flex-shrink-0 text-fg-subtle'>
                   {album.playcount} plays
                 </div>
+                <button
+                  onClick={(e) => handleInfoClick(album, e)}
+                  class='text-xs text-fg-subtle hover:text-fg px-1'
+                  title='Fetch album info'>
+                  {isLoading() ? '◐' : info() ? '✓' : 'ⓘ'}
+                </button>
               </div>
             );
           }}
