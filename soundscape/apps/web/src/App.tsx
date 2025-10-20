@@ -495,14 +495,23 @@ const App: Component = () => {
               }
               rightPanel={
                 <div class='flex flex-col h-full'>
-                  <div class='flex-shrink-0 p-2 border-b bg-bg border-border'>
-                    <h2 class='text-sm font-medium'>Similar Artists</h2>
-                    <Show when={selectedArtist()}>
-                      <div class='mt-1 text-xs text-fg-muted'>
-                        {selectedArtist()}
+                  <Show when={selectedArtist()}>
+                    <div class='flex flex-shrink-0 justify-between py-2 border-b bg-bg border-border'>
+                      <h2 class='text-sm font-medium'>{selectedArtist()}</h2>
+                      <div class='flex-shrink-0'>
+                        <EveryNoiseViewer
+                          genre={everyNoiseGenre.genre()}
+                          isLoading={everyNoiseGenre.isLoading()}
+                          artistName={selectedArtist()}
+                        />
                       </div>
-                    </Show>
-                  </div>
+                    </div>
+                    <div class='flex-shrink-0 py-2 border-b bg-bg border-border'>
+                      <div class='mt-1 text-xs text-fg-muted'>
+                        Similar Artists
+                      </div>
+                    </div>
+                  </Show>
                   <div class='overflow-y-auto flex-1'>
                     <Show
                       when={selectedArtist()}
@@ -520,15 +529,6 @@ const App: Component = () => {
                       />
                     </Show>
                   </div>
-                  <Show when={selectedArtist()}>
-                    <div class='flex-shrink-0'>
-                      <EveryNoiseViewer
-                        genre={everyNoiseGenre.genre()}
-                        isLoading={everyNoiseGenre.isLoading()}
-                        artistName={selectedArtist()}
-                      />
-                    </div>
-                  </Show>
                 </div>
               }
             />
