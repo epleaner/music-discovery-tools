@@ -17,12 +17,14 @@ import TopAlbumList from './components/TopAlbumList';
 import SiteViewer from './components/SiteViewer';
 import ResizablePanels from './components/ResizablePanels';
 import ResizableBottom from './components/ResizableBottom';
+import EveryNoiseViewer from './components/EveryNoiseViewer';
 import {
   createRecentTracksResource,
   createTopArtistsResource,
   createTopTracksResource,
   createTopAlbumsResource,
   createSimilarArtistsResource,
+  createEveryNoiseResource,
 } from './lib/lastfm-resource';
 import {
   TIME_PERIOD_LABELS,
@@ -98,6 +100,7 @@ const App: Component = () => {
   const topTracks = createTopTracksResource(username, period);
   const topAlbums = createTopAlbumsResource(username, period);
   const similarArtists = createSimilarArtistsResource(selectedArtist);
+  const everyNoiseGenre = createEveryNoiseResource(selectedArtist);
 
   const recentAlbums = createMemo(() =>
     groupTracksByAlbum(recentTracks.tracks())
@@ -517,6 +520,15 @@ const App: Component = () => {
                       />
                     </Show>
                   </div>
+                  <Show when={selectedArtist()}>
+                    <div class='flex-shrink-0'>
+                      <EveryNoiseViewer
+                        genre={everyNoiseGenre.genre()}
+                        isLoading={everyNoiseGenre.isLoading()}
+                        artistName={selectedArtist()}
+                      />
+                    </div>
+                  </Show>
                 </div>
               }
             />
