@@ -376,7 +376,7 @@ const App: Component = () => {
 
                     {/* Period selector for top */}
                     <Show when={currentView() === 'top'}>
-                      <div class='flex overflow-x-auto gap-1 p-2 border-b border-border items-center'>
+                      <div class='flex overflow-x-auto gap-1 items-center p-2 border-b border-border'>
                         <For
                           each={
                             Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]
@@ -399,7 +399,7 @@ const App: Component = () => {
                             topTracks.isLoading() ||
                             topAlbums.isLoading()
                           }>
-                          <div class='ml-1 text-xs text-fg-muted animate-spin'>
+                          <div class='ml-1 text-xs animate-spin text-fg-muted'>
                             ◐
                           </div>
                         </Show>
@@ -495,15 +495,15 @@ const App: Component = () => {
               }
               rightPanel={
                 <div class='flex flex-col h-full'>
-                  <div class='flex-shrink-0 p-4 border-b bg-bg border-border'>
+                  <div class='flex-shrink-0 p-2 border-b bg-bg border-border'>
                     <h2 class='text-sm font-medium'>Similar Artists</h2>
                     <Show when={selectedArtist()}>
                       <div class='mt-1 text-xs text-fg-muted'>
-                        to {selectedArtist()}
+                        {selectedArtist()}
                       </div>
                     </Show>
                   </div>
-                  <div class='overflow-y-auto flex-1 p-2'>
+                  <div class='overflow-y-auto flex-1'>
                     <Show
                       when={selectedArtist()}
                       fallback={

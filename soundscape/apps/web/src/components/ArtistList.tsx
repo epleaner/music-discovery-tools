@@ -83,9 +83,9 @@ const ArtistList: Component<ArtistListProps> = (props) => {
   };
 
   return (
-    <div>
+    <>
       <Show when={props.error}>
-        <div class='p-2 mb-2 text-xs border bg-bg-muted border-border'>
+        <div class='p-2 text-xs border-b bg-bg-muted border-border'>
           {props.error?.message}
         </div>
       </Show>
@@ -94,88 +94,93 @@ const ArtistList: Component<ArtistListProps> = (props) => {
         <div class='py-8 text-xs text-center text-fg-muted'>Loading...</div>
       </Show>
 
-      <div class='grid grid-cols-2 gap-px bg-border'>
-        <For each={props.artists}>
-          {(artist) => {
-            const info = () => artistInfoCache()[artist.name];
-            const isLoading = () => loadingInfo().has(artist.name);
+      <Show when={props.artists.length > 0}>
+        <div class='grid grid-cols-2 gap-px bg-border'>
+          <For each={props.artists}>
+            {(artist) => {
+              const info = () => artistInfoCache()[artist.name];
+              const isLoading = () => loadingInfo().has(artist.name);
 
-            // Check cache immediately and load if available (but don't fetch from API)
-            createEffect(() => {
-              if (!info()) {
-                loadCachedInfoForName(artist.name);
-              }
-            });
+              // Check cache immediately and load if available (but don't fetch from API)
+              createEffect(() => {
+                if (!info()) {
+                  loadCachedInfoForName(artist.name);
+                }
+              });
 
-            return (
-              <div class='bg-bg'>
-                <div
-                  class='flex gap-2 items-center p-2 transition-colors cursor-pointer hover:bg-bg-subtle'
-                  onClick={() => props.onArtistClick?.(artist.name)}>
-                  <div class='flex-1 min-w-0'>
-                    <div class='flex gap-2 items-center'>
-                      <div class='text-sm truncate'>{artist.name}</div>
-                      <a
-                        href={getRYMArtistUrl(artist.name)}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        onClick={(e) => e.stopPropagation()}
-                        class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
-                        title='View on RateYourMusic'>
-                        rym
-                      </a>
+              return (
+                <div class='bg-bg'>
+                  <div
+                    class='flex gap-2 items-center p-2 transition-colors cursor-pointer hover:bg-bg-subtle'
+                    onClick={() => props.onArtistClick?.(artist.name)}>
+                    <div class='flex-1 min-w-0'>
+                      <div class='flex gap-2 items-center'>
+                        <div class='text-sm truncate'>{artist.name}</div>
+                        <a
+                          href={getRYMArtistUrl(artist.name)}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          onClick={(e) => e.stopPropagation()}
+                          class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
+                          title='View on RateYourMusic'>
+                          rym
+                        </a>
+                      </div>
+                      <div class='flex gap-1 items-center text-xs text-fg-muted'>
+                        <Show
+                          when={props.showPlaycount && getPlaycount(artist)}>
+                          <span>
+                            {parseInt(getPlaycount(artist)!).toLocaleString()}{' '}
+                            plays
+                          </span>
+                        </Show>
+                        <Show when={props.showMatch && getMatch(artist)}>
+                          <span>
+                            {Math.round(parseFloat(getMatch(artist)!) * 100)}%
+                            match
+                          </span>
+                        </Show>
+                        <Show
+                          when={
+                            info()?.tags?.tag && info()!.tags.tag.length > 0
+                          }>
+                          <span class='flex gap-1'>
+                            <For each={info()!.tags.tag.slice(0, 3)}>
+                              {(tag, index) => (
+                                <span>
+                                  {tag.name}
+                                  {index() <
+                                  Math.min(2, info()!.tags.tag.length - 1)
+                                    ? ','
+                                    : ''}
+                                </span>
+                              )}
+                            </For>
+                          </span>
+                        </Show>
+                      </div>
                     </div>
-                    <div class='flex gap-1 items-center text-xs text-fg-muted'>
-                      <Show when={props.showPlaycount && getPlaycount(artist)}>
-                        <span>
-                          {parseInt(getPlaycount(artist)!).toLocaleString()}{' '}
-                          plays
-                        </span>
-                      </Show>
-                      <Show when={props.showMatch && getMatch(artist)}>
-                        <span>
-                          {Math.round(parseFloat(getMatch(artist)!) * 100)}%
-                          match
-                        </span>
-                      </Show>
-                      <Show
-                        when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
-                        <span class='flex gap-1'>
-                          <For each={info()!.tags.tag.slice(0, 3)}>
-                            {(tag, index) => (
-                              <span>
-                                {tag.name}
-                                {index() <
-                                Math.min(2, info()!.tags.tag.length - 1)
-                                  ? ','
-                                  : ''}
-                              </span>
-                            )}
-                          </For>
-                        </span>
-                      </Show>
-                    </div>
+                    <Show when={isLoading() || !info()}>
+                      <button
+                        onClick={(e) => handleInfoClick(artist.name, e)}
+                        class='text-xs text-fg-subtle hover:text-fg px-1'
+                        title='Fetch artist info'>
+                        {isLoading() ? '◐' : 'ⓘ'}
+                      </button>
+                    </Show>
                   </div>
-                  <Show when={isLoading() || !info()}>
-                    <button
-                      onClick={(e) => handleInfoClick(artist.name, e)}
-                      class='text-xs text-fg-subtle hover:text-fg px-1'
-                      title='Fetch artist info'>
-                      {isLoading() ? '◐' : 'ⓘ'}
-                    </button>
-                  </Show>
                 </div>
-              </div>
-            );
-          }}
-        </For>
-      </div>
+              );
+            }}
+          </For>
+        </div>
+      </Show>
 
       <Show
         when={props.artists.length === 0 && !props.isLoading && !props.error}>
         <div class='py-8 text-xs text-center text-fg-muted'>No artists</div>
       </Show>
-    </div>
+    </>
   );
 };
 
