@@ -94,7 +94,7 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
             });
 
             return (
-              <div class='flex items-center gap-2 p-2 text-xs border-b border-border hover:bg-bg-subtle'>
+              <div class='flex gap-2 items-center p-2 text-xs border-b border-border hover:bg-bg-subtle'>
                 <div class='flex-1 min-w-0'>
                   <div class='flex gap-1 items-center'>
                     <span class='font-medium truncate'>{album.name}</span>
@@ -135,17 +135,17 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
                     </div>
                   </Show>
                 </div>
-                <div class='flex-shrink-0 text-fg-subtle'>
-                  {album.playcount} plays
-                </div>
                 <Show when={isLoading() || !info()}>
                   <button
                     onClick={(e) => handleInfoClick(album, e)}
-                    class='text-xs text-fg-subtle hover:text-fg px-1'
+                    class='px-1 text-xs text-fg-subtle hover:text-fg'
                     title='Fetch album info'>
                     {isLoading() ? '◐' : 'ⓘ'}
                   </button>
                 </Show>
+                <div class='flex-shrink-0 text-fg-subtle'>
+                  {album.playcount} plays
+                </div>
               </div>
             );
           }}

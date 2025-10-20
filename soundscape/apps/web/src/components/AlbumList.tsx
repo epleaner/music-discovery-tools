@@ -157,7 +157,8 @@ const AlbumList: Component<AlbumListProps> = (props) => {
                           {(tag, index) => (
                             <span>
                               {tag.name}
-                              {index() < Math.min(2, info()!.tags.tag.length - 1)
+                              {index() <
+                              Math.min(2, info()!.tags.tag.length - 1)
                                 ? ','
                                 : ''}
                             </span>
