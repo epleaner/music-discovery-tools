@@ -1,4 +1,4 @@
-import { Component, For, Show, createSignal } from 'solid-js';
+import { Component, For, Show, createSignal, createEffect } from 'solid-js';
 import type { RecentArtist, Track, ArtistInfo } from '@soundscape/types';
 import { getRYMArtistUrl, fetchArtistInfo } from '@soundscape/utils';
 
@@ -21,19 +21,7 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
     Record<string, ArtistInfo>
   >({});
 
-  const toggleArtistInfo = async (artistName: string, e: MouseEvent) => {
-    e.stopPropagation();
-
-    setArtistInfoExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(artistName)) {
-        next.delete(artistName);
-      } else {
-        next.add(artistName);
-      }
-      return next;
-    });
-
+  const fetchArtistInfoForName = async (artistName: string) => {
     if (!artistInfoCache()[artistName]) {
       try {
         const response = await fetchArtistInfo(artistName);
@@ -45,6 +33,20 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
         console.error('Failed to fetch artist info:', err);
       }
     }
+  };
+
+  const toggleArtistInfo = (artistName: string, e: MouseEvent) => {
+    e.stopPropagation();
+
+    setArtistInfoExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(artistName)) {
+        next.delete(artistName);
+      } else {
+        next.add(artistName);
+      }
+      return next;
+    });
   };
 
   const getImageUrl = (artist: RecentArtist) => {
@@ -99,8 +101,14 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
       <div class='space-y-px'>
         <For each={props.artists}>
           {(artist) => {
+            // Fetch artist info automatically
+            createEffect(() => {
+              fetchArtistInfoForName(artist.name);
+            });
+
             const expanded = () => isExpanded(artist.name);
             const artistTracks = () => getTracksForArtist(artist.name);
+            const info = () => artistInfoCache()[artist.name];
 
             return (
               <div class='border-b border-border'>
@@ -137,9 +145,23 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                         </button>
                       </Show>
                     </div>
-                    <div class='text-xs text-fg-muted'>
-                      {artist.trackCount}{' '}
-                      {artist.trackCount === 1 ? 'track' : 'tracks'}
+                    <div class='flex gap-1 items-center text-xs text-fg-muted'>
+                      <span>
+                        {artist.trackCount}{' '}
+                        {artist.trackCount === 1 ? 'track' : 'tracks'}
+                      </span>
+                      <Show when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
+                        <span class='flex gap-1'>
+                          <For each={info()!.tags.tag.slice(0, 3)}>
+                            {(tag, index) => (
+                              <span>
+                                {tag.name}
+                                {index() < Math.min(2, info()!.tags.tag.length - 1) ? ',' : ''}
+                              </span>
+                            )}
+                          </For>
+                        </span>
+                      </Show>
                     </div>
                   </div>
                   <div class='flex items-center gap-2'>

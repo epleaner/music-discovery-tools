@@ -101,27 +101,30 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                         rym
                       </a>
                     </div>
-                    <Show when={props.showPlaycount && getPlaycount(artist)}>
-                      <div class='text-xs text-fg-muted'>
-                        {parseInt(getPlaycount(artist)!).toLocaleString()} plays
-                      </div>
-                    </Show>
-                    <Show when={props.showMatch && getMatch(artist)}>
-                      <div class='text-xs text-fg-muted'>
-                        {Math.round(parseFloat(getMatch(artist)!) * 100)}% match
-                      </div>
-                    </Show>
-                    <Show when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
-                      <div class='flex gap-1 flex-wrap text-xs text-fg-muted'>
-                        <For each={info()!.tags.tag.slice(0, 3)}>
-                          {(tag, index) => (
-                            <span>
-                              {tag.name}{index() < Math.min(2, info()!.tags.tag.length - 1) ? ',' : ''}
-                            </span>
-                          )}
-                        </For>
-                      </div>
-                    </Show>
+                    <div class='flex gap-1 items-center text-xs text-fg-muted'>
+                      <Show when={props.showPlaycount && getPlaycount(artist)}>
+                        <span>
+                          {parseInt(getPlaycount(artist)!).toLocaleString()} plays
+                        </span>
+                      </Show>
+                      <Show when={props.showMatch && getMatch(artist)}>
+                        <span>
+                          {Math.round(parseFloat(getMatch(artist)!) * 100)}% match
+                        </span>
+                      </Show>
+                      <Show when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
+                        <span class='flex gap-1'>
+                          <For each={info()!.tags.tag.slice(0, 3)}>
+                            {(tag, index) => (
+                              <span>
+                                {tag.name}
+                                {index() < Math.min(2, info()!.tags.tag.length - 1) ? ',' : ''}
+                              </span>
+                            )}
+                          </For>
+                        </span>
+                      </Show>
+                    </div>
                   </div>
                   <button
                     onClick={(e) => toggleArtistInfo(artist.name, e)}
