@@ -356,7 +356,9 @@ const App: Component = () => {
                           }>
                           {(view) => (
                             <button
-                              onClick={() => updateState({ topSubview: view.id })}
+                              onClick={() =>
+                                updateState({ topSubview: view.id })
+                              }
                               class={`px-2 py-1 text-xs whitespace-nowrap ${
                                 topViewType() === view.id
                                   ? 'bg-accent text-bg'
@@ -388,7 +390,12 @@ const App: Component = () => {
                             </button>
                           )}
                         </For>
-                        <Show when={topArtists.isLoading() || topTracks.isLoading() || topAlbums.isLoading()}>
+                        <Show
+                          when={
+                            topArtists.isLoading() ||
+                            topTracks.isLoading() ||
+                            topAlbums.isLoading()
+                          }>
                           <div class='ml-1 text-xs text-fg-muted animate-spin'>
                             ◐
                           </div>

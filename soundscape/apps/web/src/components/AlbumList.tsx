@@ -17,12 +17,14 @@ const AlbumList: Component<AlbumListProps> = (props) => {
   const [albumInfoExpanded, setAlbumInfoExpanded] = createSignal<Set<string>>(
     new Set()
   );
-  const [albumInfoCache, setAlbumInfoCache] = createSignal<Record<string, AlbumInfo>>({});
+  const [albumInfoCache, setAlbumInfoCache] = createSignal<
+    Record<string, AlbumInfo>
+  >({});
 
   const toggleAlbumInfo = async (album: RecentAlbum, e: MouseEvent) => {
     e.stopPropagation();
     const key = getAlbumKey(album);
-    
+
     setAlbumInfoExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(key)) {
@@ -191,12 +193,21 @@ const AlbumList: Component<AlbumListProps> = (props) => {
                   </For>
                 </div>
               </Show>
-              <Show when={albumInfoExpanded().has(albumKey) && albumInfoCache()[albumKey]}>
+              <Show
+                when={
+                  albumInfoExpanded().has(albumKey) &&
+                  albumInfoCache()[albumKey]
+                }>
                 <div class='px-4 py-2 bg-bg-subtle border-t border-border text-xs'>
-                  <Show when={albumInfoCache()[albumKey]?.tags?.tag && albumInfoCache()[albumKey]!.tags.tag.length > 0}>
+                  <Show
+                    when={
+                      albumInfoCache()[albumKey]?.tags?.tag &&
+                      albumInfoCache()[albumKey]!.tags.tag.length > 0
+                    }>
                     <div class='flex gap-1 flex-wrap'>
                       <span class='text-fg-muted'>Tags:</span>
-                      <For each={albumInfoCache()[albumKey]!.tags.tag.slice(0, 5)}>
+                      <For
+                        each={albumInfoCache()[albumKey]!.tags.tag.slice(0, 5)}>
                         {(tag) => (
                           <span class='text-fg-subtle'>{tag.name}</span>
                         )}

@@ -1,4 +1,4 @@
-import { Component, For, Show, createSignal } from 'solid-js';
+import { Component, For, Show, createSignal, createEffect } from 'solid-js';
 import type { Artist, SimilarArtist, ArtistInfo } from '@soundscape/types';
 import { getRYMArtistUrl, fetchArtistInfo } from '@soundscape/utils';
 
@@ -12,23 +12,33 @@ interface ArtistListProps {
 }
 
 const ArtistList: Component<ArtistListProps> = (props) => {
-  const [expandedArtistName, setExpandedArtistName] = createSignal<string | null>(null);
-  const [artistInfoCache, setArtistInfoCache] = createSignal<Record<string, ArtistInfo>>({});
+  const [expandedArtistName, setExpandedArtistName] = createSignal<
+    string | null
+  >(null);
+  const [artistInfoCache, setArtistInfoCache] = createSignal<
+    Record<string, ArtistInfo>
+  >({});
 
-  const toggleArtistInfo = async (artistName: string, e: MouseEvent) => {
+  const fetchArtistInfoForName = async (artistName: string) => {
+    if (!artistInfoCache()[artistName]) {
+      try {
+        const response = await fetchArtistInfo(artistName);
+        setArtistInfoCache({
+          ...artistInfoCache(),
+          [artistName]: response.artist,
+        });
+      } catch (err) {
+        console.error('Failed to fetch artist info:', err);
+      }
+    }
+  };
+
+  const toggleArtistInfo = (artistName: string, e: MouseEvent) => {
     e.stopPropagation();
     if (expandedArtistName() === artistName) {
       setExpandedArtistName(null);
     } else {
       setExpandedArtistName(artistName);
-      if (!artistInfoCache()[artistName]) {
-        try {
-          const response = await fetchArtistInfo(artistName);
-          setArtistInfoCache({ ...artistInfoCache(), [artistName]: response.artist });
-        } catch (err) {
-          console.error('Failed to fetch artist info:', err);
-        }
-      }
     }
   };
 
@@ -65,9 +75,14 @@ const ArtistList: Component<ArtistListProps> = (props) => {
       <div class='grid grid-cols-2 gap-px bg-border'>
         <For each={props.artists}>
           {(artist) => {
+            // Fetch artist info automatically
+            createEffect(() => {
+              fetchArtistInfoForName(artist.name);
+            });
+
             const isExpanded = () => expandedArtistName() === artist.name;
             const info = () => artistInfoCache()[artist.name];
-            
+
             return (
               <div class='bg-bg'>
                 <div
@@ -96,6 +111,17 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                         {Math.round(parseFloat(getMatch(artist)!) * 100)}% match
                       </div>
                     </Show>
+                    <Show when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
+                      <div class='flex gap-1 flex-wrap text-xs text-fg-muted'>
+                        <For each={info()!.tags.tag.slice(0, 3)}>
+                          {(tag, index) => (
+                            <span>
+                              {tag.name}{index() < Math.min(2, info()!.tags.tag.length - 1) ? ',' : ''}
+                            </span>
+                          )}
+                        </For>
+                      </div>
+                    </Show>
                   </div>
                   <button
                     onClick={(e) => toggleArtistInfo(artist.name, e)}
@@ -104,21 +130,9 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                     {isExpanded() ? '−' : 'ⓘ'}
                   </button>
                 </div>
-                <Show when={isExpanded() && info()}>
-                  <div class='px-4 py-2 bg-bg-subtle text-xs space-y-1'>
-                    <Show when={info()?.ontour === '1'}>
-                      <div class='text-fg'>Currently on tour</div>
-                    </Show>
-                    <Show when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
-                      <div class='flex gap-1 flex-wrap'>
-                        <span class='text-fg-muted'>Tags:</span>
-                        <For each={info()!.tags.tag.slice(0, 5)}>
-                          {(tag) => (
-                            <span class='text-fg-subtle'>{tag.name}</span>
-                          )}
-                        </For>
-                      </div>
-                    </Show>
+                <Show when={isExpanded() && info()?.ontour === '1'}>
+                  <div class='px-4 py-2 bg-bg-subtle text-xs'>
+                    <div class='text-fg'>Currently on tour</div>
                   </div>
                 </Show>
               </div>

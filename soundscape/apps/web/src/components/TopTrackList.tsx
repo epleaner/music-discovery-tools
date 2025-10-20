@@ -10,8 +10,12 @@ interface TopTrackListProps {
 }
 
 const TopTrackList: Component<TopTrackListProps> = (props) => {
-  const [expandedTrackKey, setExpandedTrackKey] = createSignal<string | null>(null);
-  const [trackInfoCache, setTrackInfoCache] = createSignal<Record<string, TrackInfo>>({});
+  const [expandedTrackKey, setExpandedTrackKey] = createSignal<string | null>(
+    null
+  );
+  const [trackInfoCache, setTrackInfoCache] = createSignal<
+    Record<string, TrackInfo>
+  >({});
 
   const getTrackKey = (track: TopTrack) => `${track.artist.name}-${track.name}`;
 
@@ -44,10 +48,9 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
         </div>
       </Show>
 
-      <Show when={!props.isLoading && !props.error && props.tracks.length === 0}>
-        <div class='p-4 text-xs text-center text-fg-muted'>
-          No tracks found
-        </div>
+      <Show
+        when={!props.isLoading && !props.error && props.tracks.length === 0}>
+        <div class='p-4 text-xs text-center text-fg-muted'>No tracks found</div>
       </Show>
 
       <Show when={!props.isLoading && !props.error && props.tracks.length > 0}>
@@ -56,7 +59,7 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
             const key = getTrackKey(track);
             const isExpanded = () => expandedTrackKey() === key;
             const info = () => trackInfoCache()[key];
-            
+
             return (
               <div>
                 <div class='flex items-center gap-2 p-2 text-xs border-b border-border hover:bg-bg-subtle'>
@@ -88,7 +91,10 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
                 </div>
                 <Show when={isExpanded() && info()}>
                   <div class='px-4 py-2 bg-bg-subtle border-b border-border text-xs'>
-                    <Show when={info()?.toptags?.tag && info()!.toptags.tag.length > 0}>
+                    <Show
+                      when={
+                        info()?.toptags?.tag && info()!.toptags.tag.length > 0
+                      }>
                       <div class='flex gap-1 flex-wrap'>
                         <span class='text-fg-muted'>Tags:</span>
                         <For each={info()!.toptags.tag.slice(0, 5)}>
@@ -110,4 +116,3 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
 };
 
 export default TopTrackList;
-

@@ -10,8 +10,12 @@ interface TopAlbumListProps {
 }
 
 const TopAlbumList: Component<TopAlbumListProps> = (props) => {
-  const [expandedAlbumKey, setExpandedAlbumKey] = createSignal<string | null>(null);
-  const [albumInfoCache, setAlbumInfoCache] = createSignal<Record<string, AlbumInfo>>({});
+  const [expandedAlbumKey, setExpandedAlbumKey] = createSignal<string | null>(
+    null
+  );
+  const [albumInfoCache, setAlbumInfoCache] = createSignal<
+    Record<string, AlbumInfo>
+  >({});
 
   const getAlbumKey = (album: TopAlbum) => `${album.artist.name}-${album.name}`;
 
@@ -44,10 +48,9 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
         </div>
       </Show>
 
-      <Show when={!props.isLoading && !props.error && props.albums.length === 0}>
-        <div class='p-4 text-xs text-center text-fg-muted'>
-          No albums found
-        </div>
+      <Show
+        when={!props.isLoading && !props.error && props.albums.length === 0}>
+        <div class='p-4 text-xs text-center text-fg-muted'>No albums found</div>
       </Show>
 
       <Show when={!props.isLoading && !props.error && props.albums.length > 0}>
@@ -56,7 +59,7 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
             const key = getAlbumKey(album);
             const isExpanded = () => expandedAlbumKey() === key;
             const info = () => albumInfoCache()[key];
-            
+
             return (
               <div>
                 <div class='flex items-center gap-2 p-2 text-xs border-b border-border hover:bg-bg-subtle'>
@@ -98,7 +101,8 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
                 </div>
                 <Show when={isExpanded() && info()}>
                   <div class='px-4 py-2 bg-bg-subtle border-b border-border text-xs'>
-                    <Show when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
+                    <Show
+                      when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
                       <div class='flex gap-1 flex-wrap'>
                         <span class='text-fg-muted'>Tags:</span>
                         <For each={info()!.tags.tag.slice(0, 5)}>
@@ -120,4 +124,3 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
 };
 
 export default TopAlbumList;
-

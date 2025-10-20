@@ -17,11 +17,13 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
   const [artistInfoExpanded, setArtistInfoExpanded] = createSignal<Set<string>>(
     new Set()
   );
-  const [artistInfoCache, setArtistInfoCache] = createSignal<Record<string, ArtistInfo>>({});
+  const [artistInfoCache, setArtistInfoCache] = createSignal<
+    Record<string, ArtistInfo>
+  >({});
 
   const toggleArtistInfo = async (artistName: string, e: MouseEvent) => {
     e.stopPropagation();
-    
+
     setArtistInfoExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(artistName)) {
@@ -35,7 +37,10 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
     if (!artistInfoCache()[artistName]) {
       try {
         const response = await fetchArtistInfo(artistName);
-        setArtistInfoCache({ ...artistInfoCache(), [artistName]: response.artist });
+        setArtistInfoCache({
+          ...artistInfoCache(),
+          [artistName]: response.artist,
+        });
       } catch (err) {
         console.error('Failed to fetch artist info:', err);
       }
@@ -178,15 +183,27 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                     </Show>
                   </div>
                 </Show>
-                <Show when={artistInfoExpanded().has(artist.name) && artistInfoCache()[artist.name]}>
+                <Show
+                  when={
+                    artistInfoExpanded().has(artist.name) &&
+                    artistInfoCache()[artist.name]
+                  }>
                   <div class='px-4 py-2 bg-bg-subtle border-t border-border text-xs space-y-1'>
                     <Show when={artistInfoCache()[artist.name]?.ontour === '1'}>
                       <div class='text-fg'>Currently on tour</div>
                     </Show>
-                    <Show when={artistInfoCache()[artist.name]?.tags?.tag && artistInfoCache()[artist.name]!.tags.tag.length > 0}>
+                    <Show
+                      when={
+                        artistInfoCache()[artist.name]?.tags?.tag &&
+                        artistInfoCache()[artist.name]!.tags.tag.length > 0
+                      }>
                       <div class='flex gap-1 flex-wrap'>
                         <span class='text-fg-muted'>Tags:</span>
-                        <For each={artistInfoCache()[artist.name]!.tags.tag.slice(0, 5)}>
+                        <For
+                          each={artistInfoCache()[artist.name]!.tags.tag.slice(
+                            0,
+                            5
+                          )}>
                           {(tag) => (
                             <span class='text-fg-subtle'>{tag.name}</span>
                           )}

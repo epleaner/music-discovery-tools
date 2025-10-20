@@ -10,10 +10,15 @@ interface TrackListProps {
 }
 
 const TrackList: Component<TrackListProps> = (props) => {
-  const [expandedTrackKey, setExpandedTrackKey] = createSignal<string | null>(null);
-  const [trackInfoCache, setTrackInfoCache] = createSignal<Record<string, TrackInfo>>({});
+  const [expandedTrackKey, setExpandedTrackKey] = createSignal<string | null>(
+    null
+  );
+  const [trackInfoCache, setTrackInfoCache] = createSignal<
+    Record<string, TrackInfo>
+  >({});
 
-  const getTrackKey = (track: Track) => `${track.artist['#text']}-${track.name}`;
+  const getTrackKey = (track: Track) =>
+    `${track.artist['#text']}-${track.name}`;
 
   const toggleTrackInfo = async (track: Track) => {
     const key = getTrackKey(track);
@@ -23,7 +28,10 @@ const TrackList: Component<TrackListProps> = (props) => {
       setExpandedTrackKey(key);
       if (!trackInfoCache()[key]) {
         try {
-          const response = await fetchTrackInfo(track.artist['#text'], track.name);
+          const response = await fetchTrackInfo(
+            track.artist['#text'],
+            track.name
+          );
           setTrackInfoCache({ ...trackInfoCache(), [key]: response.track });
         } catch (err) {
           console.error('Failed to fetch track info:', err);
@@ -68,7 +76,7 @@ const TrackList: Component<TrackListProps> = (props) => {
           const key = getTrackKey(track);
           const isExpanded = () => expandedTrackKey() === key;
           const info = () => trackInfoCache()[key];
-          
+
           return (
             <div>
               <div class='flex items-center gap-2 p-2 transition-colors border-b border-border hover:bg-bg-subtle'>
@@ -109,7 +117,10 @@ const TrackList: Component<TrackListProps> = (props) => {
               </div>
               <Show when={isExpanded() && info()}>
                 <div class='px-4 py-2 bg-bg-subtle border-b border-border text-xs'>
-                  <Show when={info()?.toptags?.tag && info()!.toptags.tag.length > 0}>
+                  <Show
+                    when={
+                      info()?.toptags?.tag && info()!.toptags.tag.length > 0
+                    }>
                     <div class='flex gap-1 flex-wrap'>
                       <span class='text-fg-muted'>Tags:</span>
                       <For each={info()!.toptags.tag.slice(0, 5)}>
