@@ -1,6 +1,16 @@
 import { Component, For, Show, createSignal, createEffect } from 'solid-js';
-import type { RecentArtist, Track, ArtistInfo, ArtistInfoResponse } from '@soundscape/types';
-import { getRYMArtistUrl, fetchArtistInfo, getCached, getArtistCacheKey } from '@soundscape/utils';
+import type {
+  RecentArtist,
+  Track,
+  ArtistInfo,
+  ArtistInfoResponse,
+} from '@soundscape/types';
+import {
+  getRYMArtistUrl,
+  fetchArtistInfo,
+  getCached,
+  getArtistCacheKey,
+} from '@soundscape/utils';
 
 interface RecentArtistListProps {
   artists: RecentArtist[];

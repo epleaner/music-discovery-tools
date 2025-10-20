@@ -39,7 +39,11 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
     }
   };
 
-  const loadCachedInfoForKey = async (key: string, artistName: string, trackName: string) => {
+  const loadCachedInfoForKey = async (
+    key: string,
+    artistName: string,
+    trackName: string
+  ) => {
     const cacheKey = getTrackCacheKey(artistName, trackName);
     const cached = await getCached<TrackInfoResponse>(cacheKey);
     if (cached) {

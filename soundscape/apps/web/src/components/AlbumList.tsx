@@ -1,6 +1,16 @@
 import { Component, For, Show, createSignal, createEffect } from 'solid-js';
-import type { RecentAlbum, Track, AlbumInfo, AlbumInfoResponse } from '@soundscape/types';
-import { getRYMAlbumUrl, fetchAlbumInfo, getCached, getAlbumCacheKey } from '@soundscape/utils';
+import type {
+  RecentAlbum,
+  Track,
+  AlbumInfo,
+  AlbumInfoResponse,
+} from '@soundscape/types';
+import {
+  getRYMAlbumUrl,
+  fetchAlbumInfo,
+  getCached,
+  getAlbumCacheKey,
+} from '@soundscape/utils';
 
 interface AlbumListProps {
   albums: RecentAlbum[];
@@ -41,7 +51,11 @@ const AlbumList: Component<AlbumListProps> = (props) => {
     }
   };
 
-  const loadCachedInfoForKey = async (key: string, artistName: string, albumName: string) => {
+  const loadCachedInfoForKey = async (
+    key: string,
+    artistName: string,
+    albumName: string
+  ) => {
     const cacheKey = getAlbumCacheKey(artistName, albumName);
     const cached = await getCached<AlbumInfoResponse>(cacheKey);
     if (cached) {
