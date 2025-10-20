@@ -27,12 +27,15 @@ const EveryNoiseViewer: Component<EveryNoiseViewerProps> = (props) => {
           class='text-xs link'>
           Every Noise at Once
         </a>
-        <div class='text-xs text-fg-muted'>
-          <Show when={props.isLoading}>◐</Show>
-          <Show when={!props.isLoading && !props.genre}>
+
+        <Show when={props.isLoading}>
+          <div class='text-xs text-fg-muted'>◐</div>
+        </Show>
+        <Show when={!props.isLoading && !props.genre}>
+          <div class='text-xs text-fg-muted'>
             No genre data found for {props.artistName}
-          </Show>
-        </div>
+          </div>
+        </Show>
       </div>
       <Show when={props.genre && !props.isLoading}>
         <button

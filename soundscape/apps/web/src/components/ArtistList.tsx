@@ -135,7 +135,7 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                           </span>
                         </Show>
                         <Show when={props.showMatch && getMatch(artist)}>
-                          <span>
+                          <span class='shrink-0'>
                             {Math.round(parseFloat(getMatch(artist)!) * 100)}%
                             match
                           </span>
@@ -163,7 +163,7 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                     <Show when={isLoading() || !info()}>
                       <button
                         onClick={(e) => handleInfoClick(artist.name, e)}
-                        class='text-xs text-fg-subtle hover:text-fg px-1'
+                        class='px-1 text-xs text-fg-subtle hover:text-fg'
                         title='Fetch artist info'>
                         {isLoading() ? '◐' : 'ⓘ'}
                       </button>
