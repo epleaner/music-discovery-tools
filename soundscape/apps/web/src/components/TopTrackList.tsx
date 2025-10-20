@@ -127,12 +127,12 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
                 <div class='flex-shrink-0 text-fg-subtle'>
                   {track.playcount} plays
                 </div>
-                <button
-                  onClick={(e) => handleInfoClick(track, e)}
-                  class='text-xs text-fg-subtle hover:text-fg px-1'
-                  title='Fetch track info'>
-                  {isLoading() ? '◐' : info() ? '✓' : 'ⓘ'}
-                </button>
+                  <button
+                    onClick={(e) => handleInfoClick(track, e)}
+                    class='text-xs text-fg-subtle hover:text-fg px-1'
+                    title='Fetch track info'>
+                    {isLoading() ? '◐' : 'ⓘ'}
+                  </button>
               </div>
             );
           }}

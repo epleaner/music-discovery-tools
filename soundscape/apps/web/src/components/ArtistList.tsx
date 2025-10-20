@@ -156,12 +156,12 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                       </Show>
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => handleInfoClick(artist.name, e)}
-                    class='text-xs text-fg-subtle hover:text-fg px-1'
-                    title='Fetch artist info'>
-                    {isLoading() ? '◐' : info() ? '✓' : 'ⓘ'}
-                  </button>
+                    <button
+                      onClick={(e) => handleInfoClick(artist.name, e)}
+                      class='text-xs text-fg-subtle hover:text-fg px-1'
+                      title='Fetch artist info'>
+                      {isLoading() ? '◐' : 'ⓘ'}
+                    </button>
                 </div>
               </div>
             );

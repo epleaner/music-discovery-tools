@@ -21,9 +21,6 @@ interface RecentArtistListProps {
 }
 
 const RecentArtistList: Component<RecentArtistListProps> = (props) => {
-  const [expandedArtists, setExpandedArtists] = createSignal<Set<string>>(
-    new Set()
-  );
   const [artistInfoCache, setArtistInfoCache] = createSignal<
     Record<string, ArtistInfo>
   >({});
@@ -73,36 +70,6 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
     return image?.['#text'] || '';
   };
 
-  const formatTrackDate = (track: Track) => {
-    if (!track.date) return 'Now';
-    const date = new Date(parseInt(track.date.uts) * 1000);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
-    return `${Math.floor(diffMins / 1440)}d ago`;
-  };
-
-  const toggleArtist = (artistName: string) => {
-    setExpandedArtists((prev) => {
-      const next = new Set(prev);
-      if (next.has(artistName)) {
-        next.delete(artistName);
-      } else {
-        next.add(artistName);
-      }
-      return next;
-    });
-  };
-
-  const getTracksForArtist = (artistName: string) => {
-    return props.tracks.filter((track) => track.artist['#text'] === artistName);
-  };
-
-  const isExpanded = (artistName: string) => expandedArtists().has(artistName);
-
   return (
     <div>
       <Show when={props.error}>
@@ -115,11 +82,9 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
         <div class='py-8 text-xs text-center text-fg-muted'>Loading...</div>
       </Show>
 
-      <div class='space-y-px'>
+      <div class='grid grid-cols-2 gap-px bg-border'>
         <For each={props.artists}>
           {(artist) => {
-            const expanded = () => isExpanded(artist.name);
-            const artistTracks = () => getTracksForArtist(artist.name);
             const info = () => artistInfoCache()[artist.name];
             const isLoading = () => loadingInfo().has(artist.name);
 
@@ -131,10 +96,8 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
             });
 
             return (
-              <div class='border-b border-border'>
-                <div
-                  class='flex items-center gap-2 p-2 transition-colors cursor-pointer hover:bg-bg-subtle'
-                  onClick={() => toggleArtist(artist.name)}>
+              <div class='bg-bg'>
+                <div class='flex gap-2 items-center p-2 transition-colors hover:bg-bg-subtle'>
                   <Show when={getImageUrl(artist)}>
                     <img
                       src={getImageUrl(artist)}
@@ -143,14 +106,14 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                     />
                   </Show>
                   <div class='flex-1 min-w-0'>
-                    <div class='flex items-center gap-2'>
+                    <div class='flex gap-2 items-center'>
                       <div class='text-sm truncate'>{artist.name}</div>
                       <a
                         href={getRYMArtistUrl(artist.name)}
                         target='_blank'
                         rel='noopener noreferrer'
                         onClick={(e) => e.stopPropagation()}
-                        class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'
+                        class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
                         title='View on RateYourMusic'>
                         rym
                       </a>
@@ -188,47 +151,13 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                       </Show>
                     </div>
                   </div>
-                  <div class='flex items-center gap-2'>
-                    <div class='text-xs text-fg-subtle'>
-                      {expanded() ? '−' : '+'}
-                    </div>
-                    <button
-                      onClick={(e) => handleInfoClick(artist.name, e)}
-                      class='text-xs text-fg-subtle hover:text-fg px-1'
-                      title='Fetch artist info'>
-                      {isLoading() ? '◐' : info() ? '✓' : 'ⓘ'}
-                    </button>
-                  </div>
+                  <button
+                    onClick={(e) => handleInfoClick(artist.name, e)}
+                    class='text-xs text-fg-subtle hover:text-fg px-1'
+                    title='Fetch artist info'>
+                    {isLoading() ? '◐' : 'ⓘ'}
+                  </button>
                 </div>
-                <Show when={expanded()}>
-                  <div class='bg-bg-subtle'>
-                    <For each={artistTracks()}>
-                      {(track) => (
-                        <div class='flex items-center gap-2 px-2 py-1 pl-12 border-t border-border'>
-                          <div class='flex-1 min-w-0'>
-                            <div class='text-xs truncate'>{track.name}</div>
-                            <div class='text-xs truncate text-fg-muted'>
-                              {track.album['#text']}
-                            </div>
-                          </div>
-                          <div class='text-xs text-fg-subtle whitespace-nowrap'>
-                            {formatTrackDate(track)}
-                          </div>
-                        </div>
-                      )}
-                    </For>
-                    <Show when={props.onArtistClick}>
-                      <button
-                        class='w-full py-1 text-xs text-center border-t border-border text-fg-muted hover:text-fg hover:bg-bg'
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          props.onArtistClick?.(artist.name);
-                        }}>
-                        View Similar Artists →
-                      </button>
-                    </Show>
-                  </div>
-                </Show>
               </div>
             );
           }}

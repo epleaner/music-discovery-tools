@@ -138,12 +138,12 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
                 <div class='flex-shrink-0 text-fg-subtle'>
                   {album.playcount} plays
                 </div>
-                <button
-                  onClick={(e) => handleInfoClick(album, e)}
-                  class='text-xs text-fg-subtle hover:text-fg px-1'
-                  title='Fetch album info'>
-                  {isLoading() ? '◐' : info() ? '✓' : 'ⓘ'}
-                </button>
+                  <button
+                    onClick={(e) => handleInfoClick(album, e)}
+                    class='text-xs text-fg-subtle hover:text-fg px-1'
+                    title='Fetch album info'>
+                    {isLoading() ? '◐' : 'ⓘ'}
+                  </button>
               </div>
             );
           }}
