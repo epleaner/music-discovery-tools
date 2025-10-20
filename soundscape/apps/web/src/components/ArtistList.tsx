@@ -104,21 +104,27 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                     <div class='flex gap-1 items-center text-xs text-fg-muted'>
                       <Show when={props.showPlaycount && getPlaycount(artist)}>
                         <span>
-                          {parseInt(getPlaycount(artist)!).toLocaleString()} plays
+                          {parseInt(getPlaycount(artist)!).toLocaleString()}{' '}
+                          plays
                         </span>
                       </Show>
                       <Show when={props.showMatch && getMatch(artist)}>
                         <span>
-                          {Math.round(parseFloat(getMatch(artist)!) * 100)}% match
+                          {Math.round(parseFloat(getMatch(artist)!) * 100)}%
+                          match
                         </span>
                       </Show>
-                      <Show when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
+                      <Show
+                        when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
                         <span class='flex gap-1'>
                           <For each={info()!.tags.tag.slice(0, 3)}>
                             {(tag, index) => (
                               <span>
                                 {tag.name}
-                                {index() < Math.min(2, info()!.tags.tag.length - 1) ? ',' : ''}
+                                {index() <
+                                Math.min(2, info()!.tags.tag.length - 1)
+                                  ? ','
+                                  : ''}
                               </span>
                             )}
                           </For>

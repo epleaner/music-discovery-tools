@@ -150,13 +150,17 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                         {artist.trackCount}{' '}
                         {artist.trackCount === 1 ? 'track' : 'tracks'}
                       </span>
-                      <Show when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
+                      <Show
+                        when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
                         <span class='flex gap-1'>
                           <For each={info()!.tags.tag.slice(0, 3)}>
                             {(tag, index) => (
                               <span>
                                 {tag.name}
-                                {index() < Math.min(2, info()!.tags.tag.length - 1) ? ',' : ''}
+                                {index() <
+                                Math.min(2, info()!.tags.tag.length - 1)
+                                  ? ','
+                                  : ''}
                               </span>
                             )}
                           </For>
@@ -208,30 +212,10 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                 <Show
                   when={
                     artistInfoExpanded().has(artist.name) &&
-                    artistInfoCache()[artist.name]
+                    artistInfoCache()[artist.name]?.ontour === '1'
                   }>
-                  <div class='px-4 py-2 bg-bg-subtle border-t border-border text-xs space-y-1'>
-                    <Show when={artistInfoCache()[artist.name]?.ontour === '1'}>
-                      <div class='text-fg'>Currently on tour</div>
-                    </Show>
-                    <Show
-                      when={
-                        artistInfoCache()[artist.name]?.tags?.tag &&
-                        artistInfoCache()[artist.name]!.tags.tag.length > 0
-                      }>
-                      <div class='flex gap-1 flex-wrap'>
-                        <span class='text-fg-muted'>Tags:</span>
-                        <For
-                          each={artistInfoCache()[artist.name]!.tags.tag.slice(
-                            0,
-                            5
-                          )}>
-                          {(tag) => (
-                            <span class='text-fg-subtle'>{tag.name}</span>
-                          )}
-                        </For>
-                      </div>
-                    </Show>
+                  <div class='px-4 py-2 bg-bg-subtle border-t border-border text-xs'>
+                    <div class='text-fg'>Currently on tour</div>
                   </div>
                 </Show>
               </div>
