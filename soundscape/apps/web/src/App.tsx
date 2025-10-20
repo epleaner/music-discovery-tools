@@ -12,18 +12,23 @@ import TrackList from './components/TrackList';
 import ArtistList from './components/ArtistList';
 import AlbumList from './components/AlbumList';
 import RecentArtistList from './components/RecentArtistList';
+import TopTrackList from './components/TopTrackList';
+import TopAlbumList from './components/TopAlbumList';
 import SiteViewer from './components/SiteViewer';
 import ResizablePanels from './components/ResizablePanels';
 import ResizableBottom from './components/ResizableBottom';
 import {
   createRecentTracksResource,
   createTopArtistsResource,
+  createTopTracksResource,
+  createTopAlbumsResource,
   createSimilarArtistsResource,
 } from './lib/lastfm-resource';
 import {
   TIME_PERIOD_LABELS,
   type TimePeriod,
   type RecentViewType,
+  type TopViewType,
 } from '@soundscape/types';
 import { groupTracksByAlbum, groupTracksByArtist } from '@soundscape/utils';
 import { useHashState } from './lib/use-hash-state';
@@ -35,6 +40,7 @@ interface AppState extends Record<string, string> {
   username: string;
   view: string;
   subview: string;
+  topSubview: string;
   period: string;
   artist: string;
   sites: string; // JSON-encoded array of sites
@@ -53,6 +59,7 @@ const App: Component = () => {
     username: '',
     view: 'recent',
     subview: 'tracks',
+    topSubview: 'artists',
     period: '7day',
     artist: '',
     sites: JSON.stringify(defaultSites),
@@ -64,6 +71,7 @@ const App: Component = () => {
   const username = () => state().username;
   const currentView = () => state().view;
   const recentViewType = () => state().subview;
+  const topViewType = () => state().topSubview as TopViewType;
   const period = () => state().period as TimePeriod;
   const selectedArtist = () => state().artist;
   const sitesString = () => state().sites;
@@ -87,6 +95,8 @@ const App: Component = () => {
 
   const recentTracks = createRecentTracksResource(username);
   const topArtists = createTopArtistsResource(username, period);
+  const topTracks = createTopTracksResource(username, period);
+  const topAlbums = createTopAlbumsResource(username, period);
   const similarArtists = createSimilarArtistsResource(selectedArtist);
 
   const recentAlbums = createMemo(() =>
@@ -333,7 +343,33 @@ const App: Component = () => {
                       </div>
                     </Show>
 
-                    {/* Period selector for top artists */}
+                    {/* Subview selector for top */}
+                    <Show when={currentView() === 'top'}>
+                      <div class='flex gap-1 p-2 border-b border-border'>
+                        <For
+                          each={
+                            [
+                              { id: 'artists', label: 'Artists' },
+                              { id: 'tracks', label: 'Tracks' },
+                              { id: 'albums', label: 'Albums' },
+                            ] as { id: TopViewType; label: string }[]
+                          }>
+                          {(view) => (
+                            <button
+                              onClick={() => updateState({ topSubview: view.id })}
+                              class={`px-2 py-1 text-xs whitespace-nowrap ${
+                                topViewType() === view.id
+                                  ? 'bg-accent text-bg'
+                                  : 'text-fg-muted hover:text-fg'
+                              }`}>
+                              {view.label}
+                            </button>
+                          )}
+                        </For>
+                      </div>
+                    </Show>
+
+                    {/* Period selector for top */}
                     <Show when={currentView() === 'top'}>
                       <div class='flex overflow-x-auto gap-1 p-2 border-b border-border items-center'>
                         <For
@@ -352,7 +388,7 @@ const App: Component = () => {
                             </button>
                           )}
                         </For>
-                        <Show when={topArtists.isLoading()}>
+                        <Show when={topArtists.isLoading() || topTracks.isLoading() || topAlbums.isLoading()}>
                           <div class='ml-1 text-xs text-fg-muted animate-spin'>
                             ◐
                           </div>
@@ -414,13 +450,33 @@ const App: Component = () => {
 
                       <Match when={currentView() === 'top'}>
                         <div class='p-2'>
-                          <ArtistList
-                            artists={topArtists.artists()}
-                            isLoading={topArtists.isLoading()}
-                            error={topArtists.error()}
-                            onArtistClick={handleArtistClick}
-                            showPlaycount={true}
-                          />
+                          <Switch>
+                            <Match when={topViewType() === 'artists'}>
+                              <ArtistList
+                                artists={topArtists.artists()}
+                                isLoading={topArtists.isLoading()}
+                                error={topArtists.error()}
+                                onArtistClick={handleArtistClick}
+                                showPlaycount={true}
+                              />
+                            </Match>
+                            <Match when={topViewType() === 'tracks'}>
+                              <TopTrackList
+                                tracks={topTracks.tracks()}
+                                isLoading={topTracks.isLoading()}
+                                error={topTracks.error()}
+                                onArtistClick={handleArtistClick}
+                              />
+                            </Match>
+                            <Match when={topViewType() === 'albums'}>
+                              <TopAlbumList
+                                albums={topAlbums.albums()}
+                                isLoading={topAlbums.isLoading()}
+                                error={topAlbums.error()}
+                                onArtistClick={handleArtistClick}
+                              />
+                            </Match>
+                          </Switch>
                         </div>
                       </Match>
                     </Switch>

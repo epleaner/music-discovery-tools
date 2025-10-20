@@ -7,13 +7,19 @@ import {
 import type {
   RecentTracksResponse,
   TopArtistsResponse,
+  TopTracksResponse,
+  TopAlbumsResponse,
   TimePeriod,
   Track,
   Artist,
+  TopTrack,
+  TopAlbum,
 } from '@soundscape/types';
 import {
   fetchRecentTracks,
   fetchTopArtists,
+  fetchTopTracks,
+  fetchTopAlbums,
   fetchSimilarArtists,
 } from '@soundscape/utils';
 
@@ -136,6 +142,68 @@ export function createSimilarArtistsResource(artistName: () => string) {
   return {
     artists: () => data()?.similarartists.artist || [],
     sourceArtist: () => data()?.similarartists['@attr'].artist || '',
+    isLoading: () => data.loading,
+    error: () => data.error,
+    refetch,
+    mutate,
+  };
+}
+
+/**
+ * Create a resource for fetching top tracks
+ */
+export function createTopTracksResource(
+  username: () => string,
+  period: () => TimePeriod = () => '7day'
+) {
+  const [data, { mutate, refetch }] = createResource<
+    TopTracksResponse | null,
+    { username: string; period: TimePeriod }
+  >(
+    () => {
+      const user = username();
+      const timePeriod = period();
+      return user?.trim() ? { username: user, period: timePeriod } : null;
+    },
+    async ({ username, period }) => {
+      return await fetchTopTracks(username, period);
+    }
+  );
+
+  return {
+    tracks: (): TopTrack[] => data()?.toptracks.track || [],
+    totalTracks: () => data()?.toptracks['@attr'].total || '0',
+    isLoading: () => data.loading,
+    error: () => data.error,
+    refetch,
+    mutate,
+  };
+}
+
+/**
+ * Create a resource for fetching top albums
+ */
+export function createTopAlbumsResource(
+  username: () => string,
+  period: () => TimePeriod = () => '7day'
+) {
+  const [data, { mutate, refetch }] = createResource<
+    TopAlbumsResponse | null,
+    { username: string; period: TimePeriod }
+  >(
+    () => {
+      const user = username();
+      const timePeriod = period();
+      return user?.trim() ? { username: user, period: timePeriod } : null;
+    },
+    async ({ username, period }) => {
+      return await fetchTopAlbums(username, period);
+    }
+  );
+
+  return {
+    albums: (): TopAlbum[] => data()?.topalbums.album || [],
+    totalAlbums: () => data()?.topalbums['@attr'].total || '0',
     isLoading: () => data.loading,
     error: () => data.error,
     refetch,
