@@ -105,6 +105,19 @@ export async function setCached<T>(key: string, data: T): Promise<void> {
 }
 
 /**
+ * Check if a cache entry exists (without fetching if missing)
+ */
+export async function hasCached(key: string): Promise<boolean> {
+  try {
+    const cached = await getCached(key);
+    return cached !== null;
+  } catch (err) {
+    console.error('Failed to check cache:', err);
+    return false;
+  }
+}
+
+/**
  * Clear all cached entries (useful for debugging or settings)
  */
 export async function clearCache(): Promise<void> {

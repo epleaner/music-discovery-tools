@@ -1,6 +1,6 @@
 import { Component, For, Show, createSignal, createEffect } from 'solid-js';
-import type { RecentAlbum, Track, AlbumInfo } from '@soundscape/types';
-import { getRYMAlbumUrl, fetchAlbumInfo } from '@soundscape/utils';
+import type { RecentAlbum, Track, AlbumInfo, AlbumInfoResponse } from '@soundscape/types';
+import { getRYMAlbumUrl, fetchAlbumInfo, getCached, getAlbumCacheKey } from '@soundscape/utils';
 
 interface AlbumListProps {
   albums: RecentAlbum[];
@@ -38,6 +38,14 @@ const AlbumList: Component<AlbumListProps> = (props) => {
           return next;
         });
       }
+    }
+  };
+
+  const loadCachedInfoForKey = async (key: string, artistName: string, albumName: string) => {
+    const cacheKey = getAlbumCacheKey(artistName, albumName);
+    const cached = await getCached<AlbumInfoResponse>(cacheKey);
+    if (cached) {
+      setAlbumInfoCache({ ...albumInfoCache(), [key]: cached.album });
     }
   };
 
@@ -121,10 +129,10 @@ const AlbumList: Component<AlbumListProps> = (props) => {
           const info = () => albumInfoCache()[albumKey];
           const isLoading = () => loadingInfo().has(albumKey);
 
-          // Check cache immediately and load if available
+          // Check cache immediately and load if available (but don't fetch from API)
           createEffect(() => {
             if (!info()) {
-              fetchAlbumInfoForKey(albumKey, album.artist, album.name);
+              loadCachedInfoForKey(albumKey, album.artist, album.name);
             }
           });
 

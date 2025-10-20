@@ -1,6 +1,6 @@
 import { Component, For, Show, createSignal, createEffect } from 'solid-js';
-import type { Track, TrackInfo } from '@soundscape/types';
-import { fetchTrackInfo } from '@soundscape/utils';
+import type { Track, TrackInfo, TrackInfoResponse } from '@soundscape/types';
+import { fetchTrackInfo, getCached, getTrackCacheKey } from '@soundscape/utils';
 
 interface TrackListProps {
   tracks: Track[];
@@ -37,6 +37,14 @@ const TrackList: Component<TrackListProps> = (props) => {
           return next;
         });
       }
+    }
+  };
+
+  const loadCachedInfoForKey = async (key: string, artistName: string, trackName: string) => {
+    const cacheKey = getTrackCacheKey(artistName, trackName);
+    const cached = await getCached<TrackInfoResponse>(cacheKey);
+    if (cached) {
+      setTrackInfoCache({ ...trackInfoCache(), [key]: cached.track });
     }
   };
 
@@ -83,10 +91,10 @@ const TrackList: Component<TrackListProps> = (props) => {
           const info = () => trackInfoCache()[key];
           const isLoading = () => loadingInfo().has(key);
 
-          // Check cache immediately and load if available
+          // Check cache immediately and load if available (but don't fetch from API)
           createEffect(() => {
             if (!info()) {
-              fetchTrackInfoForKey(key, track.artist['#text'], track.name);
+              loadCachedInfoForKey(key, track.artist['#text'], track.name);
             }
           });
 

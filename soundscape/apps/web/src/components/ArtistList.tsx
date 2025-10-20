@@ -1,6 +1,6 @@
 import { Component, For, Show, createSignal, createEffect } from 'solid-js';
-import type { Artist, SimilarArtist, ArtistInfo } from '@soundscape/types';
-import { getRYMArtistUrl, fetchArtistInfo } from '@soundscape/utils';
+import type { Artist, SimilarArtist, ArtistInfo, ArtistInfoResponse } from '@soundscape/types';
+import { getRYMArtistUrl, fetchArtistInfo, getCached, getArtistCacheKey } from '@soundscape/utils';
 
 interface ArtistListProps {
   artists: Artist[] | SimilarArtist[];
@@ -35,6 +35,17 @@ const ArtistList: Component<ArtistListProps> = (props) => {
           return next;
         });
       }
+    }
+  };
+
+  const loadCachedInfoForName = async (artistName: string) => {
+    const cacheKey = getArtistCacheKey(artistName);
+    const cached = await getCached<ArtistInfoResponse>(cacheKey);
+    if (cached) {
+      setArtistInfoCache({
+        ...artistInfoCache(),
+        [artistName]: cached.artist,
+      });
     }
   };
 
@@ -79,10 +90,10 @@ const ArtistList: Component<ArtistListProps> = (props) => {
             const info = () => artistInfoCache()[artist.name];
             const isLoading = () => loadingInfo().has(artist.name);
 
-            // Check cache immediately and load if available
+            // Check cache immediately and load if available (but don't fetch from API)
             createEffect(() => {
               if (!info()) {
-                fetchArtistInfoForName(artist.name);
+                loadCachedInfoForName(artist.name);
               }
             });
 
