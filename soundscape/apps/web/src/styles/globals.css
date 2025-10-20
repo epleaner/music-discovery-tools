@@ -98,4 +98,9 @@
     @apply focus:outline-none focus:ring-1 focus:ring-accent;
     @apply transition-shadow;
   }
+
+  .link {
+    @apply text-fg-muted hover:text-fg transition-colors;
+    @apply hover:underline;
+  }
 }

@@ -15,34 +15,32 @@ const EveryNoiseViewer: Component<EveryNoiseViewerProps> = (props) => {
   };
 
   return (
-    <div class='flex flex-col border-t border-border bg-bg'>
-      <div class='flex-shrink-0 p-2 border-b border-border'>
-        <h3 class='text-xs font-medium'>Every Noise at Once</h3>
+    <div class='flex flex-shrink-0 gap-2 justify-between items-center'>
+      <div class='flex gap-2 items-center'>
+        <Show when={props.genre && !props.isLoading}>
+          <div class='text-xs'>{props.genre!.genre}</div>
+        </Show>
+        <a
+          href='https://everynoise.com'
+          target='_blank'
+          rel='noopener noreferrer'
+          class='text-xs link'>
+          Every Noise at Once
+        </a>
+        <div class='text-xs text-fg-muted'>
+          <Show when={props.isLoading}>◐</Show>
+          <Show when={!props.isLoading && !props.genre}>
+            No genre data found for {props.artistName}
+          </Show>
+        </div>
       </div>
-
-      <Show when={props.isLoading}>
-        <div class='p-2 text-xs text-fg-muted'>Loading genre...</div>
-      </Show>
-
-      <Show when={!props.isLoading && !props.genre}>
-        <div class='p-2 text-xs text-fg-muted'>
-          No genre data found for {props.artistName}
-        </div>
-      </Show>
-
       <Show when={props.genre && !props.isLoading}>
-        <div class='p-2'>
-          <div class='mb-2'>
-            <div class='text-xs text-fg-muted'>Genre</div>
-            <div class='text-sm'>{props.genre!.genre}</div>
-          </div>
-          <button
-            onClick={handleOpenGenre}
-            class='w-full text-xs btn-secondary'
-            title='Open genre map in new tab'>
-            View Genre Map →
-          </button>
-        </div>
+        <button
+          onClick={handleOpenGenre}
+          class='text-xs link'
+          title='Open genre map in new tab'>
+          Genre Map →
+        </button>
       </Show>
     </div>
   );
