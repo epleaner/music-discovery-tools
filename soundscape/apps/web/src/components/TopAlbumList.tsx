@@ -1,4 +1,4 @@
-import { Component, Show, For, createSignal } from 'solid-js';
+import { Component, Show, For, createSignal, createEffect } from 'solid-js';
 import type { TopAlbum, AlbumInfo } from '@soundscape/types';
 import { getRYMAlbumUrl, fetchAlbumInfo } from '@soundscape/utils';
 
@@ -68,6 +68,13 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
             const key = getAlbumKey(album);
             const info = () => albumInfoCache()[key];
             const isLoading = () => loadingInfo().has(key);
+
+            // Check cache immediately and load if available
+            createEffect(() => {
+              if (!info()) {
+                fetchAlbumInfoForKey(key, album.artist.name, album.name);
+              }
+            });
 
             return (
               <div class='flex items-center gap-2 p-2 text-xs border-b border-border hover:bg-bg-subtle'>

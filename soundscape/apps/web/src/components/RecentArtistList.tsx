@@ -1,4 +1,4 @@
-import { Component, For, Show, createSignal } from 'solid-js';
+import { Component, For, Show, createSignal, createEffect } from 'solid-js';
 import type { RecentArtist, Track, ArtistInfo } from '@soundscape/types';
 import { getRYMArtistUrl, fetchArtistInfo } from '@soundscape/utils';
 
@@ -101,6 +101,13 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
             const artistTracks = () => getTracksForArtist(artist.name);
             const info = () => artistInfoCache()[artist.name];
             const isLoading = () => loadingInfo().has(artist.name);
+
+            // Check cache immediately and load if available
+            createEffect(() => {
+              if (!info()) {
+                fetchArtistInfoForName(artist.name);
+              }
+            });
 
             return (
               <div class='border-b border-border'>

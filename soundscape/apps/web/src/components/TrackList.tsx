@@ -1,4 +1,4 @@
-import { Component, For, Show, createSignal } from 'solid-js';
+import { Component, For, Show, createSignal, createEffect } from 'solid-js';
 import type { Track, TrackInfo } from '@soundscape/types';
 import { fetchTrackInfo } from '@soundscape/utils';
 
@@ -82,6 +82,13 @@ const TrackList: Component<TrackListProps> = (props) => {
           const key = getTrackKey(track);
           const info = () => trackInfoCache()[key];
           const isLoading = () => loadingInfo().has(key);
+
+          // Check cache immediately and load if available
+          createEffect(() => {
+            if (!info()) {
+              fetchTrackInfoForKey(key, track.artist['#text'], track.name);
+            }
+          });
 
           return (
             <div class='flex items-center gap-2 p-2 transition-colors border-b border-border hover:bg-bg-subtle'>

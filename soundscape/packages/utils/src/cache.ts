@@ -134,14 +134,23 @@ export function getArtistCacheKey(artistName: string): string {
 /**
  * Generate cache key for album info
  */
-export function getAlbumCacheKey(artistName: string, albumName: string): string {
-  return `album:${artistName.toLowerCase().trim()}:${albumName.toLowerCase().trim()}`;
+export function getAlbumCacheKey(
+  artistName: string,
+  albumName: string
+): string {
+  return `album:${artistName.toLowerCase().trim()}:${albumName
+    .toLowerCase()
+    .trim()}`;
 }
 
 /**
  * Generate cache key for track info
  */
-export function getTrackCacheKey(artistName: string, trackName: string): string {
-  return `track:${artistName.toLowerCase().trim()}:${trackName.toLowerCase().trim()}`;
+export function getTrackCacheKey(
+  artistName: string,
+  trackName: string
+): string {
+  return `track:${artistName.toLowerCase().trim()}:${trackName
+    .toLowerCase()
+    .trim()}`;
 }
-
