@@ -6,3 +6,4 @@ export * from './lastfm';
 export * from './recent-grouping';
 export * from './url-hash';
 export * from './rym';
+export * from './cache';

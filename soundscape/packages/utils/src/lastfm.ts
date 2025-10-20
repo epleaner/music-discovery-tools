@@ -10,6 +10,13 @@ import type {
   LastFMError,
   TimePeriod,
 } from '@soundscape/types';
+import {
+  getCached,
+  setCached,
+  getArtistCacheKey,
+  getAlbumCacheKey,
+  getTrackCacheKey,
+} from './cache';
 
 const BASE_URL = 'https://ws.audioscrobbler.com/2.0/';
 
@@ -219,6 +226,13 @@ export async function fetchTrackInfo(
     throw new Error('Artist name and track name are required');
   }
 
+  // Check cache first
+  const cacheKey = getTrackCacheKey(artistName, trackName);
+  const cached = await getCached<TrackInfoResponse>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const url = `${BASE_URL}?method=track.getinfo&artist=${encodeURIComponent(
     artistName
   )}&track=${encodeURIComponent(trackName)}&api_key=${apiKey}&format=json`;
@@ -240,6 +254,9 @@ export async function fetchTrackInfo(
     throw new Error('Track not found');
   }
 
+  // Cache the result
+  await setCached(cacheKey, data);
+
   return data;
 }
 
@@ -251,6 +268,13 @@ export async function fetchArtistInfo(
 ): Promise<ArtistInfoResponse> {
   if (!artistName?.trim()) {
     throw new Error('Artist name is required');
+  }
+
+  // Check cache first
+  const cacheKey = getArtistCacheKey(artistName);
+  const cached = await getCached<ArtistInfoResponse>(cacheKey);
+  if (cached) {
+    return cached;
   }
 
   const url = `${BASE_URL}?method=artist.getinfo&artist=${encodeURIComponent(
@@ -274,6 +298,9 @@ export async function fetchArtistInfo(
     throw new Error('Artist not found');
   }
 
+  // Cache the result
+  await setCached(cacheKey, data);
+
   return data;
 }
 
@@ -286,6 +313,13 @@ export async function fetchAlbumInfo(
 ): Promise<AlbumInfoResponse> {
   if (!artistName?.trim() || !albumName?.trim()) {
     throw new Error('Artist name and album name are required');
+  }
+
+  // Check cache first
+  const cacheKey = getAlbumCacheKey(artistName, albumName);
+  const cached = await getCached<AlbumInfoResponse>(cacheKey);
+  if (cached) {
+    return cached;
   }
 
   const url = `${BASE_URL}?method=album.getinfo&artist=${encodeURIComponent(
@@ -308,6 +342,9 @@ export async function fetchAlbumInfo(
   if (!data.album) {
     throw new Error('Album not found');
   }
+
+  // Cache the result
+  await setCached(cacheKey, data);
 
   return data;
 }
