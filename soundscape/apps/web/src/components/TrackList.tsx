@@ -147,12 +147,14 @@ const TrackList: Component<TrackListProps> = (props) => {
               <div class='text-xs text-fg-subtle whitespace-nowrap'>
                 {formatDate(track)}
               </div>
+              <Show when={isLoading() || !info()}>
                 <button
                   onClick={(e) => handleInfoClick(track, e)}
                   class='text-xs text-fg-subtle hover:text-fg px-1'
                   title='Fetch track info'>
                   {isLoading() ? '◐' : 'ⓘ'}
                 </button>
+              </Show>
             </div>
           );
         }}

@@ -170,12 +170,14 @@ const AlbumList: Component<AlbumListProps> = (props) => {
                     <div class='text-xs text-fg-subtle whitespace-nowrap'>
                       {formatDate(album)}
                     </div>
-                    <button
-                      onClick={(e) => handleInfoClick(album, e)}
-                      class='text-xs text-fg-subtle hover:text-fg px-1'
-                      title='Fetch album info'>
-                      {isLoading() ? '◐' : 'ⓘ'}
-                    </button>
+                    <Show when={isLoading() || !info()}>
+                      <button
+                        onClick={(e) => handleInfoClick(album, e)}
+                        class='text-xs text-fg-subtle hover:text-fg px-1'
+                        title='Fetch album info'>
+                        {isLoading() ? '◐' : 'ⓘ'}
+                      </button>
+                    </Show>
                   </div>
                 </div>
               </div>

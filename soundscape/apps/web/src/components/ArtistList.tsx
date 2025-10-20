@@ -156,12 +156,14 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                       </Show>
                     </div>
                   </div>
+                  <Show when={isLoading() || !info()}>
                     <button
                       onClick={(e) => handleInfoClick(artist.name, e)}
                       class='text-xs text-fg-subtle hover:text-fg px-1'
                       title='Fetch artist info'>
                       {isLoading() ? '◐' : 'ⓘ'}
                     </button>
+                  </Show>
                 </div>
               </div>
             );
