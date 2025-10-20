@@ -1,6 +1,6 @@
 import { Component, For, Show, createSignal } from 'solid-js';
-import type { RecentArtist, Track } from '@soundscape/types';
-import { getRYMArtistUrl } from '@soundscape/utils';
+import type { RecentArtist, Track, ArtistInfo } from '@soundscape/types';
+import { getRYMArtistUrl, fetchArtistInfo } from '@soundscape/utils';
 
 interface RecentArtistListProps {
   artists: RecentArtist[];
@@ -14,6 +14,33 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
   const [expandedArtists, setExpandedArtists] = createSignal<Set<string>>(
     new Set()
   );
+  const [artistInfoExpanded, setArtistInfoExpanded] = createSignal<Set<string>>(
+    new Set()
+  );
+  const [artistInfoCache, setArtistInfoCache] = createSignal<Record<string, ArtistInfo>>({});
+
+  const toggleArtistInfo = async (artistName: string, e: MouseEvent) => {
+    e.stopPropagation();
+    
+    setArtistInfoExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(artistName)) {
+        next.delete(artistName);
+      } else {
+        next.add(artistName);
+      }
+      return next;
+    });
+
+    if (!artistInfoCache()[artistName]) {
+      try {
+        const response = await fetchArtistInfo(artistName);
+        setArtistInfoCache({ ...artistInfoCache(), [artistName]: response.artist });
+      } catch (err) {
+        console.error('Failed to fetch artist info:', err);
+      }
+    }
+  };
 
   const getImageUrl = (artist: RecentArtist) => {
     const image = artist.image?.find(
@@ -110,8 +137,16 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                       {artist.trackCount === 1 ? 'track' : 'tracks'}
                     </div>
                   </div>
-                  <div class='text-xs text-fg-subtle'>
-                    {expanded() ? '−' : '+'}
+                  <div class='flex items-center gap-2'>
+                    <div class='text-xs text-fg-subtle'>
+                      {expanded() ? '−' : '+'}
+                    </div>
+                    <button
+                      onClick={(e) => toggleArtistInfo(artist.name, e)}
+                      class='text-xs text-fg-subtle hover:text-fg px-1'
+                      title='Toggle artist info'>
+                      {artistInfoExpanded().has(artist.name) ? '−' : 'ⓘ'}
+                    </button>
                   </div>
                 </div>
                 <Show when={expanded()}>
@@ -140,6 +175,23 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                         }}>
                         View Similar Artists →
                       </button>
+                    </Show>
+                  </div>
+                </Show>
+                <Show when={artistInfoExpanded().has(artist.name) && artistInfoCache()[artist.name]}>
+                  <div class='px-4 py-2 bg-bg-subtle border-t border-border text-xs space-y-1'>
+                    <Show when={artistInfoCache()[artist.name]?.ontour === '1'}>
+                      <div class='text-fg'>Currently on tour</div>
+                    </Show>
+                    <Show when={artistInfoCache()[artist.name]?.tags?.tag && artistInfoCache()[artist.name]!.tags.tag.length > 0}>
+                      <div class='flex gap-1 flex-wrap'>
+                        <span class='text-fg-muted'>Tags:</span>
+                        <For each={artistInfoCache()[artist.name]!.tags.tag.slice(0, 5)}>
+                          {(tag) => (
+                            <span class='text-fg-subtle'>{tag.name}</span>
+                          )}
+                        </For>
+                      </div>
                     </Show>
                   </div>
                 </Show>
