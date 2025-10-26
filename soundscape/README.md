@@ -1,114 +1,103 @@
 # Soundscape
 
-A modern monorepo infrastructure for browser extension and web app development with shared components and TypeScript support.
+A modern music discovery platform with browser extension and web app, integrating Last.fm, RateYourMusic, and real-time synchronization.
 
 ## Architecture
 
-This monorepo uses **Turborepo** for build orchestration and **pnpm** for package management. It provides a clean foundation for:
+Turborepo monorepo with:
 
-### Apps
+- **Web App**: SolidJS with real-time WebSocket communication
+- **Browser Extension**: WXT (React) for RateYourMusic integration
+- **Backend**: tRPC + Express + WebSocket server
+- **Database**: Prisma with SQLite (dev) / PostgreSQL (production)
 
-- **`apps/extension`** - WXT-based browser extension (Chrome, Firefox, Safari)
-- **`apps/web`** - SolidJS web application
-
-### Packages
-
-- **`packages/ui`** - Shared React components with TailwindCSS utilities
-- **`packages/utils`** - Shared utility functions
-- **`packages/types`** - Shared TypeScript type definitions
-
-## Features
-
-- ✅ **Cross-browser extension support** - Single codebase for Chrome, Firefox, and Safari
-- ✅ **Shared component infrastructure** - Ready for reusable UI components between extension and web app
-- ✅ **TypeScript throughout** - Full type safety across all packages
-- ✅ **TailwindCSS** - Consistent styling with design tokens
-- ✅ **Hot reload** - Fast development experience
-- ✅ **Modern tooling** - WXT, SolidJS, Turborepo, pnpm
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
 - Node.js 18+
-- pnpm 8+
+- pnpm 8.12.0+
 
 ### Installation
 
 ```bash
-# Install dependencies
+# Install all dependencies
 pnpm install
 
-# Start development servers for all apps
-pnpm dev
+# Create database environment file
+echo 'DATABASE_URL="file:./dev.db"' > packages/db/.env
 
-# Or start individual apps
-pnpm --filter @soundscape/extension dev
-pnpm --filter @soundscape/web dev
+# Generate Prisma client
+pnpm db:generate
+
+# Push database schema
+pnpm db:push
 ```
 
-### Building
+### Development
+
+**Option 1: Run everything together**
 
 ```bash
-# Build all apps and packages
-pnpm build
-
-# Build extension for specific browsers
-pnpm --filter @soundscape/extension build:firefox
-pnpm --filter @soundscape/extension build:safari
-```
-
-## Development
-
-### Extension Development
-
-The browser extension is built with **WXT** (Web Extension Toolkit):
-
-```bash
-cd apps/extension
-
-# Chrome development
-pnpm dev
-
-# Firefox development
-pnpm dev:firefox
-
-# Safari development
-pnpm dev:safari
-```
-
-Extension includes:
-
-- Popup interface (React + TailwindCSS)
-- Background script for persistent functionality
-- Content script for web page interaction
-- Cross-browser manifest generation
-
-### Web App Development
-
-The web app is built with **SolidJS**:
-
-```bash
-cd apps/web
 pnpm dev
 ```
 
-Web app includes:
-
-- SolidJS with fine-grained reactivity
-- TailwindCSS styling
-- Shared component compatibility
-
-### Shared Packages
-
-All shared packages support hot reload during development:
+**Option 2: Run individually**
 
 ```bash
-# Watch mode for UI components
-pnpm --filter @soundscape/ui dev
+# Terminal 1 - Backend server
+pnpm dev:server
 
-# Watch mode for utilities
-pnpm --filter @soundscape/utils dev
+# Terminal 2 - Web app
+pnpm dev:web
+
+# Terminal 3 - Browser extension
+pnpm dev:extension
+```
+
+The services will be available at:
+
+- Backend API: http://localhost:3001/trpc
+- Backend WebSocket: ws://localhost:3001/ws
+- Web App: http://localhost:5173
+- Extension: Load `.wxt/chrome-mv3` in Chrome
+
+### Environment Setup
+
+**Web App** (`apps/web/.env.local`):
+
+```bash
+VITE_LASTFM_API_KEY=your_api_key_here
+VITE_API_URL=http://localhost:3001
+VITE_WS_URL=ws://localhost:3001/ws
+```
+
+**Extension** (`apps/extension/.env`):
+
+```bash
+VITE_API_URL=http://localhost:3001
+VITE_WS_URL=ws://localhost:3001/ws
+```
+
+## Testing Real-Time Communication
+
+1. Open the web app at http://localhost:5173
+2. Load the extension in Chrome
+3. Open the extension popup
+4. Send messages between web app and extension via WebSocket
+5. Test tRPC API calls from both clients
+
+## Database Management
+
+```bash
+# Generate Prisma client after schema changes
+pnpm db:generate
+
+# Push schema to database (dev)
+pnpm db:push
+
+# Open Prisma Studio
+pnpm db:studio
 ```
 
 ## Project Structure
@@ -116,76 +105,78 @@ pnpm --filter @soundscape/utils dev
 ```
 soundscape/
 ├── apps/
-│   ├── extension/          # WXT browser extension
-│   │   ├── entrypoints/    # Extension entry points
-│   │   │   ├── popup/      # Extension popup (React)
-│   │   │   ├── background.ts
-│   │   │   └── content.ts
-│   │   ├── wxt.config.ts   # WXT configuration
-│   │   └── tailwind.config.js
-│   └── web/                # SolidJS web app
-│       ├── src/            # App source
-│       ├── vite.config.ts
-│       └── tailwind.config.js
+│   ├── server/              # tRPC + Express + WebSocket server
+│   │   └── src/
+│   │       ├── index.ts     # Server entry point
+│   │       └── context.ts   # tRPC context
+│   ├── web/                 # SolidJS web app
+│   │   └── src/
+│   │       ├── lib/
+│   │       │   ├── trpc.ts  # tRPC client
+│   │       │   └── websocket.ts  # WebSocket client
+│   │       └── components/
+│   └── extension/           # WXT browser extension
+│       ├── entrypoints/
+│       │   ├── popup/       # Extension popup (React)
+│       │   ├── background.ts
+│       │   └── content.ts
+│       └── lib/
+│           ├── trpc.ts      # tRPC client
+│           └── websocket.ts # WebSocket client
 ├── packages/
-│   ├── ui/                 # Shared React components
-│   │   └── src/lib/utils.ts # TailwindCSS utilities
-│   ├── utils/              # Shared utilities
-│   │   └── src/index.ts
-│   └── types/              # Shared TypeScript types
-│       └── src/index.ts
-├── turbo.json             # Turborepo configuration
-├── pnpm-workspace.yaml    # pnpm workspace configuration
-└── tsconfig.json          # Root TypeScript config
+│   ├── api/                 # tRPC router definitions (shared)
+│   │   └── src/
+│   │       └── router.ts    # API endpoints
+│   ├── db/                  # Prisma schema + client
+│   │   ├── prisma/
+│   │   │   └── schema.prisma
+│   │   └── src/
+│   ├── types/               # Shared TypeScript types
+│   ├── utils/               # Shared utilities
+│   └── ui/                  # Shared UI components
+└── turbo.json               # Turborepo configuration
 ```
 
 ## Technology Stack
 
-- **Framework**: WXT (Extension), SolidJS (Web)
+- **Framework**: SolidJS (web), React (extension)
+- **Backend**: Node.js + Express + tRPC
+- **Real-Time**: WebSocket (ws library)
+- **Database**: Prisma + SQLite/PostgreSQL
+- **Build**: Turborepo + Vite + WXT
+- **Styling**: TailwindCSS
 - **Language**: TypeScript
-- **Styling**: TailwindCSS with shared design tokens
-- **UI Components**: Ready for custom component library with class-variance-authority
-- **Build Tool**: Turborepo
-- **Package Manager**: pnpm
-- **Bundler**: Vite (WXT & Web)
 
-## Infrastructure Ready
+## Features
 
-This setup provides a clean foundation with:
+### Current
 
-- Cross-browser extension infrastructure
-- React-based popup with TailwindCSS
-- SolidJS web app with shared styling
-- Monorepo structure for shared packages
-- TypeScript configuration across all packages
-- Hot reload development experience
-- Production build optimization
+- ✅ Last.fm integration (recent tracks, top artists, albums)
+- ✅ Similar artist discovery
+- ✅ EveryNoise genre exploration
+- ✅ Multi-panel blog/site browsing
+- ✅ Real-time WebSocket communication
+- ✅ Type-safe API with tRPC
+- ✅ Monochrome design system
 
-Add your components, utilities, and types to the respective packages to start building your application.
+### Planned
 
-## Scripts
+- [ ] RateYourMusic list capture
+- [ ] Discovery management dashboard
+- [ ] Playlist generation
+- [ ] Spotify/YouTube integration
+- [ ] Advanced filtering and search
 
-```bash
-# Development
-pnpm dev              # Start all apps in development mode
-pnpm build            # Build all apps and packages
-pnpm lint             # Lint all packages
-pnpm type-check       # Type check all packages
-pnpm clean            # Clean all build outputs
+See `project-plan.md` for complete roadmap.
 
-# Individual package scripts
-pnpm --filter @soundscape/extension dev
-pnpm --filter @soundscape/web dev
-pnpm --filter @soundscape/ui build
-```
+## Development Guidelines
 
-## Next Steps
+See `soundscape/AGENTS.md` for:
 
-1. Add your UI components to `packages/ui/src/components/`
-2. Define shared types in `packages/types/src/index.ts`
-3. Add utility functions to `packages/utils/src/index.ts`
-4. Build your extension popup in `apps/extension/entrypoints/popup/`
-5. Develop your web app in `apps/web/src/`
+- Code style guidelines
+- Component patterns
+- SolidJS best practices
+- API integration patterns
 
 ## License
 

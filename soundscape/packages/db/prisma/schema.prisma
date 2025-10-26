@@ -1,0 +1,21 @@
+// Simple Prisma schema for development
+// Using SQLite for simplicity - can switch to PostgreSQL later
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Minimal example model - we'll build this out later
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  from      String
+  createdAt DateTime @default(now())
+}
+
+

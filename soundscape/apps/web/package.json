@@ -10,9 +10,11 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@soundscape/api": "workspace:*",
     "@soundscape/types": "workspace:*",
     "@soundscape/ui": "workspace:*",
     "@soundscape/utils": "workspace:*",
+    "@trpc/client": "^10.45.0",
     "solid-js": "^1.9.3"
   },
   "devDependencies": {

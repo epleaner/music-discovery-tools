@@ -4,9 +4,15 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "dev:server": "pnpm --filter @soundscape/server dev",
+    "dev:web": "pnpm --filter @soundscape/web dev",
+    "dev:extension": "pnpm --filter wxt-react-starter dev",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "db:generate": "pnpm --filter @soundscape/db db:generate",
+    "db:push": "pnpm --filter @soundscape/db db:push",
+    "db:studio": "pnpm --filter @soundscape/db db:studio"
   },
   "devDependencies": {
     "turbo": "^1.11.2",
