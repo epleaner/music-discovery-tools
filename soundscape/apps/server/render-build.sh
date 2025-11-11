@@ -24,7 +24,25 @@ pnpm --filter @soundscape/utils build
 
 # Build server
 echo "🚀 Building server..."
-pnpm --filter @soundscape/server build
+cd apps/server
+echo "Current directory: $(pwd)"
+echo "Running build..."
+pnpm build
 
-echo "✅ Build complete!"
+# Verify build output
+echo "Checking build output..."
+if [ ! -f "dist/index.js" ]; then
+    echo "❌ Build failed: dist/index.js not found"
+    echo "Current directory contents:"
+    ls -la
+    echo "Checking if dist exists:"
+    ls -la dist/ 2>/dev/null || echo "dist/ directory does not exist"
+    echo "Checking TypeScript compilation errors..."
+    pnpm exec tsc --noEmit || true
+    exit 1
+fi
+
+echo "✅ Build complete! Output:"
+ls -la dist/
+cd ../..
 
