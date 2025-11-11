@@ -24,6 +24,7 @@
     "@soundscape/types": "workspace:*",
     "@soundscape/ui": "workspace:*",
     "@soundscape/utils": "workspace:*",
+    "@tanstack/react-query": "^5.90.7",
     "@trpc/client": "^10.45.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

@@ -3,8 +3,10 @@ import cors from 'cors';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
+import swaggerUi from 'swagger-ui-express';
 import { appRouter } from '@soundscape/api';
 import { createContext } from './context.js';
+import { generateOpenApiDocument, createOpenApiHttpHandler } from 'trpc-openapi';
 
 const app = express();
 const server = createServer(app);
@@ -24,6 +26,36 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Generate OpenAPI document
+const openApiDocument = generateOpenApiDocument(appRouter, {
+  title: 'Soundscape API',
+  version: '1.0.0',
+  baseUrl: process.env.API_BASE_URL || 'http://localhost:3001',
+});
+
+// OpenAPI JSON endpoint
+app.get('/api/openapi.json', (req, res) => {
+  res.json(openApiDocument);
+});
+
+// Swagger UI
+app.use('/api', swaggerUi.serve, swaggerUi.setup(openApiDocument));
+
+// REST API endpoints (OpenAPI)
+const openApiHandler = createOpenApiHttpHandler({
+  router: appRouter,
+  createContext,
+  responseMeta: () => ({}),
+  onError: ({ error }: { error: unknown }) => {
+    console.error('OpenAPI error:', error);
+  },
+  maxBodySize: 10 * 1024 * 1024, // 10MB
+});
+
+app.use('/api/rest', (req, res) => {
+  openApiHandler(req, res);
+});
+
 // tRPC middleware
 app.use(
   '/trpc',
@@ -39,7 +71,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 // Store connected clients with metadata
 const clients = new Map<string, { ws: any; type: 'web' | 'extension' }>();
 
-wss.on('connection', (ws, req) => {
+wss.on('connection', (ws, _req) => {
   const clientId = Math.random().toString(36).substring(7);
   console.log(`Client connected: ${clientId}`);
 
@@ -93,6 +125,9 @@ server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📡 tRPC endpoint: http://localhost:${PORT}/trpc`);
   console.log(`🔌 WebSocket endpoint: ws://localhost:${PORT}/ws`);
+  console.log(`📚 OpenAPI docs: http://localhost:${PORT}/api`);
+  console.log(`🔗 OpenAPI JSON: http://localhost:${PORT}/api/openapi.json`);
+  console.log(`🌐 REST API: http://localhost:${PORT}/api/rest`);
 });
 
 
