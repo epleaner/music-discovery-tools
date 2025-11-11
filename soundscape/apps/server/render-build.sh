@@ -3,11 +3,11 @@ set -e
 
 echo "🔨 Building Soundscape server..."
 
-# Install dependencies
+# Install dependencies (skip postinstall scripts to avoid extension issues)
 echo "📦 Installing dependencies..."
-pnpm install
+pnpm install --ignore-scripts
 
-# Generate Prisma client
+# Generate Prisma client (this handles Prisma's postinstall needs)
 echo "🗄️  Generating Prisma client..."
 pnpm --filter @soundscape/db db:generate
 

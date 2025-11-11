@@ -3,9 +3,9 @@ set -e
 
 echo "🔨 Building Soundscape web app..."
 
-# Install dependencies
+# Install dependencies (skip postinstall scripts to avoid extension issues)
 echo "📦 Installing dependencies..."
-pnpm install
+pnpm install --ignore-scripts
 
 # Build shared packages first (in dependency order)
 echo "🏗️  Building shared packages..."
