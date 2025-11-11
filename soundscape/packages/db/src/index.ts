@@ -9,3 +9,5 @@ export const db = new PrismaClient({
 
 export * from '@prisma/client';
 
+
+

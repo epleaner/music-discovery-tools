@@ -9,7 +9,7 @@ Turborepo monorepo with:
 - **Web App**: SolidJS with real-time WebSocket communication
 - **Browser Extension**: WXT (React) for RateYourMusic integration
 - **Backend**: tRPC + Express + WebSocket server
-- **Database**: Prisma with SQLite (dev) / PostgreSQL (production)
+- **Database**: Prisma with PostgreSQL
 
 ## Quick Start
 
@@ -25,7 +25,9 @@ Turborepo monorepo with:
 pnpm install
 
 # Create database environment file
-echo 'DATABASE_URL="file:./dev.db"' > packages/db/.env
+# For local development, use a PostgreSQL connection string:
+# DATABASE_URL="postgresql://user:password@localhost:5432/soundscape?schema=public"
+echo 'DATABASE_URL="postgresql://user:password@localhost:5432/soundscape?schema=public"' > packages/db/.env
 
 # Generate Prisma client
 pnpm db:generate
@@ -142,7 +144,7 @@ soundscape/
 - **Framework**: SolidJS (web), React (extension)
 - **Backend**: Node.js + Express + tRPC
 - **Real-Time**: WebSocket (ws library)
-- **Database**: Prisma + SQLite/PostgreSQL
+- **Database**: Prisma + PostgreSQL
 - **Build**: Turborepo + Vite + WXT
 - **Styling**: TailwindCSS
 - **Language**: TypeScript

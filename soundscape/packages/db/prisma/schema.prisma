@@ -1,8 +1,7 @@
-// Simple Prisma schema for development
-// Using SQLite for simplicity - can switch to PostgreSQL later
+// Prisma schema for PostgreSQL
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

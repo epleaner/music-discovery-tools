@@ -13,13 +13,20 @@ pnpm install
 
 ```bash
 # Create database environment file
-echo 'DATABASE_URL="file:./dev.db"' > packages/db/.env
+# For local development, use a PostgreSQL connection string:
+# DATABASE_URL="postgresql://user:password@localhost:5432/soundscape?schema=public"
+echo 'DATABASE_URL="postgresql://user:password@localhost:5432/soundscape?schema=public"' > packages/db/.env
 
 # Generate Prisma client
 pnpm db:generate
 
-# Push schema to database (creates dev.db SQLite file)
+# Push schema to database
 pnpm db:push
+```
+
+**Note:** Make sure PostgreSQL is running locally. You can use Docker:
+```bash
+docker run --name soundscape-postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=soundscape -p 5432:5432 -d postgres
 ```
 
 ### 3. Configure Environment Variables
@@ -122,9 +129,14 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 # Regenerate client
 pnpm db:generate
 
-# Reset database
-rm packages/db/dev.db
+# Reset database (PostgreSQL)
+# Option 1: Drop and recreate via psql
+psql -U postgres -c "DROP DATABASE IF EXISTS soundscape;"
+psql -U postgres -c "CREATE DATABASE soundscape;"
 pnpm db:push
+
+# Option 2: Use Prisma migrate reset (if using migrations)
+pnpm db:migrate reset
 ```
 
 ### Extension won't load

@@ -1,99 +1,105 @@
-import { createSignal, onCleanup, onMount } from 'solid-js';
+/**
+ * WebSocket client for web application
+ */
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001/ws';
-
-export interface WebSocketMessage {
+interface WebSocketMessage {
   type: string;
   data?: any;
   from?: 'web' | 'extension';
   timestamp?: string;
 }
 
-export function createWebSocket() {
-  const [isConnected, setIsConnected] = createSignal(false);
-  const [lastMessage, setLastMessage] = createSignal<WebSocketMessage | null>(
-    null
-  );
+class WebAppWebSocket {
+  private ws: WebSocket | null = null;
+  private reconnectTimeout: number | null = null;
+  private messageHandlers: Set<(message: WebSocketMessage) => void> = new Set();
+  private connectionHandlers: Set<(connected: boolean) => void> = new Set();
+  private isConnected = false;
 
-  let ws: WebSocket | null = null;
-  let reconnectTimeout: number | null = null;
+  private WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001/ws';
 
-  const connect = () => {
+  connect() {
     try {
-      ws = new WebSocket(WS_URL);
+      this.ws = new WebSocket(this.WS_URL);
 
-      ws.onopen = () => {
-        console.log('WebSocket connected');
-        setIsConnected(true);
+      this.ws.onopen = () => {
+        console.log('[Web] WebSocket connected');
+        this.isConnected = true;
+        this.notifyConnectionChange(true);
 
         // Register as web client
-        ws?.send(
-          JSON.stringify({
-            type: 'register',
-            clientType: 'web',
-          })
-        );
+        this.send({
+          type: 'register',
+          clientType: 'web',
+        });
       };
 
-      ws.onmessage = (event) => {
+      this.ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data) as WebSocketMessage;
-          console.log('WebSocket message received:', message);
-          setLastMessage(message);
+          console.log('[Web] WebSocket message received:', message);
+          this.messageHandlers.forEach((handler) => handler(message));
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error('[Web] Error parsing WebSocket message:', error);
         }
       };
 
-      ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        setIsConnected(false);
+      this.ws.onclose = () => {
+        console.log('[Web] WebSocket disconnected');
+        this.isConnected = false;
+        this.notifyConnectionChange(false);
 
         // Attempt to reconnect after 3 seconds
-        reconnectTimeout = window.setTimeout(() => {
-          console.log('Attempting to reconnect...');
-          connect();
+        this.reconnectTimeout = window.setTimeout(() => {
+          console.log('[Web] Attempting to reconnect...');
+          this.connect();
         }, 3000);
       };
 
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+      this.ws.onerror = (error) => {
+        console.error('[Web] WebSocket error:', error);
       };
     } catch (error) {
-      console.error('Error creating WebSocket:', error);
+      console.error('[Web] Error creating WebSocket:', error);
     }
-  };
+  }
 
-  const send = (message: WebSocketMessage) => {
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(message));
+  send(
+    message:
+      | WebSocketMessage
+      | { type: string; clientType: string; [key: string]: any }
+  ) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message));
     } else {
-      console.warn('WebSocket is not connected');
+      console.warn('[Web] WebSocket is not connected');
     }
-  };
+  }
 
-  const disconnect = () => {
-    if (reconnectTimeout) {
-      clearTimeout(reconnectTimeout);
+  disconnect() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
     }
-    ws?.close();
-  };
+    this.ws?.close();
+  }
 
-  // Auto-connect on mount
-  onMount(() => {
-    connect();
-  });
+  onMessage(handler: (message: WebSocketMessage) => void) {
+    this.messageHandlers.add(handler);
+    return () => this.messageHandlers.delete(handler);
+  }
 
-  // Clean up on unmount
-  onCleanup(() => {
-    disconnect();
-  });
+  onConnectionChange(handler: (connected: boolean) => void) {
+    this.connectionHandlers.add(handler);
+    return () => this.connectionHandlers.delete(handler);
+  }
 
-  return {
-    isConnected,
-    lastMessage,
-    send,
-    reconnect: connect,
-  };
+  private notifyConnectionChange(connected: boolean) {
+    this.connectionHandlers.forEach((handler) => handler(connected));
+  }
+
+  getConnectionStatus() {
+    return this.isConnected;
+  }
 }
 
+export const webWs = new WebAppWebSocket();

@@ -18,6 +18,7 @@ import SiteViewer from './components/SiteViewer';
 import ResizablePanels from './components/ResizablePanels';
 import ResizableBottom from './components/ResizableBottom';
 import EveryNoiseViewer from './components/EveryNoiseViewer';
+import WebSocketExample from './components/WebSocketExample';
 import {
   createRecentTracksResource,
   createTopArtistsResource,
@@ -151,6 +152,9 @@ const App: Component = () => {
     'year'
   );
 
+  // WebSocket debug panel state
+  const [showWebSocket, setShowWebSocket] = createSignal(false);
+
   const formatGenreForURL = (genre: string) => {
     return genre
       .toLowerCase()
@@ -179,14 +183,22 @@ const App: Component = () => {
   return (
     <div class='flex flex-col h-screen bg-bg'>
       {/* Header */}
-      <div class='flex-shrink-0 p-4 border-b border-border'>
-        <div class='flex gap-3 justify-between items-center'>
+      <div class='flex-shrink-0 border-b border-border'>
+        <div class='flex gap-3 justify-between items-center p-4'>
           <UsernameInput
             onSubmit={handleUsernameSubmit}
             initialUsername={username()}
           />
 
           <div class='flex flex-1 gap-3 justify-end items-center w-full'>
+            {/* WebSocket Debug Button */}
+            <button
+              onClick={() => setShowWebSocket(!showWebSocket())}
+              class='text-xs btn-secondary'
+              title='WebSocket Debug Panel'>
+              WS {showWebSocket() ? '−' : '+'}
+            </button>
+
             {/* RYM Dropdown */}
             <div class='relative flex-shrink-0'>
               <button
@@ -287,6 +299,13 @@ const App: Component = () => {
             </button>
           </div>
         </div>
+
+        {/* WebSocket Debug Panel */}
+        <Show when={showWebSocket()}>
+          <div class='border-t border-border bg-bg-subtle'>
+            <WebSocketExample />
+          </div>
+        </Show>
       </div>
 
       <Show when={username()}>
