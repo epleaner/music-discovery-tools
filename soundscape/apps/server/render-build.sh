@@ -5,7 +5,9 @@ echo "🔨 Building Soundscape server..."
 
 # Install dependencies including devDependencies (needed for Prisma CLI)
 # Skip postinstall scripts to avoid extension issues
+# Disable workspace root check to prevent warnings in CI
 echo "📦 Installing dependencies..."
+pnpm config set ignore-workspace-root-check true
 pnpm install --ignore-scripts --include=dev
 
 # Generate Prisma client (this handles Prisma's postinstall needs)

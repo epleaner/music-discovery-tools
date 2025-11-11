@@ -5,7 +5,9 @@ echo "🔨 Building Soundscape web app..."
 
 # Install dependencies including devDependencies (needed for build tools)
 # Skip postinstall scripts to avoid extension issues
+# Disable workspace root check to prevent warnings in CI
 echo "📦 Installing dependencies..."
+pnpm config set ignore-workspace-root-check true
 pnpm install --ignore-scripts --include=dev
 
 # Build shared packages first (in dependency order)
