@@ -3,9 +3,10 @@ set -e
 
 echo "🔨 Building Soundscape server..."
 
-# Install dependencies (skip postinstall scripts to avoid extension issues)
+# Install dependencies including devDependencies (needed for Prisma CLI)
+# Skip postinstall scripts to avoid extension issues
 echo "📦 Installing dependencies..."
-pnpm install --ignore-scripts
+pnpm install --ignore-scripts --include=dev
 
 # Generate Prisma client (this handles Prisma's postinstall needs)
 echo "🗄️  Generating Prisma client..."

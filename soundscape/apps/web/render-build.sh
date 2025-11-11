@@ -3,9 +3,10 @@ set -e
 
 echo "🔨 Building Soundscape web app..."
 
-# Install dependencies (skip postinstall scripts to avoid extension issues)
+# Install dependencies including devDependencies (needed for build tools)
+# Skip postinstall scripts to avoid extension issues
 echo "📦 Installing dependencies..."
-pnpm install --ignore-scripts
+pnpm install --ignore-scripts --include=dev
 
 # Build shared packages first (in dependency order)
 echo "🏗️  Building shared packages..."
