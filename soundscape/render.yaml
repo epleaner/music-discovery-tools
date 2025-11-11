@@ -42,6 +42,7 @@ services:
   - type: web
     name: soundscape-web
     env: static
+    installCommand: pnpm install --no-frozen-lockfile --ignore-scripts
     buildCommand: ./apps/web/render-build.sh
     staticPublishPath: apps/web/dist
     envVars:
