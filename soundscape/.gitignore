@@ -50,4 +50,7 @@ Thumbs.db
 packages/api-client/src/api.ts
 packages/api-client/src/models/
 packages/api-client/src/mocks/
-openapi.json 
+openapi.json
+
+# Render build artifacts
+.render/ 

@@ -12,9 +12,24 @@ const app = express();
 const server = createServer(app);
 
 // CORS configuration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  process.env.WEB_APP_URL, // Production web app URL
+].filter(Boolean) as string[];
+
 app.use(
   cors({
-    origin: ['http://localhost:5173', 'http://localhost:5174'], // Vite dev servers
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
@@ -27,10 +42,15 @@ app.get('/health', (req, res) => {
 });
 
 // Generate OpenAPI document
+const API_BASE_URL =
+  process.env.API_BASE_URL ||
+  process.env.RENDER_EXTERNAL_URL ||
+  `http://localhost:${process.env.PORT || 3001}`;
+
 const openApiDocument = generateOpenApiDocument(appRouter, {
   title: 'Soundscape API',
   version: '1.0.0',
-  baseUrl: process.env.API_BASE_URL || 'http://localhost:3001',
+  baseUrl: API_BASE_URL,
 });
 
 // OpenAPI JSON endpoint
