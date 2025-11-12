@@ -42,7 +42,7 @@ services:
   - type: web
     name: soundscape-web
     env: static
-    installCommand: pnpm install --no-frozen-lockfile --ignore-scripts
+    installCommand: echo "Skipping automatic install - handled in build script"
     buildCommand: ./apps/web/render-build.sh
     staticPublishPath: apps/web/dist
     envVars:

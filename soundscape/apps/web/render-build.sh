@@ -8,12 +8,9 @@ echo "🔨 Building Soundscape web app..."
 # Disable workspace root check to prevent warnings in CI
 # Unset NODE_ENV to ensure devDependencies are installed
 # Use --no-frozen-lockfile for CI environments
-# Note: Render runs installCommand first, but we need devDependencies
 echo "📦 Installing dependencies (including devDependencies)..."
 pnpm config set ignore-workspace-root-check true
-if [ ! -d "node_modules" ] || [ ! -d "packages/db/node_modules/@prisma/client" ]; then
-  NODE_ENV= pnpm install --ignore-scripts --prod=false --no-frozen-lockfile
-fi
+NODE_ENV= pnpm install --ignore-scripts --prod=false --no-frozen-lockfile
 
 # Build shared packages first (in dependency order)
 echo "🏗️  Building shared packages..."
