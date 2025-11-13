@@ -19,6 +19,7 @@ import ResizablePanels from './components/ResizablePanels';
 import ResizableBottom from './components/ResizableBottom';
 import EveryNoiseViewer from './components/EveryNoiseViewer';
 import WebSocketExample from './components/WebSocketExample';
+import GenreSelect from './components/GenreSelect';
 import {
   createRecentTracksResource,
   createTopArtistsResource,
@@ -211,19 +212,11 @@ const App: Component = () => {
               <Show when={showRYMDropdown()}>
                 <div class='absolute right-0 z-30 p-3 mt-1 w-80 border shadow-lg bg-bg border-border'>
                   <div class='space-y-3'>
-                    {/* Genre Input */}
-                    <div>
-                      <label class='block mb-1 text-xs text-fg-muted'>
-                        Genre
-                      </label>
-                      <input
-                        type='text'
-                        value={rymSearchTerm()}
-                        onInput={(e) => setRYMSearchTerm(e.currentTarget.value)}
-                        placeholder='Search genre...'
-                        class='w-full text-xs input'
-                      />
-                    </div>
+                    {/* Genre Select */}
+                    <GenreSelect
+                      value={rymSearchTerm()}
+                      onValueChange={setRYMSearchTerm}
+                    />
 
                     {/* Time Range & Year */}
                     <div class='flex gap-2'>

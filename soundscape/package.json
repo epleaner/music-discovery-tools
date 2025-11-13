@@ -17,10 +17,13 @@
     "api:generate:local": "API_URL=http://localhost:3001 orval"
   },
   "devDependencies": {
+    "@types/cheerio": "^1.0.0",
     "@types/node": "^20.10.0",
+    "cheerio": "^1.1.2",
     "msw": "^2.12.1",
     "orval": "^7.16.0",
     "prettier": "^3.6.2",
+    "tsx": "^4.7.0",
     "turbo": "^1.11.2",
     "typescript": "^5.3.0"
   },

@@ -29,7 +29,7 @@ const EveryNoiseViewer: Component<EveryNoiseViewerProps> = (props) => {
         </a>
 
         <Show when={props.isLoading}>
-          <div class='text-xs text-fg-muted'>◐</div>
+          <div class='text-xs text-fg-muted animate-spin'>✸</div>
         </Show>
         <Show when={!props.isLoading && !props.genre}>
           <div class='text-xs text-fg-muted'>
@@ -40,7 +40,7 @@ const EveryNoiseViewer: Component<EveryNoiseViewerProps> = (props) => {
       <Show when={props.genre && !props.isLoading}>
         <button
           onClick={handleOpenGenre}
-          class='text-xs link'
+          class='text-xs link pr-2'
           title='Open genre map in new tab'>
           Genre Map →
         </button>

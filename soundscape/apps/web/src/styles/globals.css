@@ -77,6 +77,12 @@
 }
 
 @layer components {
+  /* Ark UI Combobox Positioner z-index */
+  [data-scope='combobox'][data-part='positioner'] {
+    --z-index: 9999 !important;
+    z-index: var(--z-index) !important;
+  }
+
   .btn {
     @apply px-3 py-1.5 text-sm font-medium transition-colors rounded;
     @apply hover:bg-bg-muted active:bg-bg-subtle;
