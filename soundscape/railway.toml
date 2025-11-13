@@ -1,0 +1,9 @@
+# Railway configuration for Soundscape monorepo
+# This file is used when deploying from the root
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "pnpm --filter @soundscape/server start"
+

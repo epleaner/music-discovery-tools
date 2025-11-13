@@ -1,0 +1,29 @@
+#!/bin/bash
+set -e
+
+echo "🔨 Building Soundscape web app for Railway..."
+
+# Railway runs from project root, so we need to cd there
+cd "$(dirname "$0")/../.." || exit 1
+
+# Install dependencies including devDependencies (needed for build tools)
+# Skip postinstall scripts to avoid extension issues
+# Disable workspace root check to prevent warnings in CI
+# Unset NODE_ENV to ensure devDependencies are installed
+echo "📦 Installing dependencies..."
+pnpm config set ignore-workspace-root-check true
+NODE_ENV= pnpm install --ignore-scripts --prod=false
+
+# Build shared packages first (in dependency order)
+echo "🏗️  Building shared packages..."
+pnpm --filter @soundscape/types build
+pnpm --filter @soundscape/utils build
+pnpm --filter @soundscape/ui build
+# @soundscape/api doesn't need building - it's TypeScript source
+
+# Build web app
+echo "🌐 Building web app..."
+pnpm --filter @soundscape/web build
+
+echo "✅ Build complete!"
+
