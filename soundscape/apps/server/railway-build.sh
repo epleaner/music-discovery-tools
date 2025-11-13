@@ -39,7 +39,14 @@ NODE_ENV= pnpm install --ignore-scripts --prod=false --no-frozen-lockfile
 
 # Generate Prisma client (this handles Prisma's postinstall needs)
 echo "🗄️  Generating Prisma client..."
+echo "Current directory before generate: $(pwd)"
+echo "Checking for packages/db:"
+ls -la packages/db/ 2>/dev/null || echo "packages/db not found"
 pnpm --filter @soundscape/db db:generate
+echo "Verifying Prisma client was generated..."
+ls -la packages/db/node_modules/.prisma/client 2>/dev/null || echo "Prisma client not found in expected location"
+ls -la node_modules/.prisma/client 2>/dev/null || echo "Prisma client not found in root node_modules"
+find . -name "PrismaClient*" -type f 2>/dev/null | head -5 || echo "No PrismaClient files found"
 
 # Build shared packages first (in dependency order)
 echo "🏗️  Building shared packages..."
