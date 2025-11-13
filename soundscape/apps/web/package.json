@@ -7,7 +7,8 @@
     "build": "vite build",
     "dev": "vite",
     "preview": "vite preview",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "start": "tsx server.ts"
   },
   "dependencies": {
     "@soundscape/api": "workspace:*",
@@ -15,9 +16,12 @@
     "@soundscape/ui": "workspace:*",
     "@soundscape/utils": "workspace:*",
     "@trpc/client": "^10.45.0",
-    "solid-js": "^1.9.3"
+    "express": "^4.18.2",
+    "solid-js": "^1.9.3",
+    "tsx": "^4.7.0"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
     "@types/node": "^20.10.0",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.32",
