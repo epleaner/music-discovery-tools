@@ -188,9 +188,24 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
     const selected = props.value
       .map((val) => allItems.find((item) => item.value === val))
       .filter((item): item is GenreItem => item !== undefined);
-    console.log('selected', selected);
     return selected;
   });
+
+  const handleShuffle = () => {
+    const allItems = initialItems();
+    if (allItems.length === 0) return;
+
+    // Randomly pick between 1-3 genres
+    const count = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+    const shuffled = [...allItems]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, count)
+      .map((item) => item.value);
+
+    props.onValueChange(shuffled);
+    setInputValue('');
+    filter('');
+  };
 
   const handleScrollToIndexFn = (details: ScrollToIndexDetails) => {
     const scrollOptions: ScrollToOptions = {
@@ -219,9 +234,19 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
       scrollToIndexFn={handleScrollToIndexFn}
       positioning={{ sameWidth: true }}
     >
-      <Combobox.Label class="block mb-1 text-xs text-fg-muted">
-        Genre
-      </Combobox.Label>
+      <div class="flex items-center gap-1 mb-1">
+        <Combobox.Label class="block text-xs text-fg-muted">
+          Genre
+        </Combobox.Label>
+        <button
+          type="button"
+          onClick={handleShuffle}
+          class="text-xs text-fg-muted hover:text-fg px-1"
+          title="Shuffle genres"
+        >
+          ↻
+        </button>
+      </div>
       <Combobox.Control class="relative flex items-center min-h-[32px]">
         <div
           ref={pillsContainerRef}

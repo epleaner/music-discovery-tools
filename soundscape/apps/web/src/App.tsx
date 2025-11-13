@@ -136,6 +136,7 @@ const App: Component = () => {
     const t = theme();
     // Rotate 180deg for dark mode, 0deg for light mode
     if (t === 'dark') return '180deg';
+    if (t === 'system') return '90deg';
     return '0deg';
   };
 
@@ -167,15 +168,14 @@ const App: Component = () => {
 
   const getRYMUrl = () => {
     const genres = rymSearchTerm();
-    // Join multiple genres with commas
-    const genreSlug = genres
-      .map(formatGenreForURL)
-      .join(',');
+    // Join multiple genres with commas and URL encode
+    const genreSlug = genres.map(formatGenreForURL).join(',');
+    const encodedGenreSlug = encodeURIComponent(genreSlug);
     if (rymTimeRange() === 'year') {
-      return `https://rateyourmusic.com/charts/top/album/${rymYear()}/ge:${genreSlug}/`;
+      return `https://rateyourmusic.com/charts/top/album/${rymYear()}/ge:${encodedGenreSlug}/`;
     } else {
       const decade = Math.floor(rymYear() / 10) * 10;
-      return `https://rateyourmusic.com/charts/top/album/${decade}s/ge:${genreSlug}/`;
+      return `https://rateyourmusic.com/charts/top/album/${decade}s/ge:${encodedGenreSlug}/`;
     }
   };
 
@@ -255,9 +255,24 @@ const App: Component = () => {
                       </div>
 
                       <div class="flex-1">
-                        <label class="block mb-1 text-xs text-fg-muted">
-                          {rymTimeRange() === 'year' ? 'Year' : 'Decade'}
-                        </label>
+                        <div class="flex items-center gap-1 mb-1">
+                          <label class="block text-xs text-fg-muted">
+                            {rymTimeRange() === 'year' ? 'Year' : 'Decade'}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const randomIndex = Math.floor(
+                                Math.random() * rymYears.length
+                              );
+                              setRYMYear(rymYears[randomIndex]);
+                            }}
+                            class="text-xs text-fg-muted hover:text-fg px-1"
+                            title="Shuffle year/decade"
+                          >
+                            ↻
+                          </button>
+                        </div>
                         <select
                           value={rymYear()}
                           onChange={(e) =>
@@ -295,7 +310,7 @@ const App: Component = () => {
 
             <button
               onClick={toggleTheme}
-              class="flex-shrink-0 p-2 text-lg transition-all text-fg-subtle hover:text-fg"
+              class="flex items-center justify-center flex-shrink-0 p-2 text-lg transition-all text-fg-subtle hover:text-fg"
               style={{ transform: `rotate(${getThemeRotation()})` }}
               title={`Theme: ${theme()}`}
             >

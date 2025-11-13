@@ -19,15 +19,15 @@ const UsernameInput: Component<UsernameInputProps> = (props) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} class='flex gap-2'>
+    <form onSubmit={handleSubmit} class="flex gap-2">
       <input
-        type='text'
+        type="text"
         value={localUsername()}
         onInput={(e) => setLocalUsername(e.currentTarget.value)}
-        placeholder='Last.fm username'
-        class='flex-1 input'
+        placeholder="Last.fm username"
+        class="flex-1 input"
       />
-      <button type='submit' class='btn-secondary'>
+      <button type="submit" class="btn-secondary">
         Load
       </button>
     </form>

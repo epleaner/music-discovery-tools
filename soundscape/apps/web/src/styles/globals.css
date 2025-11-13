@@ -54,7 +54,9 @@
 
   body {
     @apply bg-bg text-fg;
-    font-feature-settings: 'rlig' 1, 'calt' 1;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
   }
 
   /* Minimal scrollbar */
@@ -84,7 +86,7 @@
   }
 
   .btn {
-    @apply px-3 py-1.5 text-sm font-medium transition-colors rounded;
+    @apply px-3 py-1.5 text-sm font-medium transition-colors;
     @apply hover:bg-bg-muted active:bg-bg-subtle;
     @apply focus:outline-none focus:ring-1 focus:ring-border-hover;
   }
@@ -99,7 +101,7 @@
   }
 
   .input {
-    @apply px-3 py-1.5 text-sm bg-bg border border-border rounded;
+    @apply px-3 py-1.5 text-sm bg-bg border border-border;
     @apply placeholder:text-fg-subtle;
     @apply focus:outline-none focus:ring-1 focus:ring-accent;
     @apply transition-shadow;
