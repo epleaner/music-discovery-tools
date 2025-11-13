@@ -554,4 +554,11 @@
     @apply text-fg-muted hover:text-fg transition-colors;
     @apply hover:underline;
   }
+
+  .theme-icon {
+    @apply block w-full h-full;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+  }
 }

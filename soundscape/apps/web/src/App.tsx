@@ -380,7 +380,7 @@ const App: Component = () => {
             </div>
 
             <div
-              class="flex items-center gap-3 border border-border btn cursor-pointer"
+              class="flex items-center gap-2.5 border border-border btn cursor-pointer py-2.5"
               ref={colorThemeContainerRef}
               onClick={() =>
                 setShowColorThemeDropdown(!showColorThemeDropdown())
@@ -391,11 +391,11 @@ const App: Component = () => {
                   e.stopPropagation();
                   toggleTheme();
                 }}
-                class="flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg"
+                class="flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg w-3 h-3"
                 style={{ transform: `rotate(${getThemeRotation()})` }}
                 title={`Theme: ${theme()}`}
               >
-                ◐
+                <span class="theme-icon" />
               </button>
 
               <div class="relative">
