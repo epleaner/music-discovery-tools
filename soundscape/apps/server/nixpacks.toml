@@ -10,7 +10,7 @@ nixPkgs = ["nodejs_18", "pnpm", "openssl"]
 cmds = []
 
 [phases.build]
-cmds = ["cd /app && ./apps/server/railway-build.sh"]
+cmds = ["cd /app && bash apps/server/railway-build.sh"]
 
 [phases.start]
 cmd = "cd /app && pnpm --filter @soundscape/server start"
