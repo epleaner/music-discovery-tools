@@ -4,8 +4,10 @@
 [phases.setup]
 nixPkgs = ["nodejs_18", "pnpm", "openssl"]
 
+# Skip install phase - let the build script handle it
+# This ensures all workspace packages are available before installation
 [phases.install]
-cmds = ["cd /app && pnpm install --no-frozen-lockfile --ignore-scripts --prod=false"]
+cmds = []
 
 [phases.build]
 cmds = ["cd /app && ./apps/server/railway-build.sh"]
