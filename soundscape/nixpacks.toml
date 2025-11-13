@@ -1,15 +1,11 @@
 # Nixpacks configuration for Railway
-# This tells Railway to use pnpm instead of npm
+# This is a generic config - services should use their own nixpacks.toml
+# This file is kept for backward compatibility but should not be used
+# Each service (server, web) has its own nixpacks.toml in their directories
 
 [phases.setup]
 nixPkgs = ["nodejs_18", "pnpm", "openssl"]
 
 [phases.install]
 cmds = ["pnpm install --no-frozen-lockfile"]
-
-[phases.build]
-cmds = ["${RAILWAY_BUILD_COMMAND}"]
-
-[phases.start]
-cmd = "${RAILWAY_START_COMMAND}"
 
