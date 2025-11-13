@@ -3,6 +3,9 @@ set -e
 
 echo "🔨 Building Soundscape server for Railway..."
 
+# Railway runs from project root, so we need to cd there
+cd "$(dirname "$0")/../.." || exit 1
+
 # Install dependencies including devDependencies (needed for Prisma CLI)
 # Skip postinstall scripts to avoid extension issues
 # Disable workspace root check to prevent warnings in CI
