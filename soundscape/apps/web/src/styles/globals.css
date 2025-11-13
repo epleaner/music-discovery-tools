@@ -42,6 +42,150 @@
       --accent: 0 0% 98%;
       --accent-hover: 0 0% 80%;
     }
+
+    /* Apply dark variants of color themes when system theme is active */
+    :root:not(.light)[data-color-theme='blue'] {
+      --bg: 210 30% 10%;
+      --bg-subtle: 210 25% 12%;
+      --bg-muted: 210 20% 14%;
+      --fg: 210 20% 95%;
+      --fg-muted: 210 15% 70%;
+      --fg-subtle: 210 15% 60%;
+      --border: 210 20% 25%;
+      --border-hover: 210 25% 35%;
+      --accent: 210 70% 55%;
+      --accent-hover: 210 70% 65%;
+    }
+
+    :root:not(.light)[data-color-theme='green'] {
+      --bg: 142 25% 11%;
+      --bg-subtle: 142 20% 13%;
+      --bg-muted: 142 18% 15%;
+      --fg: 142 20% 94%;
+      --fg-muted: 142 15% 68%;
+      --fg-subtle: 142 15% 58%;
+      --border: 142 20% 24%;
+      --border-hover: 142 25% 34%;
+      --accent: 142 60% 50%;
+      --accent-hover: 142 60% 60%;
+    }
+
+    :root:not(.light)[data-color-theme='purple'] {
+      --bg: 270 30% 11%;
+      --bg-subtle: 270 25% 13%;
+      --bg-muted: 270 20% 15%;
+      --fg: 270 20% 94%;
+      --fg-muted: 270 15% 69%;
+      --fg-subtle: 270 15% 59%;
+      --border: 270 20% 25%;
+      --border-hover: 270 25% 35%;
+      --accent: 270 60% 55%;
+      --accent-hover: 270 60% 65%;
+    }
+
+    :root:not(.light)[data-color-theme='amber'] {
+      --bg: 38 30% 10%;
+      --bg-subtle: 38 25% 12%;
+      --bg-muted: 38 22% 14%;
+      --fg: 38 25% 93%;
+      --fg-muted: 38 20% 67%;
+      --fg-subtle: 38 20% 57%;
+      --border: 38 25% 24%;
+      --border-hover: 38 30% 34%;
+      --accent: 38 80% 55%;
+      --accent-hover: 38 80% 65%;
+    }
+
+    :root:not(.light)[data-color-theme='rose'] {
+      --bg: 350 30% 10%;
+      --bg-subtle: 350 25% 12%;
+      --bg-muted: 350 20% 14%;
+      --fg: 350 20% 94%;
+      --fg-muted: 350 15% 69%;
+      --fg-subtle: 350 15% 59%;
+      --border: 350 20% 24%;
+      --border-hover: 350 25% 34%;
+      --accent: 350 60% 55%;
+      --accent-hover: 350 60% 65%;
+    }
+
+    :root:not(.light)[data-color-theme='slate'] {
+      --bg: 215 20% 10%;
+      --bg-subtle: 215 16% 12%;
+      --bg-muted: 215 14% 14%;
+      --fg: 215 20% 94%;
+      --fg-muted: 215 12% 68%;
+      --fg-subtle: 215 12% 58%;
+      --border: 215 16% 24%;
+      --border-hover: 215 20% 34%;
+      --accent: 215 30% 70%;
+      --accent-hover: 215 30% 80%;
+    }
+
+    :root:not(.light)[data-color-theme='sunset'] {
+      --bg: 25 30% 10%;
+      --bg-subtle: 25 25% 12%;
+      --bg-muted: 25 22% 14%;
+      --fg: 25 25% 93%;
+      --fg-muted: 25 20% 67%;
+      --fg-subtle: 25 20% 57%;
+      --border: 25 25% 24%;
+      --border-hover: 25 30% 34%;
+      --accent: 25 80% 60%;
+      --accent-hover: 25 80% 70%;
+    }
+
+    :root:not(.light)[data-color-theme='ocean'] {
+      --bg: 200 30% 10%;
+      --bg-subtle: 200 25% 12%;
+      --bg-muted: 200 22% 14%;
+      --fg: 200 25% 94%;
+      --fg-muted: 200 20% 68%;
+      --fg-subtle: 200 20% 58%;
+      --border: 200 25% 24%;
+      --border-hover: 200 30% 34%;
+      --accent: 180 70% 55%;
+      --accent-hover: 180 70% 65%;
+    }
+
+    :root:not(.light)[data-color-theme='forest'] {
+      --bg: 120 25% 11%;
+      --bg-subtle: 120 20% 13%;
+      --bg-muted: 120 18% 15%;
+      --fg: 120 20% 94%;
+      --fg-muted: 120 15% 68%;
+      --fg-subtle: 120 15% 58%;
+      --border: 120 20% 24%;
+      --border-hover: 120 25% 34%;
+      --accent: 30 50% 50%;
+      --accent-hover: 30 50% 60%;
+    }
+
+    :root:not(.light)[data-color-theme='twilight'] {
+      --bg: 280 30% 11%;
+      --bg-subtle: 280 25% 13%;
+      --bg-muted: 280 20% 15%;
+      --fg: 280 20% 94%;
+      --fg-muted: 280 15% 69%;
+      --fg-subtle: 280 15% 59%;
+      --border: 280 25% 24%;
+      --border-hover: 280 30% 34%;
+      --accent: 220 70% 60%;
+      --accent-hover: 220 70% 70%;
+    }
+
+    :root:not(.light)[data-color-theme='fire'] {
+      --bg: 0 30% 10%;
+      --bg-subtle: 0 25% 12%;
+      --bg-muted: 0 22% 14%;
+      --fg: 0 25% 93%;
+      --fg-muted: 0 20% 67%;
+      --fg-subtle: 0 20% 57%;
+      --border: 0 25% 24%;
+      --border-hover: 0 30% 34%;
+      --accent: 0 70% 55%;
+      --accent-hover: 0 70% 65%;
+    }
   }
 
   /* Color Themes */
@@ -205,6 +349,142 @@
     --border-hover: 215 20% 34%;
     --accent: 215 30% 70%;
     --accent-hover: 215 30% 80%;
+  }
+
+  /* Multi-color Themes */
+  [data-color-theme='sunset'] {
+    --bg: 25 40% 97%;
+    --bg-subtle: 25 35% 95%;
+    --bg-muted: 25 30% 93%;
+    --fg: 25 50% 16%;
+    --fg-muted: 25 30% 44%;
+    --fg-subtle: 25 25% 59%;
+    --border: 25 30% 87%;
+    --border-hover: 25 35% 77%;
+    --accent: 340 70% 50%;
+    --accent-hover: 340 70% 40%;
+  }
+
+  [data-color-theme='sunset'].dark,
+  .dark[data-color-theme='sunset'] {
+    --bg: 25 30% 10%;
+    --bg-subtle: 25 25% 12%;
+    --bg-muted: 25 22% 14%;
+    --fg: 25 25% 93%;
+    --fg-muted: 25 20% 67%;
+    --fg-subtle: 25 20% 57%;
+    --border: 25 25% 24%;
+    --border-hover: 25 30% 34%;
+    --accent: 25 80% 60%;
+    --accent-hover: 25 80% 70%;
+  }
+
+  [data-color-theme='ocean'] {
+    --bg: 200 40% 97%;
+    --bg-subtle: 200 35% 95%;
+    --bg-muted: 200 30% 93%;
+    --fg: 200 50% 15%;
+    --fg-muted: 200 30% 42%;
+    --fg-subtle: 200 25% 57%;
+    --border: 200 30% 87%;
+    --border-hover: 200 35% 77%;
+    --accent: 180 70% 45%;
+    --accent-hover: 180 70% 35%;
+  }
+
+  [data-color-theme='ocean'].dark,
+  .dark[data-color-theme='ocean'] {
+    --bg: 200 30% 10%;
+    --bg-subtle: 200 25% 12%;
+    --bg-muted: 200 22% 14%;
+    --fg: 200 25% 94%;
+    --fg-muted: 200 20% 68%;
+    --fg-subtle: 200 20% 58%;
+    --border: 200 25% 24%;
+    --border-hover: 200 30% 34%;
+    --accent: 180 70% 55%;
+    --accent-hover: 180 70% 65%;
+  }
+
+  [data-color-theme='forest'] {
+    --bg: 120 30% 97%;
+    --bg-subtle: 120 25% 95%;
+    --bg-muted: 120 20% 93%;
+    --fg: 120 50% 15%;
+    --fg-muted: 120 30% 42%;
+    --fg-subtle: 120 25% 57%;
+    --border: 120 25% 87%;
+    --border-hover: 120 30% 77%;
+    --accent: 30 50% 40%;
+    --accent-hover: 30 50% 30%;
+  }
+
+  [data-color-theme='forest'].dark,
+  .dark[data-color-theme='forest'] {
+    --bg: 120 25% 11%;
+    --bg-subtle: 120 20% 13%;
+    --bg-muted: 120 18% 15%;
+    --fg: 120 20% 94%;
+    --fg-muted: 120 15% 68%;
+    --fg-subtle: 120 15% 58%;
+    --border: 120 20% 24%;
+    --border-hover: 120 25% 34%;
+    --accent: 30 50% 50%;
+    --accent-hover: 30 50% 60%;
+  }
+
+  [data-color-theme='twilight'] {
+    --bg: 280 30% 97%;
+    --bg-subtle: 280 25% 95%;
+    --bg-muted: 280 20% 93%;
+    --fg: 280 50% 16%;
+    --fg-muted: 280 30% 43%;
+    --fg-subtle: 280 25% 58%;
+    --border: 280 25% 87%;
+    --border-hover: 280 30% 77%;
+    --accent: 220 70% 50%;
+    --accent-hover: 220 70% 40%;
+  }
+
+  [data-color-theme='twilight'].dark,
+  .dark[data-color-theme='twilight'] {
+    --bg: 280 30% 11%;
+    --bg-subtle: 280 25% 13%;
+    --bg-muted: 280 20% 15%;
+    --fg: 280 20% 94%;
+    --fg-muted: 280 15% 69%;
+    --fg-subtle: 280 15% 59%;
+    --border: 280 25% 24%;
+    --border-hover: 280 30% 34%;
+    --accent: 220 70% 60%;
+    --accent-hover: 220 70% 70%;
+  }
+
+  [data-color-theme='fire'] {
+    --bg: 0 40% 97%;
+    --bg-subtle: 0 35% 95%;
+    --bg-muted: 0 30% 93%;
+    --fg: 0 50% 16%;
+    --fg-muted: 0 30% 44%;
+    --fg-subtle: 0 25% 59%;
+    --border: 0 30% 87%;
+    --border-hover: 0 35% 77%;
+    --accent: 25 80% 50%;
+    --accent-hover: 25 80% 40%;
+  }
+
+  [data-color-theme='fire'].dark,
+  .dark[data-color-theme='fire'] {
+    --bg: 0 30% 10%;
+    --bg-subtle: 0 25% 12%;
+    --bg-muted: 0 22% 14%;
+    --fg: 0 25% 93%;
+    --fg-muted: 0 20% 67%;
+    --fg-subtle: 0 20% 57%;
+    --border: 0 25% 24%;
+    --border-hover: 0 30% 34%;
+    --accent: 0 70% 55%;
+    --accent-hover: 0 70% 65%;
   }
 
   * {

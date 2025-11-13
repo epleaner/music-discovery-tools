@@ -8,7 +8,12 @@ export type ColorTheme =
   | 'purple'
   | 'amber'
   | 'rose'
-  | 'slate';
+  | 'slate'
+  | 'sunset'
+  | 'ocean'
+  | 'forest'
+  | 'twilight'
+  | 'fire';
 
 /**
  * Hook for managing theme preference with localStorage persistence

@@ -163,7 +163,7 @@ const App: Component = () => {
   // Color theme dropdown state
   const [showColorThemeDropdown, setShowColorThemeDropdown] =
     createSignal(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // oxlint-disable-next-line no-unassigned-vars
   let colorThemeContainerRef: HTMLDivElement | undefined;
 
   // WebSocket debug panel state
@@ -177,6 +177,11 @@ const App: Component = () => {
     { value: 'amber', label: 'Amber' },
     { value: 'rose', label: 'Rose' },
     { value: 'slate', label: 'Slate' },
+    { value: 'sunset', label: 'Sunset' },
+    { value: 'ocean', label: 'Ocean' },
+    { value: 'forest', label: 'Forest' },
+    { value: 'twilight', label: 'Twilight' },
+    { value: 'fire', label: 'Fire' },
   ];
 
   // Handle click outside for color theme dropdown
@@ -206,6 +211,11 @@ const App: Component = () => {
       amber: 'hsl(38, 80%, 45%)',
       rose: 'hsl(350, 60%, 45%)',
       slate: 'hsl(215, 30%, 25%)',
+      sunset: 'hsl(340, 70%, 50%)',
+      ocean: 'hsl(180, 70%, 45%)',
+      forest: 'hsl(30, 50%, 40%)',
+      twilight: 'hsl(220, 70%, 50%)',
+      fire: 'hsl(25, 80%, 50%)',
     };
     return colors[themeValue] || colors.default;
   };
@@ -361,26 +371,36 @@ const App: Component = () => {
               </Show>
             </div>
 
-            <div class="flex items-center gap-1 relative">
+            <div
+              class="flex items-center gap-3 border border-border btn cursor-pointer"
+              ref={colorThemeContainerRef}
+              onClick={() =>
+                setShowColorThemeDropdown(!showColorThemeDropdown())
+              }
+            >
               <button
-                onClick={toggleTheme}
-                class="flex items-center justify-center flex-shrink-0 p-2 text-lg transition-all text-fg-subtle hover:text-fg"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleTheme();
+                }}
+                class="flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg"
                 style={{ transform: `rotate(${getThemeRotation()})` }}
                 title={`Theme: ${theme()}`}
               >
                 ◐
               </button>
 
-              <div class="relative" ref={colorThemeContainerRef}>
+              <div class="relative">
                 <button
-                  onClick={() =>
-                    setShowColorThemeDropdown(!showColorThemeDropdown())
-                  }
-                  class="flex items-center justify-center flex-shrink-0 p-2 text-xs text-fg-subtle hover:text-fg transition-colors border border-border hover:border-border-hover rounded"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowColorThemeDropdown(!showColorThemeDropdown());
+                  }}
+                  class="flex items-center justify-center flex-shrink-0 text-xs text-fg-subtle hover:text-fg transition-colors"
                   title="Color Theme"
                 >
                   <span
-                    class="w-3 h-3 rounded-full"
+                    class="w-2 h-2 rounded-full"
                     style={{
                       'background-color': getThemeColor(colorTheme()),
                     }}
@@ -402,6 +422,11 @@ const App: Component = () => {
                                 | 'amber'
                                 | 'rose'
                                 | 'slate'
+                                | 'sunset'
+                                | 'ocean'
+                                | 'forest'
+                                | 'twilight'
+                                | 'fire'
                             );
                             setShowColorThemeDropdown(false);
                           }}
