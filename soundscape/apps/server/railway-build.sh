@@ -30,23 +30,36 @@ if [ ! -f "pnpm-workspace.yaml" ]; then
 fi
 
 # Install dependencies including devDependencies (needed for Prisma CLI)
-# Skip postinstall scripts to avoid extension issues
+# We skip postinstall to avoid extension issues, but we need Prisma's postinstall to run
 # Disable workspace root check to prevent warnings in CI
 # Unset NODE_ENV to ensure devDependencies are installed
 echo "📦 Installing dependencies..."
 pnpm config set ignore-workspace-root-check true
+
+# Install all dependencies first (skip postinstall to avoid extension issues)
 NODE_ENV= pnpm install --ignore-scripts --prod=false --no-frozen-lockfile
 
-# Generate Prisma client (this handles Prisma's postinstall needs)
+# Now manually run Prisma generate (since we skipped postinstall)
 echo "🗄️  Generating Prisma client..."
-echo "Current directory before generate: $(pwd)"
+echo "Current directory: $(pwd)"
 echo "Checking for packages/db:"
 ls -la packages/db/ 2>/dev/null || echo "packages/db not found"
-pnpm --filter @soundscape/db db:generate
+cd packages/db || exit 1
+echo "Running prisma generate from packages/db directory..."
+npx prisma generate --schema=./prisma/schema.prisma
+cd ../..
 echo "Verifying Prisma client was generated..."
-ls -la packages/db/node_modules/.prisma/client 2>/dev/null || echo "Prisma client not found in expected location"
-ls -la node_modules/.prisma/client 2>/dev/null || echo "Prisma client not found in root node_modules"
-find . -name "PrismaClient*" -type f 2>/dev/null | head -5 || echo "No PrismaClient files found"
+if [ -d "packages/db/node_modules/.prisma/client" ]; then
+  echo "✅ Prisma client found in packages/db/node_modules/.prisma/client"
+  ls -la packages/db/node_modules/.prisma/client | head -5
+else
+  echo "⚠️  Prisma client not in packages/db/node_modules/.prisma/client"
+fi
+if [ -d "node_modules/.prisma/client" ]; then
+  echo "✅ Prisma client found in root node_modules/.prisma/client"
+else
+  echo "⚠️  Prisma client not in root node_modules"
+fi
 
 # Build shared packages first (in dependency order)
 echo "🏗️  Building shared packages..."
