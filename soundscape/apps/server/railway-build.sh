@@ -3,8 +3,16 @@ set -e
 
 echo "🔨 Building Soundscape server for Railway..."
 
-# Railway runs from project root, so we need to cd there
-cd "$(dirname "$0")/../.." || exit 1
+# Railway runs from /app (project root)
+# The script is at apps/server/railway-build.sh, so we need to ensure we're at root
+if [ ! -f "pnpm-workspace.yaml" ] && [ -f "apps/server/railway-build.sh" ]; then
+  # We're at root already
+  echo "Current directory: $(pwd)"
+elif [ -f "../../pnpm-workspace.yaml" ]; then
+  # We're in apps/server, go to root
+  cd ../.. || exit 1
+  echo "Changed to root directory: $(pwd)"
+fi
 
 # Install dependencies including devDependencies (needed for Prisma CLI)
 # Skip postinstall scripts to avoid extension issues
@@ -12,7 +20,7 @@ cd "$(dirname "$0")/../.." || exit 1
 # Unset NODE_ENV to ensure devDependencies are installed
 echo "📦 Installing dependencies..."
 pnpm config set ignore-workspace-root-check true
-NODE_ENV= pnpm install --ignore-scripts --prod=false
+NODE_ENV= pnpm install --ignore-scripts --prod=false --no-frozen-lockfile
 
 # Generate Prisma client (this handles Prisma's postinstall needs)
 echo "🗄️  Generating Prisma client..."
