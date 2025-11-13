@@ -2,10 +2,13 @@
 # This is a generic config - services should use their own nixpacks.toml
 # This file is kept for backward compatibility but should not be used
 # Each service (server, web) has its own nixpacks.toml in their directories
+# 
+# NOTE: If Railway uses this file, it will skip install (services handle it in build scripts)
 
 [phases.setup]
 nixPkgs = ["nodejs_18", "pnpm", "openssl"]
 
+# Skip install - services handle it in their build scripts
 [phases.install]
-cmds = ["pnpm install --no-frozen-lockfile"]
+cmds = []
 
