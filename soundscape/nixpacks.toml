@@ -8,7 +8,9 @@
 [phases.setup]
 nixPkgs = ["nodejs_18", "pnpm", "openssl"]
 
-# Skip install - services handle it in their build scripts
+# Skip install - services handle it in their build scripts with --no-frozen-lockfile
+# Railway's auto-install runs before nixpacks, so we can't prevent it here
+# Services must handle installation in their build scripts
 [phases.install]
 cmds = []
 
