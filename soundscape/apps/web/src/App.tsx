@@ -202,9 +202,17 @@ const App: Component = () => {
     });
   });
 
+  const isDarkMode = createMemo(() => {
+    const currentTheme = theme();
+    if (currentTheme === 'dark') return true;
+    if (currentTheme === 'light') return false;
+    // system theme - check media query
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
   const getThemeColor = (themeValue: string): string => {
     const colors: Record<string, string> = {
-      default: 'hsl(0, 0%, 9%)',
+      default: isDarkMode() ? 'hsl(0, 0%, 98%)' : 'hsl(0, 0%, 9%)',
       blue: 'hsl(210, 70%, 45%)',
       green: 'hsl(142, 60%, 40%)',
       purple: 'hsl(270, 60%, 45%)',
