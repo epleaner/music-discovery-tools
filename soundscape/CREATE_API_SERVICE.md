@@ -37,7 +37,7 @@ Since Railway CLI requires interactive prompts for service creation, use the das
 
 5. **Set Other Environment Variables**
    - `NODE_ENV=production`
-   - `PORT=$PORT` (Railway sets this automatically)
+   - `PORT` - Railway should set this automatically for web services, but if it doesn't appear, you can manually set it. The server code uses `process.env.PORT || 3001`, so it defaults to 3001 if not set. You can check if Railway set it by looking in the Variables tab.
    - `API_BASE_URL` and `WEB_APP_URL` (set after you get the service URL)
 
 6. **Deploy**
