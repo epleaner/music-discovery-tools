@@ -203,8 +203,10 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
       .map((item) => item.value);
 
     props.onValueChange(shuffled);
-    setInputValue('');
-    filter('');
+    setTimeout(() => {
+      setInputValue('');
+      filter('');
+    }, 0);
   };
 
   const handleScrollToIndexFn = (details: ScrollToIndexDetails) => {

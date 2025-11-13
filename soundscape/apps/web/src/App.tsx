@@ -34,7 +34,11 @@ import {
   type RecentViewType,
   type TopViewType,
 } from '@soundscape/types';
-import { groupTracksByAlbum, groupTracksByArtist } from '@soundscape/utils';
+import {
+  groupTracksByAlbum,
+  groupTracksByArtist,
+  normalizeCharacters,
+} from '@soundscape/utils';
 import { useHashState } from './lib/use-hash-state';
 import { useTheme } from './lib/use-theme';
 
@@ -158,7 +162,7 @@ const App: Component = () => {
   const [showWebSocket, setShowWebSocket] = createSignal(false);
 
   const formatGenreForURL = (genre: string) => {
-    return genre
+    return normalizeCharacters(genre)
       .toLowerCase()
       .replace(/\s+/g, '-')
       .replace(/[']/g, '')

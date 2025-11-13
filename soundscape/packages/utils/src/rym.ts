@@ -3,13 +3,37 @@
  */
 
 /**
+ * Normalize accented and special characters to their English equivalents
+ */
+export function normalizeCharacters(text: string): string {
+  return text
+    .normalize('NFD') // Decompose characters (e.g., é → e + ́)
+    .replace(/[\u0300-\u036f]/g, '') // Remove combining diacritical marks
+    .replace(/[àáâãäå]/gi, 'a')
+    .replace(/[èéêë]/gi, 'e')
+    .replace(/[ìíîï]/gi, 'i')
+    .replace(/[òóôõö]/gi, 'o')
+    .replace(/[ùúûü]/gi, 'u')
+    .replace(/[ýÿ]/gi, 'y')
+    .replace(/ç/gi, 'c')
+    .replace(/ñ/gi, 'n')
+    .replace(/ß/gi, 'ss')
+    .replace(/æ/gi, 'ae')
+    .replace(/œ/gi, 'oe')
+    .replace(/ð/gi, 'd')
+    .replace(/þ/gi, 'th')
+    .replace(/ø/gi, 'o');
+}
+
+/**
  * Normalize a string for RYM URL slugs
+ * - Normalize accented characters to English equivalents
  * - Convert to lowercase
  * - Replace spaces with hyphens
  * - Remove or encode special characters
  */
 function normalizeForSlug(text: string): string {
-  return text
+  return normalizeCharacters(text)
     .toLowerCase()
     .replace(/\s+/g, '-') // Replace spaces with hyphens
     .replace(/[()[\]]/g, '') // Remove parentheses and brackets
