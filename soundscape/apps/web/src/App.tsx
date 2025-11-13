@@ -6,6 +6,8 @@ import {
   For,
   createMemo,
   createSignal,
+  onMount,
+  onCleanup,
 } from 'solid-js';
 import UsernameInput from './components/UsernameInput';
 import TrackList from './components/TrackList';
@@ -73,7 +75,7 @@ const App: Component = () => {
     sites: JSON.stringify(defaultSites),
   });
 
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, colorTheme, setColorTheme } = useTheme();
 
   // Getters for reactive access
   const username = () => state().username;
@@ -158,8 +160,55 @@ const App: Component = () => {
     'year'
   );
 
+  // Color theme dropdown state
+  const [showColorThemeDropdown, setShowColorThemeDropdown] =
+    createSignal(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let colorThemeContainerRef: HTMLDivElement | undefined;
+
   // WebSocket debug panel state
   const [showWebSocket, setShowWebSocket] = createSignal(false);
+
+  const colorThemes: Array<{ value: string; label: string }> = [
+    { value: 'default', label: 'Default' },
+    { value: 'blue', label: 'Blue' },
+    { value: 'green', label: 'Green' },
+    { value: 'purple', label: 'Purple' },
+    { value: 'amber', label: 'Amber' },
+    { value: 'rose', label: 'Rose' },
+    { value: 'slate', label: 'Slate' },
+  ];
+
+  // Handle click outside for color theme dropdown
+  onMount(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        showColorThemeDropdown() &&
+        colorThemeContainerRef?.contains(target) === false
+      ) {
+        setShowColorThemeDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    onCleanup(() => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    });
+  });
+
+  const getThemeColor = (themeValue: string): string => {
+    const colors: Record<string, string> = {
+      default: 'hsl(0, 0%, 9%)',
+      blue: 'hsl(210, 70%, 45%)',
+      green: 'hsl(142, 60%, 40%)',
+      purple: 'hsl(270, 60%, 45%)',
+      amber: 'hsl(38, 80%, 45%)',
+      rose: 'hsl(350, 60%, 45%)',
+      slate: 'hsl(215, 30%, 25%)',
+    };
+    return colors[themeValue] || colors.default;
+  };
 
   const formatGenreForURL = (genre: string) => {
     return normalizeCharacters(genre)
@@ -312,14 +361,69 @@ const App: Component = () => {
               </Show>
             </div>
 
-            <button
-              onClick={toggleTheme}
-              class="flex items-center justify-center flex-shrink-0 p-2 text-lg transition-all text-fg-subtle hover:text-fg"
-              style={{ transform: `rotate(${getThemeRotation()})` }}
-              title={`Theme: ${theme()}`}
-            >
-              ◐
-            </button>
+            <div class="flex items-center gap-1 relative">
+              <button
+                onClick={toggleTheme}
+                class="flex items-center justify-center flex-shrink-0 p-2 text-lg transition-all text-fg-subtle hover:text-fg"
+                style={{ transform: `rotate(${getThemeRotation()})` }}
+                title={`Theme: ${theme()}`}
+              >
+                ◐
+              </button>
+
+              <div class="relative" ref={colorThemeContainerRef}>
+                <button
+                  onClick={() =>
+                    setShowColorThemeDropdown(!showColorThemeDropdown())
+                  }
+                  class="flex items-center justify-center flex-shrink-0 p-2 text-xs text-fg-subtle hover:text-fg transition-colors border border-border hover:border-border-hover rounded"
+                  title="Color Theme"
+                >
+                  <span
+                    class="w-3 h-3 rounded-full"
+                    style={{
+                      'background-color': getThemeColor(colorTheme()),
+                    }}
+                  ></span>
+                </button>
+
+                <Show when={showColorThemeDropdown()}>
+                  <div class="absolute right-0 top-full mt-1 bg-bg border border-border rounded z-50 min-w-[120px]">
+                    <For each={colorThemes}>
+                      {(item) => (
+                        <button
+                          onClick={() => {
+                            setColorTheme(
+                              item.value as
+                                | 'default'
+                                | 'blue'
+                                | 'green'
+                                | 'purple'
+                                | 'amber'
+                                | 'rose'
+                                | 'slate'
+                            );
+                            setShowColorThemeDropdown(false);
+                          }}
+                          class="w-full px-3 py-2 text-xs text-left hover:bg-bg-muted transition-colors flex items-center gap-2"
+                          classList={{
+                            'bg-bg-muted': colorTheme() === item.value,
+                          }}
+                        >
+                          <span
+                            class="w-3 h-3 rounded-full flex-shrink-0 border border-border"
+                            style={{
+                              'background-color': getThemeColor(item.value),
+                            }}
+                          ></span>
+                          <span>{item.label}</span>
+                        </button>
+                      )}
+                    </For>
+                  </div>
+                </Show>
+              </div>
+            </div>
           </div>
         </div>
 
