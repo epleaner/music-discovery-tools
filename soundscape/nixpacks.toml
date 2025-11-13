@@ -1,0 +1,15 @@
+# Nixpacks configuration for Railway
+# This tells Railway to use pnpm instead of npm
+
+[phases.setup]
+nixPkgs = ["nodejs_18", "pnpm", "openssl"]
+
+[phases.install]
+cmds = ["pnpm install --frozen-lockfile"]
+
+[phases.build]
+cmds = ["${RAILWAY_BUILD_COMMAND}"]
+
+[phases.start]
+cmd = "${RAILWAY_START_COMMAND}"
+

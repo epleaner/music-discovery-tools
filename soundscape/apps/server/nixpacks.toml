@@ -1,0 +1,15 @@
+# Nixpacks configuration for Railway server service
+# This tells Railway to use pnpm instead of npm
+
+[phases.setup]
+nixPkgs = ["nodejs_18", "pnpm", "openssl"]
+
+[phases.install]
+cmds = ["cd /app && pnpm install --frozen-lockfile --ignore-scripts --prod=false"]
+
+[phases.build]
+cmds = ["cd /app && ./apps/server/railway-build.sh"]
+
+[phases.start]
+cmd = "cd /app && pnpm --filter @soundscape/server start"
+
