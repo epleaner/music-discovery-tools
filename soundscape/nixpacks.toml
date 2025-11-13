@@ -5,7 +5,7 @@
 nixPkgs = ["nodejs_18", "pnpm", "openssl"]
 
 [phases.install]
-cmds = ["pnpm install --frozen-lockfile"]
+cmds = ["pnpm install --no-frozen-lockfile"]
 
 [phases.build]
 cmds = ["${RAILWAY_BUILD_COMMAND}"]

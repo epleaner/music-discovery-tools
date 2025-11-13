@@ -5,7 +5,7 @@
 nixPkgs = ["nodejs_18", "pnpm", "openssl"]
 
 [phases.install]
-cmds = ["cd /app && pnpm install --frozen-lockfile --ignore-scripts --prod=false"]
+cmds = ["cd /app && pnpm install --no-frozen-lockfile --ignore-scripts --prod=false"]
 
 [phases.build]
 cmds = ["cd /app && ./apps/server/railway-build.sh"]
