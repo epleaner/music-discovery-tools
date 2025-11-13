@@ -44,7 +44,7 @@ coverage/
 Thumbs.db
 
 # Turbo
-.turbo/
+.turbo/ 
 
 # Generated API client (will be regenerated)
 packages/api-client/src/api.ts
