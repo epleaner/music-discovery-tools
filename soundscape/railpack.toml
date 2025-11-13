@@ -1,0 +1,6 @@
+# Railpack configuration for Railway
+# This overrides Railpack's default install behavior
+
+[phases.install]
+cmds = ["pnpm install --no-frozen-lockfile --ignore-scripts"]
+
