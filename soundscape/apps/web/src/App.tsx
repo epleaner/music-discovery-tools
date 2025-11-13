@@ -147,7 +147,7 @@ const App: Component = () => {
 
   // RYM dropdown state
   const [showRYMDropdown, setShowRYMDropdown] = createSignal(false);
-  const [rymSearchTerm, setRYMSearchTerm] = createSignal('Psychedelic Folk');
+  const [rymSearchTerm, setRYMSearchTerm] = createSignal<string[]>([]);
   const [rymYear, setRYMYear] = createSignal(2025);
   const [rymTimeRange, setRYMTimeRange] = createSignal<'year' | 'decade'>(
     'year'
@@ -166,7 +166,11 @@ const App: Component = () => {
   };
 
   const getRYMUrl = () => {
-    const genreSlug = formatGenreForURL(rymSearchTerm());
+    const genres = rymSearchTerm();
+    // Join multiple genres with commas
+    const genreSlug = genres
+      .map(formatGenreForURL)
+      .join(',');
     if (rymTimeRange() === 'year') {
       return `https://rateyourmusic.com/charts/top/album/${rymYear()}/ge:${genreSlug}/`;
     } else {
@@ -182,36 +186,38 @@ const App: Component = () => {
   );
 
   return (
-    <div class='flex flex-col h-screen bg-bg'>
+    <div class="flex flex-col h-screen bg-bg">
       {/* Header */}
-      <div class='flex-shrink-0 border-b border-border'>
-        <div class='flex gap-3 justify-between items-center p-4'>
+      <div class="flex-shrink-0 border-b border-border">
+        <div class="flex gap-3 justify-between items-center p-4">
           <UsernameInput
             onSubmit={handleUsernameSubmit}
             initialUsername={username()}
           />
 
-          <div class='flex flex-1 gap-3 justify-end items-center w-full'>
+          <div class="flex flex-1 gap-3 justify-end items-center w-full">
             {/* WebSocket Debug Button */}
             <button
               onClick={() => setShowWebSocket(!showWebSocket())}
-              class='text-xs btn-secondary'
-              title='WebSocket Debug Panel'>
+              class="text-xs btn-secondary"
+              title="WebSocket Debug Panel"
+            >
               WS {showWebSocket() ? '−' : '+'}
             </button>
 
             {/* RYM Dropdown */}
-            <div class='relative flex-shrink-0'>
+            <div class="relative flex-shrink-0">
               <button
                 onClick={() => setShowRYMDropdown(!showRYMDropdown())}
-                class='btn-secondary'
-                title='RateYourMusic Charts'>
+                class="btn-secondary"
+                title="RateYourMusic Charts"
+              >
                 RYM Charts
               </button>
 
               <Show when={showRYMDropdown()}>
-                <div class='absolute right-0 z-30 p-3 mt-1 w-80 border shadow-lg bg-bg border-border'>
-                  <div class='space-y-3'>
+                <div class="absolute right-0 z-30 p-3 mt-1 w-80 border shadow-lg bg-bg border-border">
+                  <div class="space-y-3">
                     {/* Genre Select */}
                     <GenreSelect
                       value={rymSearchTerm()}
@@ -219,19 +225,20 @@ const App: Component = () => {
                     />
 
                     {/* Time Range & Year */}
-                    <div class='flex gap-2'>
-                      <div class='flex-1'>
-                        <label class='block mb-1 text-xs text-fg-muted'>
+                    <div class="flex gap-2">
+                      <div class="flex-1">
+                        <label class="block mb-1 text-xs text-fg-muted">
                           Range
                         </label>
-                        <div class='flex gap-1'>
+                        <div class="flex gap-1">
                           <button
                             onClick={() => setRYMTimeRange('year')}
                             class={`flex-1 px-2 py-1 text-xs ${
                               rymTimeRange() === 'year'
                                 ? 'bg-accent text-bg'
                                 : 'text-fg-muted hover:text-fg border border-border'
-                            }`}>
+                            }`}
+                          >
                             Year
                           </button>
                           <button
@@ -240,14 +247,15 @@ const App: Component = () => {
                               rymTimeRange() === 'decade'
                                 ? 'bg-accent text-bg'
                                 : 'text-fg-muted hover:text-fg border border-border'
-                            }`}>
+                            }`}
+                          >
                             Decade
                           </button>
                         </div>
                       </div>
 
-                      <div class='flex-1'>
-                        <label class='block mb-1 text-xs text-fg-muted'>
+                      <div class="flex-1">
+                        <label class="block mb-1 text-xs text-fg-muted">
                           {rymTimeRange() === 'year' ? 'Year' : 'Decade'}
                         </label>
                         <select
@@ -255,7 +263,8 @@ const App: Component = () => {
                           onChange={(e) =>
                             setRYMYear(parseInt(e.currentTarget.value))
                           }
-                          class='w-full text-xs input'>
+                          class="w-full text-xs input"
+                        >
                           <For each={rymYears}>
                             {(year) => (
                               <option value={year}>
@@ -275,7 +284,8 @@ const App: Component = () => {
                         window.open(getRYMUrl(), '_blank');
                         setShowRYMDropdown(false);
                       }}
-                      class='py-2 w-full text-xs btn-primary'>
+                      class="py-2 w-full text-xs btn-primary"
+                    >
                       Open in RateYourMusic →
                     </button>
                   </div>
@@ -285,9 +295,10 @@ const App: Component = () => {
 
             <button
               onClick={toggleTheme}
-              class='flex-shrink-0 p-2 text-lg transition-all text-fg-subtle hover:text-fg'
+              class="flex-shrink-0 p-2 text-lg transition-all text-fg-subtle hover:text-fg"
               style={{ transform: `rotate(${getThemeRotation()})` }}
-              title={`Theme: ${theme()}`}>
+              title={`Theme: ${theme()}`}
+            >
               ◐
             </button>
           </div>
@@ -295,7 +306,7 @@ const App: Component = () => {
 
         {/* WebSocket Debug Panel */}
         <Show when={showWebSocket()}>
-          <div class='border-t border-border bg-bg-subtle'>
+          <div class="border-t border-border bg-bg-subtle">
             <WebSocketExample />
           </div>
         </Show>
@@ -312,11 +323,11 @@ const App: Component = () => {
               minLeftWidth={30}
               maxLeftWidth={80}
               leftPanel={
-                <div class='flex flex-col h-full'>
+                <div class="flex flex-col h-full">
                   {/* Sticky Header */}
-                  <div class='flex-shrink-0 bg-bg'>
+                  <div class="flex-shrink-0 bg-bg">
                     {/* Tabs */}
-                    <div class='flex border-b border-border'>
+                    <div class="flex border-b border-border">
                       <For each={tabs}>
                         {(tab) => (
                           <button
@@ -325,7 +336,8 @@ const App: Component = () => {
                               currentView() === tab.id
                                 ? 'border-accent'
                                 : 'border-transparent text-fg-muted hover:text-fg'
-                            }`}>
+                            }`}
+                          >
                             {tab.label}
                           </button>
                         )}
@@ -334,7 +346,7 @@ const App: Component = () => {
 
                     {/* View type selector for recent */}
                     <Show when={currentView() === 'recent'}>
-                      <div class='flex gap-1 p-2 border-b border-border'>
+                      <div class="flex gap-1 p-2 border-b border-border">
                         <For
                           each={
                             [
@@ -342,7 +354,8 @@ const App: Component = () => {
                               { id: 'albums', label: 'Albums' },
                               { id: 'artists', label: 'Artists' },
                             ] as { id: RecentViewType; label: string }[]
-                          }>
+                          }
+                        >
                           {(view) => (
                             <button
                               onClick={() => updateState({ subview: view.id })}
@@ -350,7 +363,8 @@ const App: Component = () => {
                                 recentViewType() === view.id
                                   ? 'bg-accent text-bg'
                                   : 'text-fg-muted hover:text-fg'
-                              }`}>
+                              }`}
+                            >
                               {view.label}
                             </button>
                           )}
@@ -360,7 +374,7 @@ const App: Component = () => {
 
                     {/* Subview selector for top */}
                     <Show when={currentView() === 'top'}>
-                      <div class='flex gap-1 p-2 border-b border-border'>
+                      <div class="flex gap-1 p-2 border-b border-border">
                         <For
                           each={
                             [
@@ -368,7 +382,8 @@ const App: Component = () => {
                               { id: 'tracks', label: 'Tracks' },
                               { id: 'albums', label: 'Albums' },
                             ] as { id: TopViewType; label: string }[]
-                          }>
+                          }
+                        >
                           {(view) => (
                             <button
                               onClick={() =>
@@ -378,7 +393,8 @@ const App: Component = () => {
                                 topViewType() === view.id
                                   ? 'bg-accent text-bg'
                                   : 'text-fg-muted hover:text-fg'
-                              }`}>
+                              }`}
+                            >
                               {view.label}
                             </button>
                           )}
@@ -388,11 +404,10 @@ const App: Component = () => {
 
                     {/* Period selector for top */}
                     <Show when={currentView() === 'top'}>
-                      <div class='flex overflow-x-auto gap-1 items-center p-2 border-b border-border'>
+                      <div class="flex overflow-x-auto gap-1 items-center p-2 border-b border-border">
                         <For
-                          each={
-                            Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]
-                          }>
+                          each={Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]}
+                        >
                           {(p) => (
                             <button
                               onClick={() => updateState({ period: p })}
@@ -400,7 +415,8 @@ const App: Component = () => {
                                 period() === p
                                   ? 'bg-accent text-bg'
                                   : 'text-fg-muted hover:text-fg'
-                              }`}>
+                              }`}
+                            >
                               {TIME_PERIOD_LABELS[p]}
                             </button>
                           )}
@@ -410,8 +426,9 @@ const App: Component = () => {
                             topArtists.isLoading() ||
                             topTracks.isLoading() ||
                             topAlbums.isLoading()
-                          }>
-                          <div class='ml-1 text-xs animate-spin text-fg-muted'>
+                          }
+                        >
+                          <div class="ml-1 text-xs animate-spin text-fg-muted">
                             ◐
                           </div>
                         </Show>
@@ -420,7 +437,7 @@ const App: Component = () => {
                   </div>
 
                   {/* Content */}
-                  <div class='overflow-y-auto flex-1'>
+                  <div class="overflow-y-auto flex-1">
                     <Switch>
                       <Match when={currentView() === 'recent'}>
                         <div>
@@ -458,11 +475,13 @@ const App: Component = () => {
                               !recentTracks.isLoading() &&
                               parseInt(recentTracks.currentPage().toString()) <
                                 parseInt(recentTracks.totalPages())
-                            }>
-                            <div class='p-4 text-center border-t border-border'>
+                            }
+                          >
+                            <div class="p-4 text-center border-t border-border">
                               <button
                                 onClick={() => recentTracks.loadMore()}
-                                class='text-xs btn'>
+                                class="text-xs btn"
+                              >
                                 Load More
                               </button>
                             </div>
@@ -471,7 +490,7 @@ const App: Component = () => {
                       </Match>
 
                       <Match when={currentView() === 'top'}>
-                        <div class='p-2'>
+                        <div class="p-2">
                           <Switch>
                             <Match when={topViewType() === 'artists'}>
                               <ArtistList
@@ -506,11 +525,11 @@ const App: Component = () => {
                 </div>
               }
               rightPanel={
-                <div class='flex flex-col h-full'>
+                <div class="flex flex-col h-full">
                   <Show when={selectedArtist()}>
-                    <div class='flex flex-shrink-0 justify-between py-2 border-b bg-bg border-border'>
-                      <h2 class='text-sm font-medium'>{selectedArtist()}</h2>
-                      <div class='flex-shrink-0'>
+                    <div class="flex flex-shrink-0 justify-between py-2 border-b bg-bg border-border">
+                      <h2 class="text-sm font-medium">{selectedArtist()}</h2>
+                      <div class="flex-shrink-0">
                         <EveryNoiseViewer
                           genre={everyNoiseGenre.genre()}
                           isLoading={everyNoiseGenre.isLoading()}
@@ -518,20 +537,21 @@ const App: Component = () => {
                         />
                       </div>
                     </div>
-                    <div class='flex-shrink-0 py-2 border-b bg-bg border-border'>
-                      <div class='mt-1 text-xs text-fg-muted'>
+                    <div class="flex-shrink-0 py-2 border-b bg-bg border-border">
+                      <div class="mt-1 text-xs text-fg-muted">
                         Similar Artists
                       </div>
                     </div>
                   </Show>
-                  <div class='overflow-y-auto flex-1'>
+                  <div class="overflow-y-auto flex-1">
                     <Show
                       when={selectedArtist()}
                       fallback={
-                        <div class='py-8 text-xs text-center text-fg-muted'>
+                        <div class="py-8 text-xs text-center text-fg-muted">
                           Click any artist to see similar artists
                         </div>
-                      }>
+                      }
+                    >
                       <ArtistList
                         artists={similarArtists.artists()}
                         isLoading={similarArtists.isLoading()}
@@ -560,8 +580,8 @@ const App: Component = () => {
           minBottomHeight={150}
           maxBottomHeight={600}
           topPanel={
-            <div class='flex justify-center items-center h-full'>
-              <div class='text-xs text-center text-fg-muted'>
+            <div class="flex justify-center items-center h-full">
+              <div class="text-xs text-center text-fg-muted">
                 Enter a username to start
               </div>
             </div>

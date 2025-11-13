@@ -1,4 +1,4 @@
-import { Component, For, createMemo, Show } from 'solid-js';
+import { Component, For, createMemo, Show, createSignal } from 'solid-js';
 import { Combobox, useListCollection } from '@ark-ui/solid/combobox';
 import { useFilter } from '@ark-ui/solid/locale';
 import { Portal } from 'solid-js/web';
@@ -12,8 +12,8 @@ import {
 } from '../lib/flatten-genres';
 
 interface GenreSelectProps {
-  value: string;
-  onValueChange: (value: string) => void;
+  value: string[];
+  onValueChange: (value: string[]) => void;
 }
 
 interface GenreItem {
@@ -39,8 +39,13 @@ interface VirtualItem {
 const GenreSelect: Component<GenreSelectProps> = (props) => {
   // oxlint-disable-next-line no-unassigned-vars
   let contentRef!: HTMLDivElement;
+  // oxlint-disable-next-line no-unassigned-vars
+  let pillsContainerRef!: HTMLDivElement;
   let timerRef: NodeJS.Timeout;
+  // oxlint-disable-next-line no-unassigned-vars
+  let triggerRef!: HTMLButtonElement;
 
+  const [inputValue, setInputValue] = createSignal('');
   const filterFn = useFilter({ sensitivity: 'base' });
 
   // Transform flattened genres to include type (top-level genre) for grouping
@@ -138,8 +143,54 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
   });
 
   const handleInputChange = (details: { inputValue: string }) => {
+    setInputValue(details.inputValue);
     filter(details.inputValue);
   };
+
+  const handleItemSelect = (item: GenreItem) => {
+    const currentValues = props.value || [];
+    if (!currentValues.includes(item.value)) {
+      props.onValueChange([...currentValues, item.value]);
+    }
+    // Focus back on input
+    setTimeout(() => {
+      setInputValue('');
+      filter('');
+      triggerRef?.click();
+    }, 0);
+  };
+
+  const handleRemovePill = (valueToRemove: string) => {
+    const currentValues = props.value || [];
+    props.onValueChange(currentValues.filter((v) => v !== valueToRemove));
+    // Focus back on input
+    setTimeout(() => {
+      triggerRef?.click();
+    }, 0);
+  };
+
+  const handleInputKeyDown = (e: KeyboardEvent) => {
+    // Remove last pill on backspace when input is empty
+    if (
+      e.key === 'Backspace' &&
+      inputValue() === '' &&
+      props.value.length > 0
+    ) {
+      e.preventDefault();
+      const currentValues = props.value || [];
+      props.onValueChange(currentValues.slice(0, -1));
+    }
+  };
+
+  // Get selected items for display
+  const selectedItems = createMemo(() => {
+    const allItems = initialItems();
+    const selected = props.value
+      .map((val) => allItems.find((item) => item.value === val))
+      .filter((item): item is GenreItem => item !== undefined);
+    console.log('selected', selected);
+    return selected;
+  });
 
   const handleScrollToIndexFn = (details: ScrollToIndexDetails) => {
     const scrollOptions: ScrollToOptions = {
@@ -159,12 +210,11 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
   return (
     <Combobox.Root
       collection={collection()}
-      value={props.value ? [props.value] : []}
-      onValueChange={(details) => {
-        if (details.value && details.value.length > 0) {
-          props.onValueChange(details.value[0]);
-        }
+      value={props.value || []}
+      onValueChange={() => {
+        // Don't update from combobox value changes - we handle selection manually
       }}
+      inputValue={inputValue()}
       onInputValueChange={handleInputChange}
       scrollToIndexFn={handleScrollToIndexFn}
       positioning={{ sameWidth: true }}
@@ -172,14 +222,54 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
       <Combobox.Label class="block mb-1 text-xs text-fg-muted">
         Genre
       </Combobox.Label>
-      <Combobox.Control class="relative flex items-center ">
-        <Combobox.Trigger class="w-full">
-          <Combobox.Input
-            placeholder="Search genre..."
-            class="w-full text-xs input px-2 py-1.5 border border-border bg-bg relative"
-          />
-        </Combobox.Trigger>
-        <Combobox.ClearTrigger class="absolute right-0 text-fg-muted hover:text-fg px-2">
+      <Combobox.Control class="relative flex items-center min-h-[32px]">
+        <div
+          ref={pillsContainerRef}
+          class="flex flex-wrap items-center gap-1 flex-1 px-2 py-1.5 border border-border bg-bg min-h-[32px]"
+          onClick={() => {
+            triggerRef?.click();
+          }}
+        >
+          <For each={selectedItems()}>
+            {(item) => (
+              <div class="flex items-center gap-1 px-2 py-0.5 bg-bg-subtle border border-border rounded text-xs">
+                <span class="text-fg">{item.label}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemovePill(item.value);
+                  }}
+                  class="text-fg-muted hover:text-fg ml-1"
+                  aria-label={`Remove ${item.label}`}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          </For>
+          <Combobox.Trigger
+            class="flex-1 min-w-[120px] p-0 m-0 flex items-center"
+            ref={triggerRef}
+          >
+            <Combobox.Input
+              placeholder={props.value.length === 0 ? 'Search genre...' : ''}
+              class="w-full flex-1 text-xs bg-transparent border-0 outline-none min-w-[120px] p-0 m-0"
+              onKeyDown={handleInputKeyDown}
+              onFocus={() => {
+                triggerRef?.click();
+              }}
+            />
+          </Combobox.Trigger>
+        </div>
+        <Combobox.ClearTrigger
+          class="absolute right-0 text-fg-muted hover:text-fg px-2"
+          onClick={() => {
+            props.onValueChange([]);
+            setInputValue('');
+            filter('');
+          }}
+        >
           🅧
         </Combobox.ClearTrigger>
       </Combobox.Control>
@@ -226,6 +316,9 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
 
                   if (!flatItem.item) return null;
 
+                  const isSelected = () =>
+                    props.value.includes(flatItem.item!.value);
+
                   return (
                     <Combobox.Item
                       item={flatItem.item}
@@ -238,6 +331,7 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
                         transform: `translateY(${virtualItem.start}px)`,
                       }}
                       class="px-3 py-2 text-xs hover:bg-bg-subtle cursor-pointer border-b border-border flex items-center"
+                      onClick={() => handleItemSelect(flatItem.item!)}
                     >
                       <Combobox.ItemText class="flex flex-col gap-0.5 flex-1">
                         <span class="text-fg font-medium">
@@ -252,9 +346,9 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
                           </span>
                         </Show>
                       </Combobox.ItemText>
-                      <Combobox.ItemIndicator class="text-fg ml-2">
-                        ✓
-                      </Combobox.ItemIndicator>
+                      <Show when={isSelected()}>
+                        <span class="text-fg ml-2">✓</span>
+                      </Show>
                     </Combobox.Item>
                   );
                 }}
