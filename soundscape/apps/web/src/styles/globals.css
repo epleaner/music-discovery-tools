@@ -529,18 +529,18 @@
   }
 
   .btn {
-    @apply px-3 py-1.5 text-sm font-medium transition-colors;
+    @apply px-3 py-1.5 text-xs font-medium transition-colors;
     @apply hover:bg-bg-muted active:bg-bg-subtle;
     @apply focus:outline-none focus:ring-1 focus:ring-border-hover;
   }
 
   .btn-primary {
-    @apply bg-accent text-bg;
+    @apply bg-accent text-xs;
     @apply hover:bg-accent-hover;
   }
 
   .btn-secondary {
-    @apply px-3 py-2 text-xs font-medium border border-border hover:bg-bg-subtle transition-colors whitespace-nowrap;
+    @apply px-3 py-2 text-xs border border-border hover:bg-bg-subtle transition-colors whitespace-nowrap;
   }
 
   .input {
