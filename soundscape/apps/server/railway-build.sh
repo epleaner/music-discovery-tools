@@ -3,15 +3,30 @@ set -e
 
 echo "🔨 Building Soundscape server for Railway..."
 
-# Railway runs from /app (project root)
-# The script is at apps/server/railway-build.sh, so we need to ensure we're at root
-if [ ! -f "pnpm-workspace.yaml" ] && [ -f "apps/server/railway-build.sh" ]; then
-  # We're at root already
-  echo "Current directory: $(pwd)"
-elif [ -f "../../pnpm-workspace.yaml" ]; then
-  # We're in apps/server, go to root
+# Railway deploys from apps/server, so we need to go to monorepo root
+# Check if we're in apps/server directory
+if [ -f "package.json" ] && [ -d "src" ] && [ ! -f "pnpm-workspace.yaml" ]; then
+  # We're in apps/server, go to monorepo root
+  echo "Current directory: $(pwd) - appears to be apps/server"
+  echo "Navigating to monorepo root..."
   cd ../.. || exit 1
   echo "Changed to root directory: $(pwd)"
+elif [ -f "pnpm-workspace.yaml" ]; then
+  # We're already at root
+  echo "Current directory: $(pwd) - already at monorepo root"
+else
+  echo "Warning: Could not determine directory structure"
+  echo "Current directory: $(pwd)"
+  echo "Contents:"
+  ls -la
+  exit 1
+fi
+
+# Verify we're at the root
+if [ ! -f "pnpm-workspace.yaml" ]; then
+  echo "❌ Error: pnpm-workspace.yaml not found. Not at monorepo root."
+  echo "Current directory: $(pwd)"
+  exit 1
 fi
 
 # Install dependencies including devDependencies (needed for Prisma CLI)
