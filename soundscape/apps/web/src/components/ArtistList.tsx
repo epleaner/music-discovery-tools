@@ -6,7 +6,7 @@ import type {
   ArtistInfoResponse,
 } from '@soundscape/types';
 import {
-  getRYMArtistUrl,
+  getRYMSearchUrl,
   fetchArtistInfo,
   getCached,
   getArtistCacheKey,
@@ -117,7 +117,7 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                       <div class='flex gap-2 items-center'>
                         <div class='text-sm truncate'>{artist.name}</div>
                         <a
-                          href={getRYMArtistUrl(artist.name)}
+                          href={getRYMSearchUrl(artist.name)}
                           target='_blank'
                           rel='noopener noreferrer'
                           onClick={(e) => e.stopPropagation()}

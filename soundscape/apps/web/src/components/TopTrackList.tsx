@@ -1,6 +1,11 @@
 import { Component, Show, For, createSignal, createEffect } from 'solid-js';
 import type { TopTrack, TrackInfo, TrackInfoResponse } from '@soundscape/types';
-import { fetchTrackInfo, getCached, getTrackCacheKey } from '@soundscape/utils';
+import {
+  fetchTrackInfo,
+  getCached,
+  getTrackCacheKey,
+  getRYMSearchUrl,
+} from '@soundscape/utils';
 
 interface TopTrackListProps {
   tracks: TopTrack[];
@@ -98,6 +103,15 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
                       class='hover:underline'>
                       {track.artist.name}
                     </button>
+                    <a
+                      href={getRYMSearchUrl(track.artist.name)}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      onClick={(e) => e.stopPropagation()}
+                      class='text-[10px] hover:underline text-fg-subtle'
+                      title='View on RateYourMusic'>
+                      rym
+                    </a>
                     <button
                       onClick={() => props.onArtistClick?.(track.artist.name)}
                       class='text-[10px] hover:underline'

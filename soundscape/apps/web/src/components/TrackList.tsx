@@ -1,6 +1,11 @@
 import { Component, For, Show, createSignal, createEffect } from 'solid-js';
 import type { Track, TrackInfo, TrackInfoResponse } from '@soundscape/types';
-import { fetchTrackInfo, getCached, getTrackCacheKey } from '@soundscape/utils';
+import {
+  fetchTrackInfo,
+  getCached,
+  getTrackCacheKey,
+  getRYMSearchUrl,
+} from '@soundscape/utils';
 
 interface TrackListProps {
   tracks: Track[];
@@ -117,6 +122,15 @@ const TrackList: Component<TrackListProps> = (props) => {
                   <div class='text-xs truncate text-fg-muted'>
                     {track.artist['#text']}
                   </div>
+                  <a
+                    href={getRYMSearchUrl(track.artist['#text'])}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    onClick={(e) => e.stopPropagation()}
+                    class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
+                    title='View on RateYourMusic'>
+                    rym
+                  </a>
                   <Show when={props.onArtistClick}>
                     <button
                       onClick={(e) => {
