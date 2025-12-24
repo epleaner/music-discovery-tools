@@ -22,6 +22,7 @@ import ResizableBottom from './components/ResizableBottom';
 import EveryNoiseViewer from './components/EveryNoiseViewer';
 import WebSocketExample from './components/WebSocketExample';
 import GenreSelect from './components/GenreSelect';
+import AuthPanel from './components/AuthPanel';
 import {
   createRecentTracksResource,
   createTopArtistsResource,
@@ -267,6 +268,7 @@ const App: Component = () => {
           />
 
           <div class="flex flex-1 gap-3 justify-end items-center w-full">
+            <AuthPanel />
             {/* WebSocket Debug Button */}
             <button
               onClick={() => setShowWebSocket(!showWebSocket())}

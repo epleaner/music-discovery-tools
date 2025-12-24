@@ -1,7 +1,34 @@
-import { router, publicProcedure } from './trpc.js';
+import { router, publicProcedure, protectedProcedure } from './trpc.js';
 import { z } from 'zod';
 
+const authRouter = router({
+  me: protectedProcedure
+    .meta({
+      openapi: {
+        method: 'GET',
+        path: '/auth/me',
+        tags: ['auth'],
+        summary: 'Current user',
+        description: 'Returns the authenticated Supabase user profile',
+      },
+    })
+    .input(z.void())
+    .output(
+      z.object({
+        id: z.string(),
+        email: z.string().nullable(),
+        phone: z.string().nullable(),
+      })
+    )
+    .query(({ ctx }) => ({
+      id: ctx.user.id,
+      email: ctx.user.email,
+      phone: ctx.user.phone,
+    })),
+});
+
 export const appRouter = router({
+  auth: authRouter,
   // Health check
   health: publicProcedure
     .meta({
