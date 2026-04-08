@@ -38,7 +38,7 @@ Phase 1 expects a dedicated Gmail label, defaulting to `music`.
 2. Create a label named `music`, or choose another label and set `NEWSLETTER_GMAIL_LABEL` to match.
 3. Apply that label only to newsletters you want Soundscape to ingest.
 
-Live sync fails fast if the configured label does not exist.
+Live sync fails fast if the configured label does not exist. Label resolution is case-insensitive, so `music` and `Music` both work.
 
 ## Credentials
 

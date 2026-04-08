@@ -103,7 +103,7 @@ PI_LLM_MODEL=gpt-5.4-medium
 
 Setup notes:
 
-- Create a Gmail label named `music`, or set `NEWSLETTER_GMAIL_LABEL` to the label you actually use.
+- Create a Gmail label named `music`, or set `NEWSLETTER_GMAIL_LABEL` to the label you actually use. Label resolution is case-insensitive.
 - Apply that label only to newsletters you want ingested.
 - `NEWSLETTER_DB_PATH` is optional; if unset, the default DB is `soundscape/data/newsletters.sqlite`.
 - Gmail credentials are optional for `--dry-run`.

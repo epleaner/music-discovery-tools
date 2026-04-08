@@ -10,6 +10,7 @@ import {
 import {
   buildGmailApiQuery,
   buildGmailSearchQuery,
+  createGmailApiClient,
   fetchGmailSyncData,
   getPersistedRawGmailMessage,
   mapGmailApiMessageToNewsletterMessage,
@@ -208,6 +209,53 @@ test('fetchGmailSyncData resolves the configured label and loads matching messag
     'list:Label_42:after:1775642399',
     'get:gmail-1',
     'get:gmail-2',
+  ]);
+});
+
+test('createGmailApiClient resolves labels case-insensitively', async () => {
+  const requests: Array<{ url: string; method?: string }> = [];
+  const client = createGmailApiClient(
+    {
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+      refreshToken: 'refresh-token',
+      redirectUri: 'https://developers.google.com/oauthplayground',
+    },
+    async (url, init) => {
+      requests.push({ url: String(url), method: init?.method });
+
+      if (String(url) === 'https://oauth2.googleapis.com/token') {
+        return new Response(JSON.stringify({ access_token: 'token-123' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (String(url) === 'https://gmail.googleapis.com/gmail/v1/users/me/labels') {
+        return new Response(
+          JSON.stringify({
+            labels: [
+              { id: 'Label_1', name: 'INBOX' },
+              { id: 'Label_2', name: 'Music' },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      throw new Error(`Unexpected URL: ${String(url)}`);
+    }
+  );
+
+  const label = await client.resolveLabelByName('music');
+
+  assert.deepEqual(label, { id: 'Label_2', name: 'Music' });
+  assert.deepEqual(requests, [
+    { url: 'https://oauth2.googleapis.com/token', method: 'POST' },
+    { url: 'https://gmail.googleapis.com/gmail/v1/users/me/labels', method: undefined },
   ]);
 });
 

@@ -209,7 +209,10 @@ export function createGmailApiClient(
         '/gmail/v1/users/me/labels'
       );
 
-      const label = payload.labels?.find((candidate) => candidate.name === labelName);
+      const normalizedLabelName = labelName.trim().toLowerCase();
+      const label = payload.labels?.find(
+        (candidate) => candidate.name?.trim().toLowerCase() === normalizedLabelName
+      );
 
       if (!label?.id || !label.name) {
         return null;
