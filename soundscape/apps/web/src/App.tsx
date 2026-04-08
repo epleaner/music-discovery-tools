@@ -22,6 +22,11 @@ import ResizableBottom from './components/ResizableBottom';
 import EveryNoiseViewer from './components/EveryNoiseViewer';
 import WebSocketExample from './components/WebSocketExample';
 import GenreSelect from './components/GenreSelect';
+import NewsletterPanel from './components/NewsletterPanel';
+import {
+  buildRightPanelModel,
+  resolveRightPanelMode,
+} from './lib/app-right-panel';
 import {
   createRecentTracksResource,
   createTopArtistsResource,
@@ -53,6 +58,7 @@ interface AppState extends Record<string, string> {
   topSubview: string;
   period: string;
   artist: string;
+  rightPanel: string;
   sites: string; // JSON-encoded array of sites
 }
 
@@ -72,6 +78,7 @@ const App: Component = () => {
     topSubview: 'artists',
     period: '7day',
     artist: '',
+    rightPanel: 'similar',
     sites: JSON.stringify(defaultSites),
   });
 
@@ -84,6 +91,7 @@ const App: Component = () => {
   const topViewType = () => state().topSubview as TopViewType;
   const period = () => state().period as TimePeriod;
   const selectedArtist = () => state().artist;
+  const rightPanelMode = () => resolveRightPanelMode(state().rightPanel);
   const sitesString = () => state().sites;
 
   // Parse sites only when the sites string actually changes
@@ -109,6 +117,12 @@ const App: Component = () => {
   const topAlbums = createTopAlbumsResource(username, period);
   const similarArtists = createSimilarArtistsResource(selectedArtist);
   const everyNoiseGenre = createEveryNoiseResource(selectedArtist);
+  const rightPanelModel = createMemo(() =>
+    buildRightPanelModel({
+      mode: rightPanelMode(),
+      selectedArtist: selectedArtist(),
+    })
+  );
 
   const recentAlbums = createMemo(() =>
     groupTracksByAlbum(recentTracks.tracks())
@@ -682,9 +696,44 @@ const App: Component = () => {
               }
               rightPanel={
                 <div class="flex flex-col h-full">
-                  <Show when={selectedArtist()}>
+                  <div class="flex flex-shrink-0 gap-1 p-2 border-b bg-bg border-border">
+                    <button
+                      onClick={() => updateState({ rightPanel: 'similar' })}
+                      class={`px-2 py-1 text-xs whitespace-nowrap ${
+                        rightPanelModel().activeMode === 'similar'
+                          ? 'bg-accent text-bg'
+                          : 'text-fg-muted hover:text-fg'
+                      }`}
+                    >
+                      Similar
+                    </button>
+                    <button
+                      onClick={() => updateState({ rightPanel: 'newsletters' })}
+                      class={`px-2 py-1 text-xs whitespace-nowrap ${
+                        rightPanelModel().activeMode === 'newsletters'
+                          ? 'bg-accent text-bg'
+                          : 'text-fg-muted hover:text-fg'
+                      }`}
+                    >
+                      Newsletters
+                    </button>
+                  </div>
+
+                  <Show
+                    when={
+                      rightPanelModel().showSimilarArtists &&
+                      rightPanelModel().similarArtistTitle
+                    }
+                  >
                     <div class="flex flex-shrink-0 justify-between py-2 border-b bg-bg border-border">
-                      <h2 class="text-sm font-medium">{selectedArtist()}</h2>
+                      <div>
+                        <h2 class="text-sm font-medium">
+                          {rightPanelModel().similarArtistTitle}
+                        </h2>
+                        <div class="mt-1 text-xs text-fg-muted">
+                          Similar Artists
+                        </div>
+                      </div>
                       <div class="flex-shrink-0">
                         <EveryNoiseViewer
                           genre={everyNoiseGenre.genre()}
@@ -693,29 +742,28 @@ const App: Component = () => {
                         />
                       </div>
                     </div>
-                    <div class="flex-shrink-0 py-2 border-b bg-bg border-border">
-                      <div class="mt-1 text-xs text-fg-muted">
-                        Similar Artists
-                      </div>
-                    </div>
                   </Show>
-                  <div class="overflow-y-auto flex-1">
-                    <Show
-                      when={selectedArtist()}
-                      fallback={
+
+                  <div class="overflow-y-auto flex-1 min-h-0">
+                    <Switch>
+                      <Match when={rightPanelModel().showNewsletterPanel}>
+                        <NewsletterPanel />
+                      </Match>
+                      <Match when={selectedArtist()}>
+                        <ArtistList
+                          artists={similarArtists.artists()}
+                          isLoading={similarArtists.isLoading()}
+                          error={similarArtists.error()}
+                          onArtistClick={handleArtistClick}
+                          showMatch={true}
+                        />
+                      </Match>
+                      <Match when={rightPanelModel().showSimilarArtists}>
                         <div class="py-8 text-xs text-center text-fg-muted">
-                          Click any artist to see similar artists
+                          {rightPanelModel().emptyMessage}
                         </div>
-                      }
-                    >
-                      <ArtistList
-                        artists={similarArtists.artists()}
-                        isLoading={similarArtists.isLoading()}
-                        error={similarArtists.error()}
-                        onArtistClick={handleArtistClick}
-                        showMatch={true}
-                      />
-                    </Show>
+                      </Match>
+                    </Switch>
                   </div>
                 </div>
               }
