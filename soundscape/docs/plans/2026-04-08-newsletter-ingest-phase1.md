@@ -453,7 +453,7 @@ git add apps/web/src/lib
 git commit -m "feat(soundscape/web): add newsletter resource layer"
 ```
 
-### [-] Ticket 4.2: Add compact newsletter list/detail components — note: starting compact panel component tests and dense UI scaffolding
+### [x] Ticket 4.2: Add compact newsletter list/detail components — commit: ae9b4df; verification: pnpm exec tsx --test src/components/NewsletterPanel.test.tsx && pnpm exec tsc --noEmit --jsx preserve --jsxImportSource solid-js --moduleResolution bundler --module ESNext --target ESNext --lib ESNext,DOM,DOM.Iterable --types vite/client,node --strict src/components/NewsletterList.tsx src/components/NewsletterDetail.tsx src/components/NewsletterPanel.tsx src/components/newsletter-panel-model.ts src/components/NewsletterPanel.test.tsx && pnpm --filter @soundscape/web build; note: added dense monochrome newsletter list/detail/panel components with explicit loading/empty/error states and a lightweight panel model test harness compatible with tsx/node test
 
 **Objective:** Build compact UI components for newsletter cards and detail rendering consistent with the app’s dense visual language.
 **Dependencies:** Ticket 4.1
@@ -497,7 +497,7 @@ git add apps/web/src/components
 git commit -m "feat(soundscape/web): add newsletter panel components"
 ```
 
-### [ ] Ticket 4.3: Integrate newsletter feed into another panel in the app
+### [-] Ticket 4.3: Integrate newsletter feed into another panel in the app — note: starting app-level panel toggle and integration test scaffolding
 
 **Objective:** Wire the newsletter feed into the existing application layout as another panel without breaking current music discovery flows.
 **Dependencies:** Ticket 4.2
