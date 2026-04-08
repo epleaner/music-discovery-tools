@@ -14,7 +14,7 @@
 
 **Demo Increment:** A local SQLite database exists, the repo builds with the new storage package, and a stub ingest command can initialize schema and record a sync run.
 
-### [x] Ticket 1.1: Add a dedicated newsletter SQLite package — commit: pending; verification: pnpm --filter @soundscape/newsletters-db type-check && pnpm --filter @soundscape/newsletters-db verify:schema; note: added scoped SQLite package with schema bootstrap, sync/message/extraction/entity helpers, and a schema verification CLI
+### [x] Ticket 1.1: Add a dedicated newsletter SQLite package — commit: a0132da; verification: pnpm --filter @soundscape/newsletters-db type-check && pnpm --filter @soundscape/newsletters-db verify:schema; note: added scoped SQLite package with schema bootstrap, sync/message/extraction/entity helpers, and a schema verification CLI
 
 **Objective:** Create a narrowly scoped shared package for newsletter storage, schema initialization, and read/write helpers without restoring generic app-wide DB complexity.
 **Dependencies:** none
@@ -65,7 +65,7 @@ git add package.json pnpm-lock.yaml pnpm-workspace.yaml packages/newsletters-db
 git commit -m "feat(soundscape/newsletters-db): add newsletter sqlite storage"
 ```
 
-### [ ] Ticket 1.2: Add ingest app scaffold and local config contract
+### [x] Ticket 1.2: Add ingest app scaffold and local config contract — commit: pending; verification: pnpm --filter @soundscape/ingest type-check && pnpm --filter @soundscape/ingest start -- --dry-run; note: added local-only ingest app scaffold, env contract, DB initialization, and placeholder sync run recording
 
 **Objective:** Create a dedicated ingestion app with a single local command entrypoint and explicit configuration boundaries for Gmail label syncing.
 **Dependencies:** Ticket 1.1

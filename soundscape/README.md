@@ -46,6 +46,13 @@ pnpm dev:web
 pnpm dev:extension
 ```
 
+**Newsletter ingest scaffold**
+
+```bash
+# Initialize the local newsletter DB and record a placeholder sync run
+pnpm --filter @soundscape/ingest start -- --dry-run
+```
+
 The services will be available at:
 
 - Backend API: http://localhost:3001/trpc
@@ -68,6 +75,14 @@ VITE_WS_URL=ws://localhost:3001/ws
 ```bash
 VITE_API_URL=http://localhost:3001
 VITE_WS_URL=ws://localhost:3001/ws
+```
+
+**Newsletter ingest** (`apps/ingest/.env.local` or `.env`):
+
+```bash
+NEWSLETTER_GMAIL_LABEL=music
+NEWSLETTER_DB_PATH=./data/newsletters.sqlite
+# Gmail and LLM credentials are optional during scaffold-only dry runs.
 ```
 
 ## Testing Real-Time Communication

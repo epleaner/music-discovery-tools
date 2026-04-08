@@ -1,0 +1,21 @@
+{
+  "name": "@soundscape/ingest",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "start": "tsx src/index.ts",
+    "test": "tsx --test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "@soundscape/newsletters-db": "workspace:*",
+    "dotenv": "^16.6.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "tsx": "^4.20.6",
+    "typescript": "^5.3.3"
+  }
+}

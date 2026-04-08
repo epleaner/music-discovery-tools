@@ -26,6 +26,14 @@ VITE_API_URL=http://localhost:3001
 VITE_WS_URL=ws://localhost:3001/ws
 ```
 
+**Newsletter ingest** - Create `apps/ingest/.env.local` when you want to override defaults:
+
+```bash
+NEWSLETTER_GMAIL_LABEL=music
+NEWSLETTER_DB_PATH=./data/newsletters.sqlite
+# Gmail / LLM credentials are optional until live sync is wired.
+```
+
 ### 4. Start Development
 
 **Option A: Everything together**
@@ -72,6 +80,17 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 1. Click the extension icon in Chrome toolbar
 2. You should see "Soundscape Extension" popup
 3. Connection status should show "Connected" (green dot)
+
+### Test Newsletter Ingest Scaffold
+
+```bash
+pnpm --filter @soundscape/ingest start -- --dry-run
+```
+
+Expected output includes:
+- `Soundscape newsletter ingest scaffold`
+- `mode=dry-run`
+- `syncRunStatus=dry_run_completed`
 
 ### Test Real-Time Communication
 
