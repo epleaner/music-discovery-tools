@@ -9,6 +9,7 @@ import {
 } from '@soundscape/newsletters-db';
 import { persistRawGmailMessage } from './gmail.js';
 import {
+  createPiNewsletterLlmClient,
   extractAndPersistNewsletterMessage,
   readSampleFixture,
   resolveSampleFixturePath,
@@ -214,6 +215,101 @@ test('extractAndPersistNewsletterMessage marks extraction failure without removi
   } finally {
     cleanup();
   }
+});
+
+test('createPiNewsletterLlmClient shells out through pi --print with the configured model', async () => {
+  const invocations: Array<{ command: string; args: string[] }> = [];
+  const client = createPiNewsletterLlmClient(
+    { model: 'gpt-5.4-medium' },
+    async (command, args) => {
+      invocations.push({ command, args });
+      return {
+        stdout: JSON.stringify({
+          sourceName: 'Pi Source',
+          summary: 'Pi summary',
+          artists: [],
+          albums: [],
+          tracks: [],
+          genres: [],
+          links: [],
+          releases: [],
+          events: [],
+        }),
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+  );
+
+  const extraction = await client.extract({
+    sourceName: 'Pi Source',
+    subject: 'Pi subject',
+    cleanedText: 'Pi body',
+  });
+
+  assert.equal(client.modelName, 'gpt-5.4-medium');
+  assert.deepEqual(extraction, {
+    sourceName: 'Pi Source',
+    summary: 'Pi summary',
+    artists: [],
+    albums: [],
+    tracks: [],
+    genres: [],
+    links: [],
+    releases: [],
+    events: [],
+  });
+  assert.equal(invocations.length, 1);
+  assert.equal(invocations[0]?.command, 'pi');
+  assert.deepEqual(invocations[0]?.args.slice(0, 6), [
+    '--model',
+    'gpt-5.4-medium',
+    '--print',
+    '--no-session',
+    '--no-tools',
+    '--mode',
+  ]);
+  assert.equal(invocations[0]?.args[6], 'text');
+  assert.match(invocations[0]?.args.at(-1) ?? '', /Return strict JSON only/);
+});
+
+test('createPiNewsletterLlmClient retries once before failing', async () => {
+  let attempts = 0;
+  const client = createPiNewsletterLlmClient(
+    { model: 'gpt-5.4-medium' },
+    async () => {
+      attempts += 1;
+
+      if (attempts === 1) {
+        throw new Error('transient pi failure');
+      }
+
+      return {
+        stdout: JSON.stringify({
+          sourceName: 'Retry Source',
+          summary: 'Recovered',
+          artists: [],
+          albums: [],
+          tracks: [],
+          genres: [],
+          links: [],
+          releases: [],
+          events: [],
+        }),
+        stderr: '',
+        exitCode: 0,
+      };
+    }
+  );
+
+  const extraction = await client.extract({
+    sourceName: 'Retry Source',
+    subject: 'Retry subject',
+    cleanedText: 'Retry body',
+  });
+
+  assert.equal(attempts, 2);
+  assert.equal((extraction as { summary: string }).summary, 'Recovered');
 });
 
 test('resolveSampleFixturePath supports repo-root-relative fixture paths', () => {

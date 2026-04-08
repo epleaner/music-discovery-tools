@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { spawn } from 'node:child_process';
 import {
   getLatestNewsletterExtractionByMessageId,
   insertNewsletterExtraction,
@@ -22,6 +23,7 @@ import {
 } from './normalize-email.js';
 
 export const NEWSLETTER_EXTRACTION_PROMPT_VERSION = 'newsletter-extraction-v1';
+export const DEFAULT_PI_LLM_MODEL = 'gpt-5.4-medium';
 
 export interface NewsletterLlmInput {
   sourceName?: string | null;
@@ -77,57 +79,63 @@ export interface SampleNewsletterFixture {
   extraction: NewsletterExtraction;
 }
 
-export function createOpenAiNewsletterLlmClient(input: {
-  apiKey: string;
-  model: string;
-  baseUrl?: string;
-}): NewsletterLlmClient {
+export interface PiCommandResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+}
+
+export type PiCommandExecutor = (
+  command: string,
+  args: string[]
+) => Promise<PiCommandResult>;
+
+export function createPiNewsletterLlmClient(
+  input: {
+    model?: string;
+    executor?: PiCommandExecutor;
+    retries?: number;
+  },
+  executorOverride?: PiCommandExecutor
+): NewsletterLlmClient {
+  const model = input.model ?? DEFAULT_PI_LLM_MODEL;
+  const executor = executorOverride ?? input.executor ?? executePiCommand;
+  const retries = input.retries ?? 1;
+
   return {
-    modelName: input.model,
+    modelName: model,
     async extract(llmInput) {
-      const baseUrl = (input.baseUrl ?? 'https://api.openai.com/v1').replace(/\/$/, '');
-      const response = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${input.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: input.model,
-          response_format: { type: 'json_object' },
-          messages: [
-            {
-              role: 'system',
-              content:
-                'Extract structured music newsletter data as strict JSON with sourceName, summary, artists, albums, tracks, genres, links, releases, and events arrays. Include confidence scores between 0 and 1 and brief evidence snippets when possible.',
-            },
-            {
-              role: 'user',
-              content: buildNewsletterExtractionPrompt(llmInput),
-            },
-          ],
-        }),
-      });
+      const prompt = buildNewsletterExtractionPrompt(llmInput);
+      let lastError: unknown;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`LLM request failed: ${response.status} ${response.statusText} ${errorText}`);
+      for (let attempt = 0; attempt <= retries; attempt += 1) {
+        try {
+          const result = await executor('pi', [
+            '--model',
+            model,
+            '--print',
+            '--no-session',
+            '--no-tools',
+            '--mode',
+            'text',
+            prompt,
+          ]);
+
+          if (result.exitCode !== 0) {
+            throw new Error(result.stderr.trim() || `pi exited with code ${result.exitCode}`);
+          }
+
+          return JSON.parse(result.stdout) as unknown;
+        } catch (error) {
+          lastError = error;
+
+          if (attempt === retries) {
+            throw lastError;
+          }
+        }
       }
 
-      const payload = (await response.json()) as {
-        choices?: Array<{
-          message?: {
-            content?: string | null;
-          };
-        }>;
-      };
-      const content = payload.choices?.[0]?.message?.content;
-
-      if (!content) {
-        throw new Error('LLM response did not include message content.');
-      }
-
-      return JSON.parse(content) as unknown;
+      throw lastError;
     },
   };
 }
@@ -276,9 +284,11 @@ export function readSampleFixture(fixturePath: string): SampleNewsletterFixture 
 
 export function buildNewsletterExtractionPrompt(input: NewsletterLlmInput): string {
   return [
+    'Return strict JSON only.',
+    'Schema keys required: sourceName, summary, artists, albums, tracks, genres, links, releases, events.',
+    'Every array item should include confidence and evidence when applicable.',
     `Source: ${input.sourceName ?? 'unknown'}`,
     `Subject: ${input.subject ?? 'unknown'}`,
-    'Return strict JSON only.',
     'Newsletter body:',
     input.cleanedText,
   ].join('\n\n');
@@ -289,4 +299,35 @@ export function getPersistedExtractionJson(
   newsletterMessageId: number
 ): string | null {
   return getLatestNewsletterExtractionByMessageId(db, newsletterMessageId)?.extractionJson ?? null;
+}
+
+async function executePiCommand(
+  command: string,
+  args: string[]
+): Promise<PiCommandResult> {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn(command, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => {
+      stdout += String(chunk);
+    });
+
+    child.stderr.on('data', (chunk) => {
+      stderr += String(chunk);
+    });
+
+    child.on('error', reject);
+    child.on('close', (exitCode) => {
+      resolvePromise({
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+        exitCode: exitCode ?? 1,
+      });
+    });
+  });
 }

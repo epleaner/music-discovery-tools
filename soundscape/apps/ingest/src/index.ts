@@ -16,7 +16,7 @@ import {
 } from './gmail.js';
 import {
   createFixtureBackedLlmClient,
-  createOpenAiNewsletterLlmClient,
+  createPiNewsletterLlmClient,
   extractAndPersistNewsletterMessage,
   normalizeFixtureMessageBodies,
   readSampleFixture,
@@ -187,9 +187,9 @@ export async function runIngest(argv: string[] = process.argv.slice(2)): Promise
         db,
         config: liveConfig,
         gmailClient: createGmailApiClient(liveConfig.gmail),
-        llmClient: createOpenAiNewsletterLlmClient({
-          apiKey: liveConfig.llm.apiKey,
+        llmClient: createPiNewsletterLlmClient({
           model: liveConfig.llm.model,
+          retries: 1,
         }),
         syncRunId,
         lastSuccessfulSyncAt,

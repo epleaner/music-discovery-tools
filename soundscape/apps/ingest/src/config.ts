@@ -2,6 +2,7 @@ import { config as loadDotenv } from 'dotenv';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
+import { DEFAULT_PI_LLM_MODEL } from './llm.js';
 
 const ingestRoot = fileURLToPath(new URL('..', import.meta.url));
 const repoRoot = resolve(ingestRoot, '../..');
@@ -17,8 +18,7 @@ const envSchema = z.object({
   GMAIL_CLIENT_SECRET: z.string().trim().min(1).optional(),
   GMAIL_REFRESH_TOKEN: z.string().trim().min(1).optional(),
   GMAIL_REDIRECT_URI: z.string().trim().min(1).optional(),
-  LLM_API_KEY: z.string().trim().min(1).optional(),
-  LLM_MODEL: z.string().trim().min(1).default('gpt-4.1-mini'),
+  PI_LLM_MODEL: z.string().trim().min(1).default(DEFAULT_PI_LLM_MODEL),
 });
 
 export interface IngestConfig {
@@ -32,7 +32,6 @@ export interface IngestConfig {
     redirectUri?: string;
   };
   llm: {
-    apiKey?: string;
     model: string;
   };
 }
@@ -48,7 +47,6 @@ export interface LiveSyncConfig {
     redirectUri: string;
   };
   llm: {
-    apiKey: string;
     model: string;
   };
 }
@@ -71,8 +69,7 @@ export function loadIngestConfig(env: NodeJS.ProcessEnv = process.env): IngestCo
       redirectUri: parsed.GMAIL_REDIRECT_URI,
     },
     llm: {
-      apiKey: parsed.LLM_API_KEY,
-      model: parsed.LLM_MODEL,
+      model: parsed.PI_LLM_MODEL,
     },
   };
 }
@@ -96,10 +93,6 @@ export function requireLiveSyncConfig(config: IngestConfig): LiveSyncConfig {
     missingFields.push('GMAIL_REDIRECT_URI');
   }
 
-  if (!config.llm.apiKey) {
-    missingFields.push('LLM_API_KEY');
-  }
-
   if (missingFields.length > 0) {
     throw new Error(
       `Live newsletter sync requires these environment variables: ${missingFields.join(', ')}`
@@ -117,7 +110,6 @@ export function requireLiveSyncConfig(config: IngestConfig): LiveSyncConfig {
       redirectUri: config.gmail.redirectUri!,
     },
     llm: {
-      apiKey: config.llm.apiKey!,
       model: config.llm.model,
     },
   };
@@ -130,7 +122,6 @@ export function formatConfigSummary(config: IngestConfig): string[] {
     `entityConfidenceThreshold=${config.entityConfidenceThreshold}`,
     `gmailConfigured=${Boolean(config.gmail.clientId && config.gmail.clientSecret)}`,
     `gmailRefreshTokenConfigured=${Boolean(config.gmail.refreshToken)}`,
-    `llmConfigured=${Boolean(config.llm.apiKey)}`,
-    `llmModel=${config.llm.model}`,
+    `piModel=${config.llm.model}`,
   ];
 }

@@ -113,8 +113,7 @@ test('runLiveNewsletterSync persists live Gmail messages, extractions, and the s
           redirectUri: 'http://localhost/callback',
         },
         llm: {
-          apiKey: 'test-api-key',
-          model: 'gpt-4.1-mini',
+          model: 'gpt-5.4-medium',
         },
       },
       gmailClient,

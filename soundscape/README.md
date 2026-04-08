@@ -98,8 +98,7 @@ GMAIL_CLIENT_ID=
 GMAIL_CLIENT_SECRET=
 GMAIL_REFRESH_TOKEN=
 GMAIL_REDIRECT_URI=
-LLM_API_KEY=
-LLM_MODEL=gpt-4.1-mini
+PI_LLM_MODEL=gpt-5.4-medium
 ```
 
 Setup notes:
@@ -107,9 +106,10 @@ Setup notes:
 - Create a Gmail label named `music`, or set `NEWSLETTER_GMAIL_LABEL` to the label you actually use.
 - Apply that label only to newsletters you want ingested.
 - `NEWSLETTER_DB_PATH` is optional; if unset, the default DB is `soundscape/data/newsletters.sqlite`.
-- Gmail and LLM credentials are optional for `--dry-run`.
-- `--sync-now` requires all Gmail OAuth fields plus `LLM_API_KEY`.
-- `LLM_MODEL` defaults to `gpt-4.1-mini` when unset.
+- Gmail credentials are optional for `--dry-run`.
+- `--sync-now` requires all Gmail OAuth fields plus a working local `pi` CLI install.
+- `PI_LLM_MODEL` defaults to `gpt-5.4-medium` when unset.
+- Live extraction uses pi headless (`pi --print`) and retries once per message before marking that extraction failed.
 
 ## Testing Real-Time Communication
 

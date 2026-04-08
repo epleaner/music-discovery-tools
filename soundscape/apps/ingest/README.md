@@ -9,7 +9,7 @@
 - records sync runs and the last successful sync cursor
 - resolves the configured Gmail label
 - fetches only messages newer than the last successful sync
-- normalizes newsletter bodies and runs LLM extraction
+- normalizes newsletter bodies and runs pi headless extraction for live syncs
 - persists both raw newsletter data and normalized high-confidence entities
 
 ## Commands
@@ -58,17 +58,17 @@ GMAIL_CLIENT_ID=
 GMAIL_CLIENT_SECRET=
 GMAIL_REFRESH_TOKEN=
 GMAIL_REDIRECT_URI=
-LLM_API_KEY=
-LLM_MODEL=gpt-4.1-mini
+PI_LLM_MODEL=gpt-5.4-medium
 ```
 
 Notes:
 
 - `NEWSLETTER_DB_PATH` is optional. If unset, the app uses `soundscape/data/newsletters.sqlite`.
-- `--dry-run` does not require Gmail or LLM credentials.
-- `--sync-now` requires all Gmail OAuth fields plus `LLM_API_KEY`.
-- `LLM_MODEL` defaults to `gpt-4.1-mini` when unset.
-- The fixture sample path also works without live Gmail credentials.
+- `--dry-run` does not require Gmail or pi credentials.
+- `--sync-now` requires the Gmail OAuth fields and a working local `pi` CLI install.
+- `PI_LLM_MODEL` defaults to `gpt-5.4-medium` when unset.
+- Live extraction uses pi headless (`pi --print`) and retries once per message before marking that extraction failed.
+- The fixture sample path also works without live Gmail credentials or pi.
 
 ## Sync behavior
 
