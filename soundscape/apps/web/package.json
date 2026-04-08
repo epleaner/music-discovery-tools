@@ -8,6 +8,7 @@
     "dev": "vite",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
+    "test": "NODE_OPTIONS=--conditions=browser tsx --test src/**/*.test.ts",
     "start": "tsx server.ts"
   },
   "dependencies": {

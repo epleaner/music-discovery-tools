@@ -411,7 +411,7 @@ git commit -m "feat(soundscape/api): add newsletter read endpoints"
 
 **Demo Increment:** The existing app shows a compact newsletter feed in a dedicated panel with list/detail interaction and extracted entities visible in the UI.
 
-### [ ] Ticket 4.1: Add newsletter client/resource layer in the web app
+### [x] Ticket 4.1: Add newsletter client/resource layer in the web app — commit: 3d78505; verification: pnpm --filter @soundscape/web test -- newsletter-resource; note: added typed newsletter API helpers, explicit list/detail/source resource states, and focused web resource tests
 
 **Objective:** Create typed newsletter API access and resource helpers for list/detail/source loading.
 **Dependencies:** Sprint 3 complete
@@ -453,7 +453,7 @@ git add apps/web/src/lib
 git commit -m "feat(soundscape/web): add newsletter resource layer"
 ```
 
-### [ ] Ticket 4.2: Add compact newsletter list/detail components
+### [-] Ticket 4.2: Add compact newsletter list/detail components — note: starting compact panel component tests and dense UI scaffolding
 
 **Objective:** Build compact UI components for newsletter cards and detail rendering consistent with the app’s dense visual language.
 **Dependencies:** Ticket 4.1
