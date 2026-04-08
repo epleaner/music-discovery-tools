@@ -28,9 +28,9 @@ module.exports = {
         18: '4.5rem',
       },
       fontSize: {
-        xs: ['0.6875rem', { lineHeight: '1rem' }],
-        sm: ['0.8125rem', { lineHeight: '1.25rem' }],
-        base: ['0.875rem', { lineHeight: '1.5rem' }],
+        xs: ['0.625rem', { lineHeight: '0.875rem' }],
+        sm: ['0.75rem', { lineHeight: '1.125rem' }],
+        base: ['0.8125rem', { lineHeight: '1.375rem' }],
       },
       borderRadius: {
         DEFAULT: '0.25rem',

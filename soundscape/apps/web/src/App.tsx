@@ -260,13 +260,13 @@ const App: Component = () => {
     <div class="flex flex-col h-screen bg-bg">
       {/* Header */}
       <div class="flex-shrink-0 border-b border-border">
-        <div class="flex gap-3 justify-between items-center p-4">
+        <div class="flex gap-2 justify-between items-center p-3">
           <UsernameInput
             onSubmit={handleUsernameSubmit}
             initialUsername={username()}
           />
 
-          <div class="flex flex-1 gap-3 justify-end items-center w-full">
+          <div class="flex flex-1 gap-2 justify-end items-center w-full">
             {/* WebSocket Debug Button */}
             <button
               onClick={() => setShowWebSocket(!showWebSocket())}
@@ -287,7 +287,7 @@ const App: Component = () => {
               </button>
 
               <Show when={showRYMDropdown()}>
-                <div class="absolute right-0 z-30 p-3 mt-1 w-80 border shadow-lg bg-bg border-border">
+                <div class="absolute right-0 z-30 p-2.5 mt-1 w-72 border shadow-lg bg-bg border-border">
                   <div class="space-y-3">
                     {/* Genre Select */}
                     <GenreSelect
