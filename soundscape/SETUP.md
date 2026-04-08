@@ -31,6 +31,7 @@ VITE_WS_URL=ws://localhost:3001/ws
 ```bash
 NEWSLETTER_GMAIL_LABEL=music
 NEWSLETTER_DB_PATH=./data/newsletters.sqlite
+NEWSLETTER_ENTITY_CONFIDENCE_THRESHOLD=0.8
 # Gmail / LLM credentials are optional until live sync is wired.
 ```
 
@@ -85,12 +86,16 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 
 ```bash
 pnpm --filter @soundscape/ingest start -- --dry-run
+pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json
 ```
 
 Expected output includes:
 - `Soundscape newsletter ingest scaffold`
 - `mode=dry-run`
 - `syncRunStatus=dry_run_completed`
+- `Soundscape newsletter ingest sample run`
+- `mode=sample`
+- `normalizedArtists=1`
 
 ### Test Real-Time Communication
 

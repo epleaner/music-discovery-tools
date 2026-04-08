@@ -51,6 +51,9 @@ pnpm dev:extension
 ```bash
 # Initialize the local newsletter DB and record a placeholder sync run
 pnpm --filter @soundscape/ingest start -- --dry-run
+
+# Run the local sample extraction pipeline end-to-end
+pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json
 ```
 
 The services will be available at:
@@ -82,6 +85,7 @@ VITE_WS_URL=ws://localhost:3001/ws
 ```bash
 NEWSLETTER_GMAIL_LABEL=music
 NEWSLETTER_DB_PATH=./data/newsletters.sqlite
+NEWSLETTER_ENTITY_CONFIDENCE_THRESHOLD=0.8
 # Gmail and LLM credentials are optional during scaffold-only dry runs.
 ```
 

@@ -65,6 +65,15 @@ export interface NewsletterMessageRecord {
   extractionStatus: string;
 }
 
+export interface NewsletterExtractionRecord {
+  id: number;
+  newsletterMessageId: number;
+  modelName: string;
+  promptVersion: string;
+  extractionJson: string;
+  summary: string | null;
+}
+
 export interface InsertNewsletterExtractionInput {
   newsletterMessageId: number;
   modelName: string;
@@ -389,6 +398,19 @@ export function getNewsletterMessageByGmailMessageId(
   };
 }
 
+export function updateNewsletterMessageExtractionStatus(
+  db: NewsletterDatabase,
+  newsletterMessageId: number,
+  extractionStatus: string
+): void {
+  db.prepare(
+    `UPDATE newsletter_messages
+     SET extraction_status = ?,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`
+  ).run(extractionStatus, newsletterMessageId);
+}
+
 export function insertNewsletterExtraction(
   db: NewsletterDatabase,
   input: InsertNewsletterExtractionInput
@@ -412,6 +434,49 @@ export function insertNewsletterExtraction(
     );
 
   return Number(result.lastInsertRowid);
+}
+
+export function getLatestNewsletterExtractionByMessageId(
+  db: NewsletterDatabase,
+  newsletterMessageId: number
+): NewsletterExtractionRecord | null {
+  const row = db
+    .prepare<
+      [number],
+      {
+        id: number;
+        newsletter_message_id: number;
+        model_name: string;
+        prompt_version: string;
+        extraction_json: string;
+        summary: string | null;
+      }
+    >(
+      `SELECT id,
+              newsletter_message_id,
+              model_name,
+              prompt_version,
+              extraction_json,
+              summary
+       FROM newsletter_extractions
+       WHERE newsletter_message_id = ?
+       ORDER BY id DESC
+       LIMIT 1`
+    )
+    .get(newsletterMessageId);
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    newsletterMessageId: row.newsletter_message_id,
+    modelName: row.model_name,
+    promptVersion: row.prompt_version,
+    extractionJson: row.extraction_json,
+    summary: row.summary,
+  };
 }
 
 export function replaceNewsletterLinks(
