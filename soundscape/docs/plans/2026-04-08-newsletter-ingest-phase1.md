@@ -545,7 +545,7 @@ git commit -m "feat(soundscape/web): integrate newsletter feed panel"
 
 **Demo Increment:** A local manual sync ingests real Gmail newsletters from label `music`, stores extracted data in SQLite, and the app renders the results in the newsletter panel.
 
-### [-] Ticket 5.1: Add manual end-to-end ingest verification path — note: starting real sync wiring review and manual verification docs
+### [!] Ticket 5.1: Add manual end-to-end ingest verification path — blocker: local Gmail/LLM credentials are not configured in `apps/ingest/.env.local`, so final live `--sync-now` verification against a real inbox could not run; note: implemented the live Gmail sync path, fail-fast credential validation, per-message extraction handling, sync cursor updates, and sample-backed API/web verification; commit: bc29492; verification: pnpm --filter @soundscape/ingest test && pnpm --filter @soundscape/ingest type-check && pnpm --filter @soundscape/ingest start -- --dry-run && pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json && pnpm --filter @soundscape/ingest start -- --sync-now (expected fail-fast without creds) && pnpm --filter @soundscape/server build && pnpm --filter @soundscape/web build && curl -I http://127.0.0.1:3001/health && curl -s 'http://127.0.0.1:3001/trpc/newsletterList?input=%7B%22limit%22%3A10%2C%22offset%22%3A0%7D' && pnpm --filter @soundscape/web exec tsx --test src/App.newsletters.test.tsx && pnpm --filter @soundscape/web exec tsx --test src/components/NewsletterPanel.test.tsx
 
 **Objective:** Make the full local ingestion path runnable against real Gmail data and clearly verifiable.
 **Dependencies:** Sprint 4 complete
@@ -597,7 +597,7 @@ git add apps/ingest README.md SETUP.md
 git commit -m "feat(soundscape/ingest): complete local newsletter sync flow"
 ```
 
-### [ ] Ticket 5.2: Add local daily runner and finish docs
+### [x] Ticket 5.2: Add local daily runner and finish docs — commit: 662ec53; verification: bash scripts/run-newsletter-sync.sh --dry-run && bash scripts/run-newsletter-sync.sh (expected fail-fast without creds) && pnpm --filter @soundscape/server build && pnpm --filter @soundscape/web build; note: added a default-to-live-sync runner, ingest README, and top-level docs for Gmail label setup, credentials, sync behavior, DB location, scheduler usage, and newsletter panel flow
 
 **Objective:** Provide a simple once-per-day local execution path and ensure docs reflect the new behavior.
 **Dependencies:** Ticket 5.1
