@@ -83,7 +83,7 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 
 ### Test Web App
 
-1. Open http://localhost:5173
+1. Open http://localhost:3000
 2. You should see the Soundscape web app
 3. Check browser console - should see "WebSocket connected"
 

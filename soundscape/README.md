@@ -61,7 +61,7 @@ The services will be available at:
 
 - Backend API: http://localhost:3001/trpc
 - Backend WebSocket: ws://localhost:3001/ws
-- Web App: http://localhost:5173
+- Web App: http://localhost:3000
 - Extension: Load `.wxt/chrome-mv3` in Chrome
 
 ### Environment Setup
@@ -83,7 +83,7 @@ VITE_WS_URL=ws://localhost:3001/ws
 
 ## Testing Real-Time Communication
 
-1. Open the web app at http://localhost:5173
+1. Open the web app at http://localhost:3000
 2. Load the extension in Chrome
 3. Open the extension popup
 4. Send messages between web app and extension via WebSocket
