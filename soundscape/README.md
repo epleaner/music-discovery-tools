@@ -55,6 +55,9 @@ pnpm --filter @soundscape/ingest start -- --dry-run
 # Default daily runner: live Gmail sync
 bash scripts/run-newsletter-sync.sh
 
+# Live Gmail sync with structured progress logs
+bash scripts/run-newsletter-sync.sh --verbose
+
 # Explicit live Gmail sync
 pnpm --filter @soundscape/ingest start -- --sync-now
 

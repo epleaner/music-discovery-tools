@@ -90,17 +90,23 @@ export type PiCommandExecutor = (
   args: string[]
 ) => Promise<PiCommandResult>;
 
+export type StructuredLogger = (line: string) => void;
+
 export function createPiNewsletterLlmClient(
   input: {
     model?: string;
     executor?: PiCommandExecutor;
     retries?: number;
+    verbose?: boolean;
+    logger?: StructuredLogger;
   },
   executorOverride?: PiCommandExecutor
 ): NewsletterLlmClient {
   const model = input.model ?? DEFAULT_PI_LLM_MODEL;
   const executor = executorOverride ?? input.executor ?? executePiCommand;
   const retries = input.retries ?? 1;
+  const verbose = input.verbose ?? false;
+  const logger = input.logger ?? console.log;
 
   return {
     modelName: model,
@@ -109,7 +115,17 @@ export function createPiNewsletterLlmClient(
       let lastError: unknown;
 
       for (let attempt = 0; attempt <= retries; attempt += 1) {
+        const attemptNumber = attempt + 1;
+
         try {
+          if (verbose) {
+            logger(
+              `event=pi_extract.attempt attempt=${attemptNumber} model=${model} source=${sanitizeLogValue(
+                llmInput.sourceName ?? 'unknown'
+              )} subject=${sanitizeLogValue(llmInput.subject ?? 'unknown')}`
+            );
+          }
+
           const result = await executor('pi', [
             '--model',
             model,
@@ -125,12 +141,31 @@ export function createPiNewsletterLlmClient(
             throw new Error(result.stderr.trim() || `pi exited with code ${result.exitCode}`);
           }
 
+          if (verbose) {
+            logger(`event=pi_extract.succeeded attempt=${attemptNumber} model=${model}`);
+          }
+
           return JSON.parse(result.stdout) as unknown;
         } catch (error) {
           lastError = error;
 
           if (attempt === retries) {
+            if (verbose) {
+              logger(
+                `event=pi_extract.failed attempt=${attemptNumber} model=${model} error=${sanitizeLogValue(
+                  error instanceof Error ? error.message : String(error)
+                )}`
+              );
+            }
             throw lastError;
+          }
+
+          if (verbose) {
+            logger(
+              `event=pi_extract.retry attempt=${attemptNumber} model=${model} error=${sanitizeLogValue(
+                error instanceof Error ? error.message : String(error)
+              )}`
+            );
           }
         }
       }
@@ -299,6 +334,10 @@ export function getPersistedExtractionJson(
   newsletterMessageId: number
 ): string | null {
   return getLatestNewsletterExtractionByMessageId(db, newsletterMessageId)?.extractionJson ?? null;
+}
+
+function sanitizeLogValue(value: string): string {
+  return JSON.stringify(value).replace(/^"|"$/g, '');
 }
 
 async function executePiCommand(

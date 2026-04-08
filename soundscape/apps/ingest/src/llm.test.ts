@@ -275,8 +275,13 @@ test('createPiNewsletterLlmClient shells out through pi --print with the configu
 
 test('createPiNewsletterLlmClient retries once before failing', async () => {
   let attempts = 0;
+  const logs: string[] = [];
   const client = createPiNewsletterLlmClient(
-    { model: 'gpt-5.4-medium' },
+    {
+      model: 'gpt-5.4-medium',
+      logger: (line) => logs.push(line),
+      verbose: true,
+    },
     async () => {
       attempts += 1;
 
@@ -310,6 +315,10 @@ test('createPiNewsletterLlmClient retries once before failing', async () => {
 
   assert.equal(attempts, 2);
   assert.equal((extraction as { summary: string }).summary, 'Recovered');
+  assert.ok(logs.some((line) => line.includes('event=pi_extract.attempt attempt=1')));
+  assert.ok(logs.some((line) => line.includes('event=pi_extract.retry attempt=1')));
+  assert.ok(logs.some((line) => line.includes('event=pi_extract.attempt attempt=2')));
+  assert.ok(logs.some((line) => line.includes('event=pi_extract.succeeded attempt=2')));
 });
 
 test('resolveSampleFixturePath supports repo-root-relative fixture paths', () => {

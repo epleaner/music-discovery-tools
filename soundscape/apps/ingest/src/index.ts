@@ -21,6 +21,7 @@ import {
   normalizeFixtureMessageBodies,
   readSampleFixture,
   type NewsletterLlmClient,
+  type StructuredLogger,
 } from './llm.js';
 import { normalizeGmailMessagePayload } from './normalize-email.js';
 import {
@@ -32,6 +33,7 @@ import {
 interface IngestCliOptions {
   dryRun: boolean;
   syncNow: boolean;
+  verbose: boolean;
   samplePath?: string;
 }
 
@@ -55,6 +57,7 @@ export function parseCliOptions(argv: string[]): IngestCliOptions {
 
   const syncNow = argv.includes('--sync-now');
   const dryRun = argv.includes('--dry-run');
+  const verbose = argv.includes('--verbose');
 
   if (syncNow && dryRun) {
     throw new Error('Use either --sync-now or --dry-run, not both.');
@@ -67,6 +70,7 @@ export function parseCliOptions(argv: string[]): IngestCliOptions {
   return {
     dryRun,
     syncNow,
+    verbose,
     samplePath,
   };
 }
@@ -78,25 +82,61 @@ export async function runLiveNewsletterSync(input: {
   llmClient: NewsletterLlmClient;
   syncRunId: number;
   lastSuccessfulSyncAt: string | null;
+  verbose?: boolean;
+  logger?: StructuredLogger;
 }): Promise<LiveSyncResult> {
+  const verbose = input.verbose ?? false;
+  const logger = input.logger ?? console.log;
+  const log = createStructuredLogWriter(verbose, logger);
+
   const gmailQuery = buildGmailSearchQuery({
     label: input.config.gmailLabel,
     lastSuccessfulSyncAt: input.lastSuccessfulSyncAt,
   });
+
+  log('gmail_sync.start', {
+    syncRunId: input.syncRunId,
+    gmailLabel: input.config.gmailLabel,
+    lastSuccessfulSyncAt: input.lastSuccessfulSyncAt ?? 'none',
+    gmailQuery,
+  });
+
   const fetched = await fetchGmailSyncData(input.gmailClient, {
     label: input.config.gmailLabel,
     lastSuccessfulSyncAt: input.lastSuccessfulSyncAt,
   });
 
+  log('gmail_sync.messages_listed', {
+    resolvedLabelId: fetched.label.id,
+    gmailApiQuery: fetched.query || 'none',
+    messageCount: fetched.messageRefs.length,
+  });
+
   let extractionFailureCount = 0;
   let newestMessageTimestamp: string | null = null;
 
-  for (const rawMessage of fetched.messages) {
+  for (const [index, rawMessage] of fetched.messages.entries()) {
     const messageMetadata = mapGmailApiMessageToNewsletterMessage(rawMessage);
+    log('newsletter_message.fetch_complete', {
+      index: index + 1,
+      totalMessages: fetched.messages.length,
+      gmailMessageId: messageMetadata.id,
+      subject: messageMetadata.subject ?? 'none',
+      source: messageMetadata.sourceName ?? messageMetadata.senderEmail ?? 'unknown',
+    });
+
     const normalizedBody = normalizeGmailMessagePayload(rawMessage.payload ?? null);
     const persisted = persistRawGmailMessage(input.db, {
       ...messageMetadata,
       ...normalizedBody,
+    });
+
+    log('newsletter_message.persisted', {
+      index: index + 1,
+      totalMessages: fetched.messages.length,
+      gmailMessageId: messageMetadata.id,
+      newsletterMessageId: persisted.newsletterMessageId,
+      cleanedTextPresent: Boolean(normalizedBody.cleanedText),
     });
 
     if (
@@ -107,6 +147,12 @@ export async function runLiveNewsletterSync(input: {
     }
 
     try {
+      log('newsletter_message.extract_start', {
+        index: index + 1,
+        totalMessages: fetched.messages.length,
+        gmailMessageId: messageMetadata.id,
+      });
+
       await extractAndPersistNewsletterMessage({
         db: input.db,
         newsletterMessageId: persisted.newsletterMessageId,
@@ -119,8 +165,20 @@ export async function runLiveNewsletterSync(input: {
         llmClient: input.llmClient,
         entityConfidenceThreshold: input.config.entityConfidenceThreshold,
       });
+
+      log('newsletter_message.extracted', {
+        index: index + 1,
+        totalMessages: fetched.messages.length,
+        gmailMessageId: messageMetadata.id,
+      });
     } catch (error) {
       extractionFailureCount += 1;
+      log('newsletter_message.extract_failed', {
+        index: index + 1,
+        totalMessages: fetched.messages.length,
+        gmailMessageId: messageMetadata.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
       console.error(
         `Failed to extract newsletter message ${messageMetadata.id}: ${error instanceof Error ? error.message : String(error)}`
       );
@@ -137,6 +195,13 @@ export async function runLiveNewsletterSync(input: {
       extractionFailureCount > 0
         ? `${extractionFailureCount} message(s) failed extraction; raw content persisted for retry/debugging.`
         : null,
+  });
+
+  log('gmail_sync.completed', {
+    syncRunId: input.syncRunId,
+    messageCount: fetched.messages.length,
+    extractionFailureCount,
+    newestMessageTimestamp: newestMessageTimestamp ?? 'none',
   });
 
   return {
@@ -190,9 +255,13 @@ export async function runIngest(argv: string[] = process.argv.slice(2)): Promise
         llmClient: createPiNewsletterLlmClient({
           model: liveConfig.llm.model,
           retries: 1,
+          verbose: options.verbose,
+          logger: console.log,
         }),
         syncRunId,
         lastSuccessfulSyncAt,
+        verbose: options.verbose,
+        logger: console.log,
       });
 
       logLiveSyncSummary({
@@ -318,6 +387,28 @@ function logLiveSyncSummary(input: {
   console.log(`messageCount=${input.result.messageCount}`);
   console.log(`extractionFailureCount=${input.result.extractionFailureCount}`);
   console.log(`newestMessageTimestamp=${input.result.newestMessageTimestamp ?? 'none'}`);
+}
+
+function createStructuredLogWriter(
+  verbose: boolean,
+  logger: StructuredLogger
+): (event: string, fields: Record<string, string | number | boolean | null | undefined>) => void {
+  return (event, fields) => {
+    if (!verbose) {
+      return;
+    }
+
+    const renderedFields = Object.entries(fields)
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => `${key}=${sanitizeStructuredLogValue(value ?? null)}`)
+      .join(' ');
+
+    logger(`event=${event}${renderedFields ? ` ${renderedFields}` : ''}`);
+  };
+}
+
+function sanitizeStructuredLogValue(value: string | number | boolean | null): string {
+  return JSON.stringify(value ?? 'none').replace(/^"|"$/g, '');
 }
 
 runIngest().catch((error: unknown) => {

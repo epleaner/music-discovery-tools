@@ -107,6 +107,7 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 ```bash
 bash scripts/run-newsletter-sync.sh --dry-run
 bash scripts/run-newsletter-sync.sh
+bash scripts/run-newsletter-sync.sh --verbose
 pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json
 ```
 
@@ -138,10 +139,11 @@ Use the wrapper directly for manual runs or scheduler hooks:
 
 ```bash
 bash scripts/run-newsletter-sync.sh
+bash scripts/run-newsletter-sync.sh --verbose
 bash scripts/run-newsletter-sync.sh --dry-run
 ```
 
-With no arguments, the wrapper defaults to `--sync-now`. It still forwards explicit flags to `pnpm --filter @soundscape/ingest start -- ...`, so it is safe to use from cron or `launchd`.
+With no mode flag, the wrapper defaults to `--sync-now`, so `bash scripts/run-newsletter-sync.sh --verbose` runs a live sync with structured progress logs. It still forwards explicit flags to `pnpm --filter @soundscape/ingest start -- ...`, so it is safe to use from cron or `launchd`.
 
 ### Test Real-Time Communication
 

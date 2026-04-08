@@ -6,8 +6,18 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$REPO_ROOT"
 
-if [ "$#" -eq 0 ]; then
-  set -- --sync-now
+has_mode=false
+for arg in "$@"; do
+  case "$arg" in
+    --sync-now|--dry-run|--sample)
+      has_mode=true
+      break
+      ;;
+  esac
+done
+
+if [ "$#" -eq 0 ] || [ "$has_mode" = false ]; then
+  set -- --sync-now "$@"
 fi
 
 pnpm --filter @soundscape/ingest start -- "$@"

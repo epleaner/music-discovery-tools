@@ -21,6 +21,9 @@ bash scripts/run-newsletter-sync.sh
 # Explicit live Gmail sync
 pnpm --filter @soundscape/ingest start -- --sync-now
 
+# Live Gmail sync with structured progress logs
+pnpm --filter @soundscape/ingest start -- --sync-now --verbose
+
 # Config-only dry run: initialize DB, record a dry-run sync, and print the Gmail query
 pnpm --filter @soundscape/ingest start -- --dry-run
 
@@ -103,8 +106,11 @@ Use the wrapper for manual runs and schedulers:
 
 ```bash
 bash scripts/run-newsletter-sync.sh
+bash scripts/run-newsletter-sync.sh --verbose
 bash scripts/run-newsletter-sync.sh --dry-run
 ```
+
+`--verbose` emits structured `key=value` progress logs for Gmail phases, per-message progress, and pi extraction attempts/retries.
 
 Example cron entry for a daily live sync at 7:30 AM:
 
