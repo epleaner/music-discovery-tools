@@ -319,7 +319,7 @@ git commit -m "feat(soundscape/ingest): persist newsletter extractions"
 
 **Demo Increment:** The local server exposes newsletter list/detail/source endpoints backed by SQLite and verified against stored sample data.
 
-### [-] Ticket 3.1: Add newsletter read queries to shared storage package — note: writing DB read-query tests and helpers
+### [x] Ticket 3.1: Add newsletter read queries to shared storage package — commit: 755a0ae; verification: pnpm --filter @soundscape/newsletters-db test -- read-queries && pnpm --filter @soundscape/newsletters-db type-check; note: added newsletter list/detail/source read helpers with explicit empty states and DB-backed tests
 
 **Objective:** Add read helpers required by the server for list/detail/source retrieval without leaking ingest-only write concerns.
 **Dependencies:** Sprint 2 complete
@@ -361,7 +361,7 @@ git add packages/newsletters-db
 git commit -m "feat(soundscape/newsletters-db): add newsletter read queries"
 ```
 
-### [ ] Ticket 3.2: Add newsletter tRPC endpoints
+### [-] Ticket 3.2: Add newsletter tRPC endpoints — note: wiring API context and newsletter read procedures
 
 **Objective:** Expose newsletter data through the existing server API for the web app.
 **Dependencies:** Ticket 3.1

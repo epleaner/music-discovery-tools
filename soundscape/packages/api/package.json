@@ -10,14 +10,18 @@
     }
   },
   "scripts": {
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
+    "@soundscape/newsletters-db": "workspace:*",
     "@trpc/server": "^10.45.0",
     "trpc-openapi": "^1.2.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/node": "^20.11.5",
+    "tsx": "^4.20.6",
     "typescript": "^5.3.3"
   }
 }
