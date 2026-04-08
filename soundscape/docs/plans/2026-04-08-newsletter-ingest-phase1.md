@@ -497,7 +497,7 @@ git add apps/web/src/components
 git commit -m "feat(soundscape/web): add newsletter panel components"
 ```
 
-### [-] Ticket 4.3: Integrate newsletter feed into another panel in the app — note: starting app-level panel toggle and integration test scaffolding
+### [x] Ticket 4.3: Integrate newsletter feed into another panel in the app — commit: e6bac6d; verification: pnpm --filter @soundscape/web exec tsx --test src/App.newsletters.test.tsx && pnpm --filter @soundscape/web build; note: added a right-panel toggle that switches between similar artists and the newsletter panel without leaving the existing app layout
 
 **Objective:** Wire the newsletter feed into the existing application layout as another panel without breaking current music discovery flows.
 **Dependencies:** Ticket 4.2
@@ -545,7 +545,7 @@ git commit -m "feat(soundscape/web): integrate newsletter feed panel"
 
 **Demo Increment:** A local manual sync ingests real Gmail newsletters from label `music`, stores extracted data in SQLite, and the app renders the results in the newsletter panel.
 
-### [ ] Ticket 5.1: Add manual end-to-end ingest verification path
+### [-] Ticket 5.1: Add manual end-to-end ingest verification path — note: starting real sync wiring review and manual verification docs
 
 **Objective:** Make the full local ingestion path runnable against real Gmail data and clearly verifiable.
 **Dependencies:** Sprint 4 complete
