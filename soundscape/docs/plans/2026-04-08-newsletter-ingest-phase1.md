@@ -114,7 +114,7 @@ git add apps/ingest README.md SETUP.md
 git commit -m "feat(soundscape/ingest): add local ingest scaffold"
 ```
 
-### [x] Ticket 1.3: Add Gmail sync cursor model and message persistence foundation — commit: pending; verification: pnpm --filter @soundscape/ingest test -- gmail && pnpm --filter @soundscape/ingest start -- --dry-run && pnpm --filter @soundscape/ingest type-check; note: added cursor lifecycle helpers, Gmail search query builder, and idempotent raw Gmail message persistence keyed by Gmail message id
+### [x] Ticket 1.3: Add Gmail sync cursor model and message persistence foundation — commit: 09f20ce; verification: pnpm --filter @soundscape/ingest test -- gmail && pnpm --filter @soundscape/ingest start -- --dry-run && pnpm --filter @soundscape/ingest type-check; note: added cursor lifecycle helpers, Gmail search query builder, and idempotent raw Gmail message persistence keyed by Gmail message id
 
 **Objective:** Implement the last-successful-sync state and idempotent raw newsletter message persistence using Gmail message ids.
 **Dependencies:** Tickets 1.1, 1.2
