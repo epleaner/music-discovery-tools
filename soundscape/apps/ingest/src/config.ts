@@ -1,5 +1,5 @@
 import { config as loadDotenv } from 'dotenv';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 
@@ -18,7 +18,7 @@ const envSchema = z.object({
   GMAIL_REFRESH_TOKEN: z.string().trim().min(1).optional(),
   GMAIL_REDIRECT_URI: z.string().trim().min(1).optional(),
   LLM_API_KEY: z.string().trim().min(1).optional(),
-  LLM_MODEL: z.string().trim().min(1).optional(),
+  LLM_MODEL: z.string().trim().min(1).default('gpt-4.1-mini'),
 });
 
 export interface IngestConfig {
@@ -33,7 +33,23 @@ export interface IngestConfig {
   };
   llm: {
     apiKey?: string;
-    model?: string;
+    model: string;
+  };
+}
+
+export interface LiveSyncConfig {
+  gmailLabel: string;
+  dbPath?: string;
+  entityConfidenceThreshold: number;
+  gmail: {
+    clientId: string;
+    clientSecret: string;
+    refreshToken: string;
+    redirectUri: string;
+  };
+  llm: {
+    apiKey: string;
+    model: string;
   };
 }
 
@@ -61,6 +77,52 @@ export function loadIngestConfig(env: NodeJS.ProcessEnv = process.env): IngestCo
   };
 }
 
+export function requireLiveSyncConfig(config: IngestConfig): LiveSyncConfig {
+  const missingFields: string[] = [];
+
+  if (!config.gmail.clientId) {
+    missingFields.push('GMAIL_CLIENT_ID');
+  }
+
+  if (!config.gmail.clientSecret) {
+    missingFields.push('GMAIL_CLIENT_SECRET');
+  }
+
+  if (!config.gmail.refreshToken) {
+    missingFields.push('GMAIL_REFRESH_TOKEN');
+  }
+
+  if (!config.gmail.redirectUri) {
+    missingFields.push('GMAIL_REDIRECT_URI');
+  }
+
+  if (!config.llm.apiKey) {
+    missingFields.push('LLM_API_KEY');
+  }
+
+  if (missingFields.length > 0) {
+    throw new Error(
+      `Live newsletter sync requires these environment variables: ${missingFields.join(', ')}`
+    );
+  }
+
+  return {
+    gmailLabel: config.gmailLabel,
+    dbPath: config.dbPath,
+    entityConfidenceThreshold: config.entityConfidenceThreshold,
+    gmail: {
+      clientId: config.gmail.clientId!,
+      clientSecret: config.gmail.clientSecret!,
+      refreshToken: config.gmail.refreshToken!,
+      redirectUri: config.gmail.redirectUri!,
+    },
+    llm: {
+      apiKey: config.llm.apiKey!,
+      model: config.llm.model,
+    },
+  };
+}
+
 export function formatConfigSummary(config: IngestConfig): string[] {
   return [
     `gmailLabel=${config.gmailLabel}`,
@@ -69,5 +131,6 @@ export function formatConfigSummary(config: IngestConfig): string[] {
     `gmailConfigured=${Boolean(config.gmail.clientId && config.gmail.clientSecret)}`,
     `gmailRefreshTokenConfigured=${Boolean(config.gmail.refreshToken)}`,
     `llmConfigured=${Boolean(config.llm.apiKey)}`,
+    `llmModel=${config.llm.model}`,
   ];
 }

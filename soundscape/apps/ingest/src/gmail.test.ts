@@ -8,9 +8,15 @@ import {
   openInitializedNewsletterDatabase,
 } from '@soundscape/newsletters-db';
 import {
+  buildGmailApiQuery,
   buildGmailSearchQuery,
+  fetchGmailSyncData,
   getPersistedRawGmailMessage,
+  mapGmailApiMessageToNewsletterMessage,
+  parseFromHeader,
+  parseGmailTimestamp,
   persistRawGmailMessage,
+  type GmailApiClient,
 } from './gmail.js';
 import {
   finalizeSyncRun,
@@ -40,6 +46,10 @@ test('empty sync state returns a null cursor and label-only Gmail query', () => 
     assert.equal(
       buildGmailSearchQuery({ label: 'music', lastSuccessfulSyncAt: null }),
       'label:music'
+    );
+    assert.equal(
+      buildGmailApiQuery({ label: 'music', lastSuccessfulSyncAt: null }),
+      ''
     );
   } finally {
     cleanup();
@@ -74,6 +84,13 @@ test('successful sync updates the last successful cursor', () => {
         lastSuccessfulSyncAt: '2026-04-08T09:59:59.000Z',
       }),
       'label:music after:1775642399'
+    );
+    assert.equal(
+      buildGmailApiQuery({
+        label: 'music',
+        lastSuccessfulSyncAt: '2026-04-08T09:59:59.000Z',
+      }),
+      'after:1775642399'
     );
   } finally {
     cleanup();
@@ -151,4 +168,92 @@ test('duplicate Gmail message ids upsert idempotently', () => {
   } finally {
     cleanup();
   }
+});
+
+test('fetchGmailSyncData resolves the configured label and loads matching messages', async () => {
+  const calls: string[] = [];
+  const client: GmailApiClient = {
+    async resolveLabelByName(labelName) {
+      calls.push(`label:${labelName}`);
+      return { id: 'Label_42', name: labelName };
+    },
+    async listMessageRefs(input) {
+      calls.push(`list:${input.labelId}:${input.query}`);
+      return [{ id: 'gmail-1' }, { id: 'gmail-2' }];
+    },
+    async getMessage(messageId) {
+      calls.push(`get:${messageId}`);
+      return {
+        id: messageId,
+        threadId: `thread-${messageId}`,
+        internalDate: '1712571000000',
+        payload: null,
+      };
+    },
+  };
+
+  const result = await fetchGmailSyncData(client, {
+    label: 'music',
+    lastSuccessfulSyncAt: '2026-04-08T09:59:59.000Z',
+  });
+
+  assert.equal(result.label.id, 'Label_42');
+  assert.equal(result.query, 'after:1775642399');
+  assert.deepEqual(
+    result.messages.map((message) => message.id),
+    ['gmail-1', 'gmail-2']
+  );
+  assert.deepEqual(calls, [
+    'label:music',
+    'list:Label_42:after:1775642399',
+    'get:gmail-1',
+    'get:gmail-2',
+  ]);
+});
+
+test('mapGmailApiMessageToNewsletterMessage derives newsletter metadata from headers', () => {
+  const mapped = mapGmailApiMessageToNewsletterMessage({
+    id: 'gmail-555',
+    threadId: 'thread-555',
+    internalDate: '1712571000000',
+    payload: {
+      headers: [
+        { name: 'Subject', value: 'Weekly discoveries' },
+        { name: 'From', value: 'The Quietus <mail@quietus.com>' },
+        { name: 'Date', value: 'Tue, 08 Apr 2026 12:10:00 +0000' },
+      ],
+    },
+  });
+
+  assert.deepEqual(mapped, {
+    id: 'gmail-555',
+    threadId: 'thread-555',
+    internalDate: '1712571000000',
+    sentAt: '2026-04-08T12:10:00.000Z',
+    subject: 'Weekly discoveries',
+    senderName: 'The Quietus',
+    senderEmail: 'mail@quietus.com',
+    sourceName: 'The Quietus',
+    headers: [
+      { name: 'Subject', value: 'Weekly discoveries' },
+      { name: 'From', value: 'The Quietus <mail@quietus.com>' },
+      { name: 'Date', value: 'Tue, 08 Apr 2026 12:10:00 +0000' },
+    ],
+  });
+});
+
+test('parseFromHeader and parseGmailTimestamp handle fallback inputs', () => {
+  assert.deepEqual(parseFromHeader('newsletter@example.com'), {
+    name: null,
+    email: 'newsletter@example.com',
+  });
+  assert.deepEqual(parseFromHeader('"Aquarium Drunkard" <mail@aquariumdrunkard.com>'), {
+    name: 'Aquarium Drunkard',
+    email: 'mail@aquariumdrunkard.com',
+  });
+  assert.equal(
+    parseGmailTimestamp(undefined, '1712571000000'),
+    '2024-04-08T10:10:00.000Z'
+  );
+  assert.equal(parseGmailTimestamp('not-a-date', undefined), null);
 });
