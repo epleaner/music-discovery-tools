@@ -12,20 +12,6 @@
 The database is running, but you need to create the schema:
 
 ```bash
-cd apps/server
-railway shell
-# In the Railway shell:
-pnpm install
-pnpm --filter @soundscape/db db:generate
-pnpm --filter @soundscape/db db:push
-exit
-```
-
-Or via Railway dashboard:
-- Go to `soundscape-api` service
-- Click "Shell" or "Connect"
-- Run the commands above
-
 ### 2. Get Service URLs
 
 **API URL:**
@@ -47,7 +33,6 @@ Or check in Railway dashboard:
 ### 3. Verify Environment Variables
 
 **In `soundscape-api` service:**
-- ✅ `DATABASE_URL` - Should be set (from PostgreSQL service)
 - ✅ `NODE_ENV=production`
 - ✅ `PORT` - Should be set by Railway
 - ⚠️ `API_BASE_URL` - Set to your API service URL
@@ -73,9 +58,6 @@ Or check in Railway dashboard:
    - Visit: `https://your-web-url.railway.app`
    - Should load the Soundscape web app
 
-4. **Test Database Connection:**
-   - The API should be able to connect to the database
-   - Check API logs for any database connection errors
 
 ### 5. Update Cross-Service URLs
 
@@ -107,11 +89,6 @@ railway logs --tail
 
 ## Troubleshooting
 
-### If API can't connect to database:
-- Verify `DATABASE_URL` is set in API service
-- Check that database service is running
-- Run migrations (step 1 above)
-
 ### If web app can't connect to API:
 - Verify `VITE_API_URL` is set correctly
 - Check CORS settings in API (should allow web app URL)
@@ -120,7 +97,6 @@ railway logs --tail
 ### If services show errors:
 - Check logs for specific error messages
 - Verify all environment variables are set
-- Ensure database migrations have run
 
 ## Success Checklist
 

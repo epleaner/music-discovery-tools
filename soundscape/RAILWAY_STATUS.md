@@ -93,13 +93,6 @@ After services are running:
 
 ## Next Steps
 
-1. Fix the database service (check logs, redeploy, or recreate)
-2. Create the web service (via dashboard or CLI)
-3. Set environment variables for inter-service communication
-4. Run database migrations (once DB is working):
-   ```bash
-   cd apps/server
-   railway shell
-   pnpm --filter @soundscape/db db:push
-   ```
+1. Create the web service (via dashboard or CLI)
+2. Set environment variables for inter-service communication
 

@@ -13,7 +13,6 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@soundscape/db": "workspace:*",
     "@trpc/server": "^10.45.0",
     "trpc-openapi": "^1.2.0",
     "zod": "^3.22.4"

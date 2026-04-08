@@ -4,7 +4,7 @@
 
 Railway is deploying from `apps/server` as the root directory, which means it only has access to files in that directory. This causes issues because:
 
-1. The monorepo workspace packages (`@soundscape/api`, `@soundscape/db`, etc.) are not available
+1. The monorepo workspace packages (`@soundscape/api`, etc.) are not available
 2. The `pnpm-workspace.yaml` file is not in the deployed directory
 3. pnpm can't resolve workspace dependencies
 

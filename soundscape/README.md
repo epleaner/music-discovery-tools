@@ -9,7 +9,6 @@ Turborepo monorepo with:
 - **Web App**: SolidJS with real-time WebSocket communication
 - **Browser Extension**: WXT (React) for RateYourMusic integration
 - **Backend**: tRPC + Express + WebSocket server
-- **Database**: Prisma with PostgreSQL
 
 ## Quick Start
 
@@ -24,16 +23,6 @@ Turborepo monorepo with:
 # Install all dependencies
 pnpm install
 
-# Create database environment file
-# For local development, use a PostgreSQL connection string:
-# DATABASE_URL="postgresql://user:password@localhost:5432/soundscape?schema=public"
-echo 'DATABASE_URL="postgresql://user:password@localhost:5432/soundscape?schema=public"' > packages/db/.env
-
-# Generate Prisma client
-pnpm db:generate
-
-# Push database schema
-pnpm db:push
 ```
 
 ### Development
@@ -89,19 +78,6 @@ VITE_WS_URL=ws://localhost:3001/ws
 4. Send messages between web app and extension via WebSocket
 5. Test tRPC API calls from both clients
 
-## Database Management
-
-```bash
-# Generate Prisma client after schema changes
-pnpm db:generate
-
-# Push schema to database (dev)
-pnpm db:push
-
-# Open Prisma Studio
-pnpm db:studio
-```
-
 ## Project Structure
 
 ```
@@ -129,10 +105,6 @@ soundscape/
 │   ├── api/                 # tRPC router definitions (shared)
 │   │   └── src/
 │   │       └── router.ts    # API endpoints
-│   ├── db/                  # Prisma schema + client
-│   │   ├── prisma/
-│   │   │   └── schema.prisma
-│   │   └── src/
 │   ├── types/               # Shared TypeScript types
 │   ├── utils/               # Shared utilities
 │   └── ui/                  # Shared UI components
@@ -144,7 +116,6 @@ soundscape/
 - **Framework**: SolidJS (web), React (extension)
 - **Backend**: Node.js + Express + tRPC
 - **Real-Time**: WebSocket (ws library)
-- **Database**: Prisma + PostgreSQL
 - **Build**: Turborepo + Vite + WXT
 - **Styling**: TailwindCSS
 - **Language**: TypeScript

@@ -9,27 +9,7 @@ cd soundscape
 pnpm install
 ```
 
-### 2. Set Up Database
-
-```bash
-# Create database environment file
-# For local development, use a PostgreSQL connection string:
-# DATABASE_URL="postgresql://user:password@localhost:5432/soundscape?schema=public"
-echo 'DATABASE_URL="postgresql://user:password@localhost:5432/soundscape?schema=public"' > packages/db/.env
-
-# Generate Prisma client
-pnpm db:generate
-
-# Push schema to database
-pnpm db:push
-```
-
-**Note:** Make sure PostgreSQL is running locally. You can use Docker:
-```bash
-docker run --name soundscape-postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=soundscape -p 5432:5432 -d postgres
-```
-
-### 3. Configure Environment Variables
+### 2. Configure Environment Variables
 
 **Web App** - Create `apps/web/.env.local`:
 
@@ -123,22 +103,6 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 - Check browser console for CORS errors
 - Verify `VITE_WS_URL` matches server URL
 
-### Prisma errors
-
-```bash
-# Regenerate client
-pnpm db:generate
-
-# Reset database (PostgreSQL)
-# Option 1: Drop and recreate via psql
-psql -U postgres -c "DROP DATABASE IF EXISTS soundscape;"
-psql -U postgres -c "CREATE DATABASE soundscape;"
-pnpm db:push
-
-# Option 2: Use Prisma migrate reset (if using migrations)
-pnpm db:migrate reset
-```
-
 ### Extension won't load
 
 - Make sure you ran `pnpm dev:extension` or `pnpm build` in extension directory
@@ -166,8 +130,7 @@ pnpm --filter @soundscape/types build
 export const appRouter = router({
   myNewEndpoint: publicProcedure
     .input(z.object({ name: z.string() }))
-    .query(async ({ input, ctx }) => {
-      // Use ctx.db for database access
+    .query(async ({ input }) => {
       return { greeting: `Hello, ${input.name}!` };
     }),
 });
@@ -183,31 +146,6 @@ const result = await trpc.myNewEndpoint.query({ name: 'World' });
 
 ```typescript
 const result = await trpc.myNewEndpoint.query({ name: 'Extension' });
-```
-
-### Adding Database Models
-
-1. Edit `packages/db/prisma/schema.prisma`:
-
-```prisma
-model MyModel {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-}
-```
-
-2. Regenerate and push:
-
-```bash
-pnpm db:generate
-pnpm db:push
-```
-
-3. Use in API:
-
-```typescript
-const items = await ctx.db.myModel.findMany();
 ```
 
 ### WebSocket Message Types
@@ -227,10 +165,8 @@ export interface CustomMessage {
 
 ### Backend
 
-1. Set `DATABASE_URL` to PostgreSQL connection string
-2. Run migrations: `pnpm db:push`
-3. Build: `pnpm --filter @soundscape/server build`
-4. Start: `pnpm --filter @soundscape/server start`
+1. Build: `pnpm --filter @soundscape/server build`
+2. Start: `pnpm --filter @soundscape/server start`
 
 ### Web App
 

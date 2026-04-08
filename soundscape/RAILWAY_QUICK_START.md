@@ -34,7 +34,6 @@ This will:
 ```bash
 cd apps/server
 railway variables set NODE_ENV=production
-railway variables set DATABASE_URL=$(railway variables get DATABASE_URL)
 railway variables set PORT=$PORT
 ```
 
@@ -68,19 +67,7 @@ railway variables set VITE_LASTFM_API_KEY=your_key_here
 railway variables set PORT=$PORT
 ```
 
-## 6. Run Database Migrations
-
-```bash
-cd apps/server
-railway shell
-# In the shell:
-pnpm install
-pnpm --filter @soundscape/db db:generate
-pnpm --filter @soundscape/db db:push
-exit
-```
-
-## 7. Get Service URLs
+## 6. Get Service URLs
 
 ```bash
 # Get API URL

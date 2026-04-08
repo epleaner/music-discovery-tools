@@ -13,6 +13,7 @@ const server = createServer(app);
 
 // CORS configuration
 const allowedOrigins = [
+  'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:5174',
   process.env.WEB_APP_URL, // Production web app URL

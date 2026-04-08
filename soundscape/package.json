@@ -10,9 +10,6 @@
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "clean": "turbo clean",
-    "db:generate": "pnpm --filter @soundscape/db db:generate",
-    "db:push": "pnpm --filter @soundscape/db db:push",
-    "db:studio": "pnpm --filter @soundscape/db db:studio",
     "api:generate": "orval",
     "api:generate:local": "API_URL=http://localhost:3001 orval"
   },

@@ -28,15 +28,6 @@ Follow the prompts to create a new project or link to an existing one.
 
 ### 3. Add PostgreSQL Database
 
-```bash
-# Add PostgreSQL service
-railway add postgresql
-
-# Get the connection string
-railway variables
-# Look for DATABASE_URL or POSTGRES_URL
-```
-
 ### 4. Deploy Backend API
 
 ```bash
@@ -48,7 +39,6 @@ railway link
 
 # Set environment variables
 railway variables set NODE_ENV=production
-railway variables set DATABASE_URL=$(railway variables get DATABASE_URL)
 railway variables set API_BASE_URL=$(railway service -s soundscape-api)
 railway variables set WEB_APP_URL=$(railway service -s soundscape-web)
 
@@ -74,20 +64,6 @@ railway up --service soundscape-web
 
 **Option C: Use Railway's Web Service with Static File Serving**
 Create a simple Express server to serve static files (see below).
-
-### 6. Run Database Migrations
-
-After the API is deployed:
-
-```bash
-# Connect to Railway shell
-railway shell
-
-# Run migrations
-pnpm install
-pnpm --filter @soundscape/db db:generate
-pnpm --filter @soundscape/db db:push
-```
 
 ## Railway CLI Commands
 
@@ -130,19 +106,6 @@ railway variables get KEY
 
 # Delete a variable
 railway variables delete KEY
-```
-
-### Database
-
-```bash
-# Add PostgreSQL
-railway add postgresql
-
-# Connect to database
-railway connect postgresql
-
-# Get database URL
-railway variables get DATABASE_URL
 ```
 
 ## Configuration Files
@@ -211,7 +174,6 @@ Railway supports monorepos. For multiple services:
 
 ```bash
 railway variables set NODE_ENV=production
-railway variables set DATABASE_URL=<from-postgres-service>
 railway variables set API_BASE_URL=https://your-api.railway.app
 railway variables set WEB_APP_URL=https://your-web.railway.app
 railway variables set PORT=$PORT  # Railway sets this automatically
@@ -257,21 +219,13 @@ railway login
 # 2. Create project
 railway init
 
-# 3. Add database
-railway add postgresql
-
-# 4. Deploy API
+# 3. Deploy API
 cd apps/server
 railway link
 railway up
 
-# 5. Set environment variables
-railway variables set DATABASE_URL=$(railway variables get DATABASE_URL)
-# ... set other vars
-
-# 6. Run migrations
-railway shell
-pnpm --filter @soundscape/db db:push
+# 4. Set environment variables
+# ... set service URLs and API keys
 ```
 
 ### Continuous Deployment
@@ -310,16 +264,6 @@ railway logs
 
 # Test build locally
 ./apps/server/railway-build.sh
-```
-
-### Database Connection Issues
-
-```bash
-# Verify DATABASE_URL
-railway variables get DATABASE_URL
-
-# Test connection
-railway connect postgresql
 ```
 
 ### Service Not Starting

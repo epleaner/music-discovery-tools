@@ -6,14 +6,10 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "tsx src/index.ts",
-    "db:generate": "prisma generate --schema=../../packages/db/prisma/schema.prisma",
-    "db:push": "prisma db push --schema=../../packages/db/prisma/schema.prisma",
-    "db:studio": "prisma studio --schema=../../packages/db/prisma/schema.prisma"
+    "start": "tsx src/index.ts"
   },
   "dependencies": {
     "@soundscape/api": "workspace:*",
-    "@soundscape/db": "workspace:*",
     "@trpc/server": "^10.45.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",
