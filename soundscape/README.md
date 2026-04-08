@@ -52,9 +52,14 @@ pnpm dev:extension
 # Initialize the local newsletter DB and record a placeholder sync run
 pnpm --filter @soundscape/ingest start -- --dry-run
 
+# Thin daily-runner wrapper around the ingest entrypoint
+bash scripts/run-newsletter-sync.sh --dry-run
+
 # Run the local sample extraction pipeline end-to-end
 pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json
 ```
+
+Phase 1 expects Gmail newsletters to be labeled `music` by default. The ingest worker reads that label, builds an incremental Gmail query bounded by the last successful sync cursor, and stores newsletter data in a local SQLite database at `data/newsletters.sqlite` unless `NEWSLETTER_DB_PATH` overrides it.
 
 The services will be available at:
 
@@ -84,10 +89,22 @@ VITE_WS_URL=ws://localhost:3001/ws
 
 ```bash
 NEWSLETTER_GMAIL_LABEL=music
-NEWSLETTER_DB_PATH=./data/newsletters.sqlite
+NEWSLETTER_DB_PATH=../../data/newsletters.sqlite
 NEWSLETTER_ENTITY_CONFIDENCE_THRESHOLD=0.8
-# Gmail and LLM credentials are optional during scaffold-only dry runs.
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+GMAIL_REFRESH_TOKEN=
+GMAIL_REDIRECT_URI=
+LLM_API_KEY=
+LLM_MODEL=
 ```
+
+Setup notes:
+
+- Create a Gmail label named `music`, or set `NEWSLETTER_GMAIL_LABEL` to the label you actually use.
+- Apply that label only to newsletters you want ingested.
+- `NEWSLETTER_DB_PATH` is optional; if unset, the default DB is `soundscape/data/newsletters.sqlite`.
+- Gmail and LLM credentials are optional for `--dry-run`, but the config surface is documented now so local live sync setup is predictable.
 
 ## Testing Real-Time Communication
 
@@ -158,6 +175,17 @@ soundscape/
 - [ ] Playlist generation
 - [ ] Spotify/YouTube integration
 - [ ] Advanced filtering and search
+
+## Newsletter workflow
+
+1. Copy `apps/ingest/.env.example` to `apps/ingest/.env.local`.
+2. Create or choose a Gmail label for newsletters and set `NEWSLETTER_GMAIL_LABEL`.
+3. Run `bash scripts/run-newsletter-sync.sh --dry-run` to initialize the DB and verify config loading.
+4. Optionally run `pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json` to load fixture data into the same DB.
+5. Start the app with `pnpm dev`, enter a username, and switch the right-hand panel from `Similar` to `Newsletters`.
+6. Use the newsletter list on the left side of that panel and the detail view on the right to inspect summaries, extracted artists/albums/tracks, and links.
+
+For ingest-specific setup and scheduler examples, see `apps/ingest/README.md`.
 
 See `project-plan.md` for complete roadmap.
 

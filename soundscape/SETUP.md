@@ -26,14 +26,32 @@ VITE_API_URL=http://localhost:3001
 VITE_WS_URL=ws://localhost:3001/ws
 ```
 
-**Newsletter ingest** - Create `apps/ingest/.env.local` when you want to override defaults:
+**Newsletter ingest** - Create `apps/ingest/.env.local`:
+
+```bash
+cp apps/ingest/.env.example apps/ingest/.env.local
+```
+
+Then fill in the values you need:
 
 ```bash
 NEWSLETTER_GMAIL_LABEL=music
-NEWSLETTER_DB_PATH=./data/newsletters.sqlite
+NEWSLETTER_DB_PATH=../../data/newsletters.sqlite
 NEWSLETTER_ENTITY_CONFIDENCE_THRESHOLD=0.8
-# Gmail / LLM credentials are optional until live sync is wired.
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+GMAIL_REFRESH_TOKEN=
+GMAIL_REDIRECT_URI=
+LLM_API_KEY=
+LLM_MODEL=
 ```
+
+Newsletter-specific setup:
+
+1. In Gmail, create a label named `music`, or set `NEWSLETTER_GMAIL_LABEL` to your chosen label.
+2. Apply that label only to newsletters you want Soundscape to ingest.
+3. Leave `NEWSLETTER_DB_PATH` unset if you want the default SQLite DB at `soundscape/data/newsletters.sqlite`.
+4. Gmail and LLM credentials are optional for `--dry-run`; they are documented here so the local config contract is complete.
 
 ### 4. Start Development
 
@@ -85,7 +103,7 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 ### Test Newsletter Ingest Scaffold
 
 ```bash
-pnpm --filter @soundscape/ingest start -- --dry-run
+bash scripts/run-newsletter-sync.sh --dry-run
 pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json
 ```
 
@@ -93,9 +111,31 @@ Expected output includes:
 - `Soundscape newsletter ingest scaffold`
 - `mode=dry-run`
 - `syncRunStatus=dry_run_completed`
+- `dbPath=` with either the default `soundscape/data/newsletters.sqlite` path or your override
+- `gmailQuery=` showing the configured label and sync cursor boundary
 - `Soundscape newsletter ingest sample run`
 - `mode=sample`
 - `normalizedArtists=1`
+
+### Use the Newsletter Panel
+
+1. Start the app with `pnpm dev` or run the server and web app separately.
+2. Enter a username so the main layout renders.
+3. In the right-hand panel, click `Newsletters`.
+4. Use the left column to browse newsletter messages.
+5. Use the detail pane to inspect summaries, extracted entities, and links.
+
+If the panel is empty, run the fixture ingest command or your local sync command first so the SQLite DB has newsletter rows.
+
+### Daily runner usage
+
+Use the wrapper directly for manual runs or scheduler hooks:
+
+```bash
+bash scripts/run-newsletter-sync.sh --dry-run
+```
+
+The wrapper forwards all arguments to `pnpm --filter @soundscape/ingest start -- ...`, so it is safe to use from cron or `launchd` once your preferred ingest flags are finalized.
 
 ### Test Real-Time Communication
 
