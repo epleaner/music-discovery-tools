@@ -266,7 +266,7 @@ git add apps/ingest
 git commit -m "feat(soundscape/ingest): add newsletter extraction schema"
 ```
 
-### [-] Ticket 2.3: Wire LLM extraction and normalized entity persistence — note: writing LLM pipeline tests and persistence wiring
+### [x] Ticket 2.3: Wire LLM extraction and normalized entity persistence — commit: f2d3511; verification: pnpm --filter @soundscape/newsletters-db type-check && pnpm --filter @soundscape/ingest test -- llm && pnpm --filter @soundscape/ingest type-check && NEWSLETTER_DB_PATH=<tmp> pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json; note: added validated extraction persistence, high-confidence normalization, fixture-backed sample ingest flow, and extraction status handling
 
 **Objective:** Connect cleaned newsletter text to the LLM, persist validated extraction JSON, and normalize high-confidence artists/albums/tracks/links into relational tables.
 **Dependencies:** Tickets 2.1, 2.2
