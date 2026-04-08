@@ -7,7 +7,7 @@ test('loadIngestConfig defaults the pi model for live sync', () => {
     NEWSLETTER_GMAIL_LABEL: 'music',
   });
 
-  assert.equal(config.llm.model, 'gpt-5.4-medium');
+  assert.equal(config.llm.model, 'gpt-5.4-mini');
 });
 
 test('requireLiveSyncConfig no longer requires LLM_API_KEY and keeps the configured pi model', () => {
@@ -17,10 +17,10 @@ test('requireLiveSyncConfig no longer requires LLM_API_KEY and keeps the configu
     GMAIL_CLIENT_SECRET: 'client-secret',
     GMAIL_REFRESH_TOKEN: 'refresh-token',
     GMAIL_REDIRECT_URI: 'http://localhost/callback',
-    PI_LLM_MODEL: 'gpt-5.4-medium',
+    PI_LLM_MODEL: 'gpt-5.4-mini',
   });
 
   const liveConfig = requireLiveSyncConfig(config);
 
-  assert.equal(liveConfig.llm.model, 'gpt-5.4-medium');
+  assert.equal(liveConfig.llm.model, 'gpt-5.4-mini');
 });

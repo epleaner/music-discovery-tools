@@ -23,7 +23,7 @@ import {
 } from './normalize-email.js';
 
 export const NEWSLETTER_EXTRACTION_PROMPT_VERSION = 'newsletter-extraction-v1';
-export const DEFAULT_PI_LLM_MODEL = 'gpt-5.4-medium';
+export const DEFAULT_PI_LLM_MODEL = 'gpt-5.4-mini';
 
 export interface NewsletterLlmInput {
   sourceName?: string | null;

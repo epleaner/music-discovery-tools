@@ -42,7 +42,7 @@ GMAIL_CLIENT_ID=
 GMAIL_CLIENT_SECRET=
 GMAIL_REFRESH_TOKEN=
 GMAIL_REDIRECT_URI=
-PI_LLM_MODEL=gpt-5.4-medium
+PI_LLM_MODEL=gpt-5.4-mini
 ```
 
 Newsletter-specific setup:
@@ -52,7 +52,7 @@ Newsletter-specific setup:
 3. Leave `NEWSLETTER_DB_PATH` unset if you want the default SQLite DB at `soundscape/data/newsletters.sqlite`.
 4. `--dry-run` does not require Gmail or pi credentials.
 5. `--sync-now` requires all Gmail OAuth fields plus a working local `pi` CLI install.
-6. `PI_LLM_MODEL` defaults to `gpt-5.4-medium` when unset.
+6. `PI_LLM_MODEL` defaults to `gpt-5.4-mini` when unset.
 7. Live extraction uses pi headless (`pi --print`) and retries once per message before marking that extraction failed.
 
 ### 4. Start Development
