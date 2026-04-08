@@ -361,7 +361,7 @@ git add packages/newsletters-db
 git commit -m "feat(soundscape/newsletters-db): add newsletter read queries"
 ```
 
-### [-] Ticket 3.2: Add newsletter tRPC endpoints — note: wiring API context and newsletter read procedures
+### [x] Ticket 3.2: Add newsletter tRPC endpoints — commit: 873015d; verification: pnpm --filter @soundscape/api test -- router && pnpm --filter @soundscape/api type-check && pnpm --filter @soundscape/server build; note: added newsletter list/detail/source procedures, API DB context wiring, and router tests
 
 **Objective:** Expose newsletter data through the existing server API for the web app.
 **Dependencies:** Ticket 3.1
