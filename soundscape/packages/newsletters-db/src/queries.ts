@@ -48,6 +48,23 @@ export interface UpsertNewsletterMessageInput {
   extractionStatus?: string;
 }
 
+export interface NewsletterMessageRecord {
+  id: number;
+  gmailMessageId: string;
+  gmailThreadId: string | null;
+  sourceId: number | null;
+  subject: string | null;
+  senderName: string | null;
+  senderEmail: string | null;
+  sentAt: string | null;
+  gmailInternalDate: string | null;
+  rawHtml: string | null;
+  rawText: string | null;
+  cleanedText: string | null;
+  rawHeadersJson: string | null;
+  extractionStatus: string;
+}
+
 export interface InsertNewsletterExtractionInput {
   newsletterMessageId: number;
   modelName: string;
@@ -305,6 +322,71 @@ export function upsertNewsletterMessage(
   }
 
   return row.id;
+}
+
+export function getNewsletterMessageByGmailMessageId(
+  db: NewsletterDatabase,
+  gmailMessageId: string
+): NewsletterMessageRecord | null {
+  const row = db
+    .prepare<
+      [string],
+      {
+        id: number;
+        gmail_message_id: string;
+        gmail_thread_id: string | null;
+        source_id: number | null;
+        subject: string | null;
+        sender_name: string | null;
+        sender_email: string | null;
+        sent_at: string | null;
+        gmail_internal_date: string | null;
+        raw_html: string | null;
+        raw_text: string | null;
+        cleaned_text: string | null;
+        raw_headers_json: string | null;
+        extraction_status: string;
+      }
+    >(
+      `SELECT id,
+              gmail_message_id,
+              gmail_thread_id,
+              source_id,
+              subject,
+              sender_name,
+              sender_email,
+              sent_at,
+              gmail_internal_date,
+              raw_html,
+              raw_text,
+              cleaned_text,
+              raw_headers_json,
+              extraction_status
+       FROM newsletter_messages
+       WHERE gmail_message_id = ?`
+    )
+    .get(gmailMessageId);
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    gmailMessageId: row.gmail_message_id,
+    gmailThreadId: row.gmail_thread_id,
+    sourceId: row.source_id,
+    subject: row.subject,
+    senderName: row.sender_name,
+    senderEmail: row.sender_email,
+    sentAt: row.sent_at,
+    gmailInternalDate: row.gmail_internal_date,
+    rawHtml: row.raw_html,
+    rawText: row.raw_text,
+    cleanedText: row.cleaned_text,
+    rawHeadersJson: row.raw_headers_json,
+    extractionStatus: row.extraction_status,
+  };
 }
 
 export function insertNewsletterExtraction(

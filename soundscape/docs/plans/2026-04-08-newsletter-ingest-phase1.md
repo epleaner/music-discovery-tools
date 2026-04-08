@@ -65,7 +65,7 @@ git add package.json pnpm-lock.yaml pnpm-workspace.yaml packages/newsletters-db
 git commit -m "feat(soundscape/newsletters-db): add newsletter sqlite storage"
 ```
 
-### [x] Ticket 1.2: Add ingest app scaffold and local config contract — commit: pending; verification: pnpm --filter @soundscape/ingest type-check && pnpm --filter @soundscape/ingest start -- --dry-run; note: added local-only ingest app scaffold, env contract, DB initialization, and placeholder sync run recording
+### [x] Ticket 1.2: Add ingest app scaffold and local config contract — commit: 1302ca1; verification: pnpm --filter @soundscape/ingest type-check && pnpm --filter @soundscape/ingest start -- --dry-run; note: added local-only ingest app scaffold, env contract, DB initialization, and placeholder sync run recording
 
 **Objective:** Create a dedicated ingestion app with a single local command entrypoint and explicit configuration boundaries for Gmail label syncing.
 **Dependencies:** Ticket 1.1
@@ -114,7 +114,7 @@ git add apps/ingest README.md SETUP.md
 git commit -m "feat(soundscape/ingest): add local ingest scaffold"
 ```
 
-### [ ] Ticket 1.3: Add Gmail sync cursor model and message persistence foundation
+### [x] Ticket 1.3: Add Gmail sync cursor model and message persistence foundation — commit: pending; verification: pnpm --filter @soundscape/ingest test -- gmail && pnpm --filter @soundscape/ingest start -- --dry-run && pnpm --filter @soundscape/ingest type-check; note: added cursor lifecycle helpers, Gmail search query builder, and idempotent raw Gmail message persistence keyed by Gmail message id
 
 **Objective:** Implement the last-successful-sync state and idempotent raw newsletter message persistence using Gmail message ids.
 **Dependencies:** Tickets 1.1, 1.2

@@ -1,11 +1,11 @@
-import {
-  completeSyncRun,
-  createSyncRun,
-  getSyncRunById,
-  openInitializedNewsletterDatabase,
-  resolveNewsletterDbPath,
-} from '@soundscape/newsletters-db';
+import { openInitializedNewsletterDatabase, resolveNewsletterDbPath } from '@soundscape/newsletters-db';
+import { buildGmailSearchQuery } from './gmail.js';
 import { formatConfigSummary, loadIngestConfig } from './config.js';
+import {
+  finalizeSyncRun,
+  readLastSuccessfulSyncCursor,
+  startSyncRun,
+} from './sync-state.js';
 
 interface IngestCliOptions {
   dryRun: boolean;
@@ -22,30 +22,47 @@ export async function runIngest(argv: string[] = process.argv.slice(2)): Promise
   const config = loadIngestConfig();
   const dbPath = resolveNewsletterDbPath(config.dbPath);
   const db = openInitializedNewsletterDatabase({ dbPath });
-  const startedAt = new Date().toISOString();
-  const syncRunId = createSyncRun(db, {
-    startedAt,
-    status: options.dryRun ? 'dry_run_started' : 'started',
-  });
+  const syncRunId = startSyncRun(
+    db,
+    new Date().toISOString(),
+    options.dryRun ? 'dry_run_started' : 'started'
+  );
 
   try {
-    completeSyncRun(db, {
+    const lastSuccessfulSyncAt = readLastSuccessfulSyncCursor(db);
+    const gmailQuery = buildGmailSearchQuery({
+      label: config.gmailLabel,
+      lastSuccessfulSyncAt,
+    });
+
+    finalizeSyncRun(db, {
       syncRunId,
+      status: options.dryRun ? 'dry_run_completed' : 'succeeded',
       completedAt: new Date().toISOString(),
-      status: options.dryRun ? 'dry_run_completed' : 'initialized',
       messageCount: 0,
       newestMessageTimestamp: null,
       errorText: null,
     });
 
-    const syncRun = getSyncRunById(db, syncRunId);
-
     console.log('Soundscape newsletter ingest scaffold');
     console.log(`mode=${options.dryRun ? 'dry-run' : 'manual'}`);
     console.log(formatConfigSummary(config).join(' '));
+    console.log(`gmailQuery=${gmailQuery}`);
+    console.log(`lastSuccessfulSyncAt=${lastSuccessfulSyncAt ?? 'none'}`);
     console.log(`syncRunId=${syncRunId}`);
-    console.log(`syncRunStatus=${syncRun?.status ?? 'unknown'}`);
+    console.log(`syncRunStatus=${options.dryRun ? 'dry_run_completed' : 'succeeded'}`);
     console.log(`dbPath=${dbPath}`);
+  } catch (error) {
+    finalizeSyncRun(db, {
+      syncRunId,
+      status: 'failed',
+      completedAt: new Date().toISOString(),
+      messageCount: 0,
+      newestMessageTimestamp: null,
+      errorText: error instanceof Error ? error.message : String(error),
+    });
+
+    throw error;
   } finally {
     db.close();
   }
