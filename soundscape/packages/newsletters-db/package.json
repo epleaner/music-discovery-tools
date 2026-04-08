@@ -11,7 +11,8 @@
   },
   "scripts": {
     "type-check": "tsc --noEmit",
-    "verify:schema": "tsx src/index.ts --verify-schema"
+    "verify:schema": "tsx src/index.ts --verify-schema",
+    "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1"

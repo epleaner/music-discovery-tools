@@ -319,7 +319,7 @@ git commit -m "feat(soundscape/ingest): persist newsletter extractions"
 
 **Demo Increment:** The local server exposes newsletter list/detail/source endpoints backed by SQLite and verified against stored sample data.
 
-### [ ] Ticket 3.1: Add newsletter read queries to shared storage package
+### [-] Ticket 3.1: Add newsletter read queries to shared storage package — note: writing DB read-query tests and helpers
 
 **Objective:** Add read helpers required by the server for list/detail/source retrieval without leaking ingest-only write concerns.
 **Dependencies:** Sprint 2 complete

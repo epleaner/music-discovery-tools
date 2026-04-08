@@ -677,3 +677,326 @@ export function replaceMessageTracks(
 
   transaction();
 }
+
+export interface NewsletterSourceSummary {
+  id: number;
+  canonicalName: string;
+  senderEmail: string | null;
+  newsletterCount: number;
+}
+
+export interface NewsletterRelatedArtist {
+  name: string;
+  confidence: number | null;
+  evidence: string | null;
+}
+
+export interface NewsletterRelatedRelease {
+  name: string;
+  primaryArtistName: string | null;
+  confidence: number | null;
+  evidence: string | null;
+}
+
+export interface NewsletterLinkSummary {
+  url: string;
+  domain: string | null;
+  title: string | null;
+  confidence: number | null;
+}
+
+export interface NewsletterSummary {
+  id: number;
+  gmailMessageId: string;
+  source: {
+    id: number | null;
+    canonicalName: string | null;
+    senderEmail: string | null;
+  };
+  subject: string | null;
+  summary: string | null;
+  sentAt: string | null;
+  extractionStatus: string;
+  artists: NewsletterRelatedArtist[];
+  albums: NewsletterRelatedRelease[];
+  tracks: NewsletterRelatedRelease[];
+  links: NewsletterLinkSummary[];
+}
+
+export interface NewsletterDetail extends NewsletterSummary {
+  cleanedText: string | null;
+}
+
+export interface ListNewslettersOptions {
+  sourceId?: number;
+  limit?: number;
+  offset?: number;
+}
+
+interface NewsletterBaseRow {
+  id: number;
+  gmail_message_id: string;
+  source_id: number | null;
+  canonical_name: string | null;
+  sender_email: string | null;
+  subject: string | null;
+  summary: string | null;
+  sent_at: string | null;
+  cleaned_text?: string | null;
+  extraction_status: string;
+}
+
+function readArtistsForMessage(
+  db: NewsletterDatabase,
+  newsletterMessageId: number
+): NewsletterRelatedArtist[] {
+  return db
+    .prepare<
+      [number],
+      { name: string; confidence: number | null; evidence: string | null }
+    >(
+      `SELECT artists.name,
+              newsletter_message_artists.confidence,
+              newsletter_message_artists.evidence
+       FROM newsletter_message_artists
+       INNER JOIN artists ON artists.id = newsletter_message_artists.artist_id
+       WHERE newsletter_message_artists.newsletter_message_id = ?
+       ORDER BY newsletter_message_artists.confidence IS NULL,
+                newsletter_message_artists.confidence DESC,
+                artists.name ASC`
+    )
+    .all(newsletterMessageId);
+}
+
+function readAlbumsForMessage(
+  db: NewsletterDatabase,
+  newsletterMessageId: number
+): NewsletterRelatedRelease[] {
+  return db
+    .prepare<
+      [number],
+      {
+        name: string;
+        primary_artist_name: string;
+        confidence: number | null;
+        evidence: string | null;
+      }
+    >(
+      `SELECT albums.title AS name,
+              albums.primary_artist_name,
+              newsletter_message_albums.confidence,
+              newsletter_message_albums.evidence
+       FROM newsletter_message_albums
+       INNER JOIN albums ON albums.id = newsletter_message_albums.album_id
+       WHERE newsletter_message_albums.newsletter_message_id = ?
+       ORDER BY newsletter_message_albums.confidence IS NULL,
+                newsletter_message_albums.confidence DESC,
+                albums.title ASC`
+    )
+    .all(newsletterMessageId)
+    .map((row) => ({
+      name: row.name,
+      primaryArtistName: row.primary_artist_name || null,
+      confidence: row.confidence,
+      evidence: row.evidence,
+    }));
+}
+
+function readTracksForMessage(
+  db: NewsletterDatabase,
+  newsletterMessageId: number
+): NewsletterRelatedRelease[] {
+  return db
+    .prepare<
+      [number],
+      {
+        name: string;
+        primary_artist_name: string;
+        confidence: number | null;
+        evidence: string | null;
+      }
+    >(
+      `SELECT tracks.title AS name,
+              tracks.primary_artist_name,
+              newsletter_message_tracks.confidence,
+              newsletter_message_tracks.evidence
+       FROM newsletter_message_tracks
+       INNER JOIN tracks ON tracks.id = newsletter_message_tracks.track_id
+       WHERE newsletter_message_tracks.newsletter_message_id = ?
+       ORDER BY newsletter_message_tracks.confidence IS NULL,
+                newsletter_message_tracks.confidence DESC,
+                tracks.title ASC`
+    )
+    .all(newsletterMessageId)
+    .map((row) => ({
+      name: row.name,
+      primaryArtistName: row.primary_artist_name || null,
+      confidence: row.confidence,
+      evidence: row.evidence,
+    }));
+}
+
+function readLinksForMessage(
+  db: NewsletterDatabase,
+  newsletterMessageId: number
+): NewsletterLinkSummary[] {
+  return db
+    .prepare<
+      [number],
+      {
+        url: string;
+        domain: string | null;
+        title: string | null;
+        confidence: number | null;
+      }
+    >(
+      `SELECT url, domain, title, confidence
+       FROM newsletter_links
+       WHERE newsletter_message_id = ?
+       ORDER BY confidence IS NULL,
+                confidence DESC,
+                url ASC`
+    )
+    .all(newsletterMessageId);
+}
+
+function toNewsletterSummary(
+  db: NewsletterDatabase,
+  row: NewsletterBaseRow
+): NewsletterSummary {
+  return {
+    id: row.id,
+    gmailMessageId: row.gmail_message_id,
+    source: {
+      id: row.source_id,
+      canonicalName: row.canonical_name,
+      senderEmail: row.sender_email,
+    },
+    subject: row.subject,
+    summary: row.summary,
+    sentAt: row.sent_at,
+    extractionStatus: row.extraction_status,
+    artists: readArtistsForMessage(db, row.id),
+    albums: readAlbumsForMessage(db, row.id),
+    tracks: readTracksForMessage(db, row.id),
+    links: readLinksForMessage(db, row.id),
+  };
+}
+
+export function listNewsletters(
+  db: NewsletterDatabase,
+  options: ListNewslettersOptions = {}
+): NewsletterSummary[] {
+  const rows = db
+    .prepare<
+      [number | null, number | null, number, number],
+      NewsletterBaseRow
+    >(
+      `SELECT newsletter_messages.id,
+              newsletter_messages.gmail_message_id,
+              newsletter_messages.source_id,
+              newsletter_sources.canonical_name,
+              NULLIF(newsletter_sources.sender_email, '') AS sender_email,
+              newsletter_messages.subject,
+              (
+                SELECT newsletter_extractions.summary
+                FROM newsletter_extractions
+                WHERE newsletter_extractions.newsletter_message_id = newsletter_messages.id
+                ORDER BY newsletter_extractions.id DESC
+                LIMIT 1
+              ) AS summary,
+              newsletter_messages.sent_at,
+              newsletter_messages.extraction_status
+       FROM newsletter_messages
+       LEFT JOIN newsletter_sources ON newsletter_sources.id = newsletter_messages.source_id
+       WHERE (? IS NULL OR newsletter_messages.source_id = ?)
+       ORDER BY COALESCE(
+                  newsletter_messages.sent_at,
+                  newsletter_messages.gmail_internal_date,
+                  newsletter_messages.created_at
+                ) DESC,
+                newsletter_messages.id DESC
+       LIMIT ?
+       OFFSET ?`
+    )
+    .all(
+      options.sourceId ?? null,
+      options.sourceId ?? null,
+      options.limit ?? -1,
+      options.offset ?? 0
+    );
+
+  return rows.map((row) => toNewsletterSummary(db, row));
+}
+
+export function getNewsletterDetail(
+  db: NewsletterDatabase,
+  newsletterMessageId: number
+): NewsletterDetail | null {
+  const row = db
+    .prepare<[number], NewsletterBaseRow>(
+      `SELECT newsletter_messages.id,
+              newsletter_messages.gmail_message_id,
+              newsletter_messages.source_id,
+              newsletter_sources.canonical_name,
+              NULLIF(newsletter_sources.sender_email, '') AS sender_email,
+              newsletter_messages.subject,
+              (
+                SELECT newsletter_extractions.summary
+                FROM newsletter_extractions
+                WHERE newsletter_extractions.newsletter_message_id = newsletter_messages.id
+                ORDER BY newsletter_extractions.id DESC
+                LIMIT 1
+              ) AS summary,
+              newsletter_messages.sent_at,
+              newsletter_messages.cleaned_text,
+              newsletter_messages.extraction_status
+       FROM newsletter_messages
+       LEFT JOIN newsletter_sources ON newsletter_sources.id = newsletter_messages.source_id
+       WHERE newsletter_messages.id = ?`
+    )
+    .get(newsletterMessageId);
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...toNewsletterSummary(db, row),
+    cleanedText: row.cleaned_text ?? null,
+  };
+}
+
+export function listNewsletterSources(
+  db: NewsletterDatabase
+): NewsletterSourceSummary[] {
+  return db
+    .prepare<
+      [],
+      {
+        id: number;
+        canonical_name: string;
+        sender_email: string | null;
+        newsletter_count: number;
+      }
+    >(
+      `SELECT newsletter_sources.id,
+              newsletter_sources.canonical_name,
+              NULLIF(newsletter_sources.sender_email, '') AS sender_email,
+              COUNT(newsletter_messages.id) AS newsletter_count
+       FROM newsletter_sources
+       INNER JOIN newsletter_messages ON newsletter_messages.source_id = newsletter_sources.id
+       GROUP BY newsletter_sources.id,
+                newsletter_sources.canonical_name,
+                newsletter_sources.sender_email
+       ORDER BY newsletter_sources.canonical_name ASC,
+                newsletter_sources.id ASC`
+    )
+    .all()
+    .map((row) => ({
+      id: row.id,
+      canonicalName: row.canonical_name,
+      senderEmail: row.sender_email,
+      newsletterCount: row.newsletter_count,
+    }));
+}
