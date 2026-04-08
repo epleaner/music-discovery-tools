@@ -169,7 +169,7 @@ git commit -m "feat(soundscape/ingest): add gmail sync cursor and raw message pe
 
 **Demo Increment:** Running the ingest worker against local sample content stores cleaned newsletter text, validated extraction JSON, and normalized high-confidence entities in SQLite.
 
-### [ ] Ticket 2.1: Add deterministic newsletter body normalization
+### [-] Ticket 2.1: Add deterministic newsletter body normalization — note: writing normalization tests and implementation
 
 **Objective:** Convert Gmail message payloads into stored raw html/text plus one cleaned full-text body suitable for LLM extraction.
 **Dependencies:** Sprint 1 complete
