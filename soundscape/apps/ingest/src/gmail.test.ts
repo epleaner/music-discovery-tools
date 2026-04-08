@@ -171,8 +171,11 @@ test('duplicate Gmail message ids upsert idempotently', () => {
   }
 });
 
-test('fetchGmailSyncData resolves the configured label and loads matching messages', async () => {
+test('fetchGmailSyncData resolves the configured label and loads matching messages sequentially', async () => {
   const calls: string[] = [];
+  let inFlightGets = 0;
+  let maxInFlightGets = 0;
+
   const client: GmailApiClient = {
     async resolveLabelByName(labelName) {
       calls.push(`label:${labelName}`);
@@ -183,7 +186,12 @@ test('fetchGmailSyncData resolves the configured label and loads matching messag
       return [{ id: 'gmail-1' }, { id: 'gmail-2' }];
     },
     async getMessage(messageId) {
-      calls.push(`get:${messageId}`);
+      calls.push(`get:start:${messageId}`);
+      inFlightGets += 1;
+      maxInFlightGets = Math.max(maxInFlightGets, inFlightGets);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      inFlightGets -= 1;
+      calls.push(`get:end:${messageId}`);
       return {
         id: messageId,
         threadId: `thread-${messageId}`,
@@ -204,11 +212,14 @@ test('fetchGmailSyncData resolves the configured label and loads matching messag
     result.messages.map((message) => message.id),
     ['gmail-1', 'gmail-2']
   );
+  assert.equal(maxInFlightGets, 1);
   assert.deepEqual(calls, [
     'label:music',
     'list:Label_42:after:1775642399',
-    'get:gmail-1',
-    'get:gmail-2',
+    'get:start:gmail-1',
+    'get:end:gmail-1',
+    'get:start:gmail-2',
+    'get:end:gmail-2',
   ]);
 });
 

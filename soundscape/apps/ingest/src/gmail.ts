@@ -303,9 +303,11 @@ export async function fetchGmailSyncData(
     labelId: label.id,
     query,
   });
-  const messages = await Promise.all(
-    messageRefs.map((messageRef) => client.getMessage(messageRef.id))
-  );
+  const messages: GmailApiMessage[] = [];
+
+  for (const messageRef of messageRefs) {
+    messages.push(await client.getMessage(messageRef.id));
+  }
 
   return {
     label,
