@@ -14,7 +14,7 @@
 
 **Demo Increment:** A local SQLite database exists, the repo builds with the new storage package, and a stub ingest command can initialize schema and record a sync run.
 
-### [ ] Ticket 1.1: Add a dedicated newsletter SQLite package
+### [x] Ticket 1.1: Add a dedicated newsletter SQLite package — commit: pending; verification: pnpm --filter @soundscape/newsletters-db type-check && pnpm --filter @soundscape/newsletters-db verify:schema; note: added scoped SQLite package with schema bootstrap, sync/message/extraction/entity helpers, and a schema verification CLI
 
 **Objective:** Create a narrowly scoped shared package for newsletter storage, schema initialization, and read/write helpers without restoring generic app-wide DB complexity.
 **Dependencies:** none

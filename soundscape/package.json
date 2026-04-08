@@ -11,7 +11,8 @@
     "type-check": "turbo type-check",
     "clean": "turbo clean",
     "api:generate": "orval",
-    "api:generate:local": "API_URL=http://localhost:3001 orval"
+    "api:generate:local": "API_URL=http://localhost:3001 orval",
+    "newsletters-db:verify": "pnpm --filter @soundscape/newsletters-db verify:schema"
   },
   "devDependencies": {
     "@types/cheerio": "^1.0.0",
