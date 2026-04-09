@@ -39,6 +39,7 @@ interface IngestCliOptions {
 
 export interface LiveSyncResult {
   syncRunId: number;
+  syncRunStatus: 'succeeded' | 'failed';
   messageCount: number;
   extractionFailureCount: number;
   newestMessageTimestamp: string | null;
@@ -185,20 +186,24 @@ export async function runLiveNewsletterSync(input: {
     }
   }
 
+  const syncStatus = extractionFailureCount > 0 ? 'failed' : 'succeeded';
+  const syncErrorText =
+    extractionFailureCount > 0
+      ? `${extractionFailureCount} message(s) failed extraction; raw content persisted for retry/debugging.`
+      : null;
+
   finalizeSyncRun(input.db, {
     syncRunId: input.syncRunId,
-    status: 'succeeded',
+    status: syncStatus,
     completedAt: new Date().toISOString(),
     messageCount: fetched.messages.length,
     newestMessageTimestamp,
-    errorText:
-      extractionFailureCount > 0
-        ? `${extractionFailureCount} message(s) failed extraction; raw content persisted for retry/debugging.`
-        : null,
+    errorText: syncErrorText,
   });
 
   log('gmail_sync.completed', {
     syncRunId: input.syncRunId,
+    syncRunStatus: syncStatus,
     messageCount: fetched.messages.length,
     extractionFailureCount,
     newestMessageTimestamp: newestMessageTimestamp ?? 'none',
@@ -206,6 +211,7 @@ export async function runLiveNewsletterSync(input: {
 
   return {
     syncRunId: input.syncRunId,
+    syncRunStatus: syncStatus,
     messageCount: fetched.messages.length,
     extractionFailureCount,
     newestMessageTimestamp,
@@ -382,7 +388,7 @@ function logLiveSyncSummary(input: {
   console.log(`resolvedLabelId=${input.result.resolvedLabelId}`);
   console.log(`lastSuccessfulSyncAt=${input.lastSuccessfulSyncAt ?? 'none'}`);
   console.log(`syncRunId=${input.result.syncRunId}`);
-  console.log('syncRunStatus=succeeded');
+  console.log(`syncRunStatus=${input.result.syncRunStatus}`);
   console.log(`dbPath=${input.dbPath}`);
   console.log(`messageCount=${input.result.messageCount}`);
   console.log(`extractionFailureCount=${input.result.extractionFailureCount}`);

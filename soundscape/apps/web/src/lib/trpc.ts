@@ -1,15 +1,30 @@
-import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import { createTRPCProxyClient, httpLink } from '@trpc/client';
+import type { TRPCLink } from '@trpc/client';
 import type { AppRouter } from '@soundscape/api';
 
-const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:3001';
+export function resolveApiUrl(apiUrl: string | undefined): string {
+  return apiUrl || 'http://localhost:3001';
+}
 
-export const trpc = createTRPCProxyClient<AppRouter>({
-  links: [
-    httpBatchLink({
-      url: `${API_URL}/trpc`,
-    }),
-  ],
-});
+export function createTrpcClient(input: {
+  apiUrl?: string;
+  createLink?: (options: { url: string }) => TRPCLink<AppRouter>;
+  createClient?: (options: { links: TRPCLink<AppRouter>[] }) => unknown;
+} = {}) {
+  const createLink = input.createLink ?? httpLink;
+  const createClient = input.createClient ?? createTRPCProxyClient<AppRouter>;
+  const apiUrl = resolveApiUrl(input.apiUrl ?? import.meta.env?.VITE_API_URL);
+
+  return createClient({
+    links: [
+      createLink({
+        url: `${apiUrl}/trpc`,
+      }),
+    ],
+  });
+}
+
+export const trpc = createTrpcClient() as ReturnType<typeof createTRPCProxyClient<AppRouter>>;
 
 
 

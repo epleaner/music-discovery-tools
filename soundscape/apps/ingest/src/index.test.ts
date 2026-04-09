@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   getAppState,
+  getSyncRunById,
   openInitializedNewsletterDatabase,
 } from '@soundscape/newsletters-db';
 import { parseCliOptions, runLiveNewsletterSync } from './index.js';
@@ -144,6 +145,83 @@ test('runLiveNewsletterSync emits structured verbose progress logs', async () =>
   }
 });
 
+test('runLiveNewsletterSync does not advance the cursor when extraction fails', async () => {
+  const { db, cleanup } = createTestDatabase();
+
+  try {
+    const gmailClient: GmailApiClient = {
+      async resolveLabelByName(labelName) {
+        return { id: 'Label_music', name: labelName };
+      },
+      async listMessageRefs() {
+        return [{ id: 'gmail-live-fail-1' }];
+      },
+      async getMessage() {
+        return {
+          id: 'gmail-live-fail-1',
+          threadId: 'thread-live-fail-1',
+          internalDate: '1775650200000',
+          payload: {
+            headers: [
+              { name: 'Subject', value: 'Broken picks' },
+              { name: 'From', value: 'Broken Sender <broken@example.com>' },
+              { name: 'Date', value: 'Tue, 08 Apr 2026 12:10:00 +0000' },
+            ],
+            parts: [
+              {
+                mimeType: 'text/plain',
+                body: {
+                  data: Buffer.from('Broken Artist', 'utf8').toString('base64url'),
+                },
+              },
+            ],
+          },
+        };
+      },
+    };
+
+    const llmClient = {
+      modelName: 'test-live-model',
+      async extract() {
+        throw new Error('pi parse failed');
+      },
+    };
+
+    const syncRunId = startSyncRun(db, '2026-04-08T12:15:00.000Z');
+
+    const result = await runLiveNewsletterSync({
+      db,
+      config: {
+        gmailLabel: 'music',
+        dbPath: undefined,
+        entityConfidenceThreshold: 0.8,
+        gmail: {
+          clientId: 'client-id',
+          clientSecret: 'client-secret',
+          refreshToken: 'refresh-token',
+          redirectUri: 'http://localhost/callback',
+        },
+        llm: {
+          model: 'gpt-5.4-medium',
+        },
+      },
+      gmailClient,
+      llmClient,
+      syncRunId,
+      lastSuccessfulSyncAt: null,
+    });
+
+    const syncRun = getSyncRunById(db, syncRunId);
+    assert.equal(result.extractionFailureCount, 1);
+    assert.equal(result.syncRunStatus, 'failed');
+    assert.equal(getAppState(db, 'newsletters.lastSuccessfulSyncAt'), null);
+    assert.equal(syncRun?.status, 'failed');
+    assert.match(syncRun?.errorText ?? '', /failed extraction/);
+  } finally {
+    cleanup();
+  }
+});
+
 test('runLiveNewsletterSync persists live Gmail messages, extractions, and the successful cursor', async () => {
   const { db, cleanup } = createTestDatabase();
 
@@ -228,6 +306,7 @@ test('runLiveNewsletterSync persists live Gmail messages, extractions, and the s
 
     assert.equal(result.messageCount, 1);
     assert.equal(result.extractionFailureCount, 0);
+    assert.equal(result.syncRunStatus, 'succeeded');
     assert.equal(result.resolvedLabelId, 'Label_music');
     assert.equal(row?.extraction_status, 'extracted');
     assert.equal(row?.cleaned_text, 'Artist Alpha\nAlbum Beta\nTrack Gamma');

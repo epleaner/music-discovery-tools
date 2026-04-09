@@ -127,6 +127,8 @@ export function createPiNewsletterLlmClient(
           }
 
           const result = await executor('pi', [
+            '--provider',
+            'openai',
             '--model',
             model,
             '--print',
@@ -141,11 +143,13 @@ export function createPiNewsletterLlmClient(
             throw new Error(result.stderr.trim() || `pi exited with code ${result.exitCode}`);
           }
 
+          const parsedOutput = parsePiJsonOutput(result.stdout);
+
           if (verbose) {
             logger(`event=pi_extract.succeeded attempt=${attemptNumber} model=${model}`);
           }
 
-          return JSON.parse(result.stdout) as unknown;
+          return parsedOutput;
         } catch (error) {
           lastError = error;
 
@@ -193,7 +197,7 @@ export async function extractAndPersistNewsletterMessage(
       subject: input.message.subject ?? null,
       cleanedText,
     });
-    const extraction = parseNewsletterExtraction(rawExtraction);
+    const extraction = parseNewsletterExtraction(normalizePiExtractionShape(rawExtraction));
     const normalizedExtraction = filterNormalizedExtraction(
       extraction,
       input.entityConfidenceThreshold
@@ -320,13 +324,69 @@ export function readSampleFixture(fixturePath: string): SampleNewsletterFixture 
 export function buildNewsletterExtractionPrompt(input: NewsletterLlmInput): string {
   return [
     'Return strict JSON only.',
-    'Schema keys required: sourceName, summary, artists, albums, tracks, genres, links, releases, events.',
-    'Every array item should include confidence and evidence when applicable.',
+    'Return exactly one JSON object with these top-level keys only: sourceName, summary, artists, albums, tracks, genres, links, releases, events.',
+    'Use schema field names exactly as written. Do not invent aliases or extra keys.',
+    'For artists and genres items, use: {"name": string, "confidence": number, "evidence": string|null, "primaryArtistName": null}.',
+    'For albums and tracks items, use: {"name": string, "primaryArtistName": string|null, "confidence": number, "evidence": string|null}. Never use "title" or "artist" keys there.',
+    'For links items, use: {"url": string, "domain": string|null, "title": string|null, "confidence": number, "evidence": string|null}.',
+    'For releases items, use: {"title": string, "artistName": string|null, "releaseDate": string|null, "confidence": number, "evidence": string|null}.',
+    'For events items, use: {"title": string, "venue": string|null, "city": string|null, "startDate": string|null, "confidence": number, "evidence": string|null}.',
+    'Use empty arrays when a category has no items.',
     `Source: ${input.sourceName ?? 'unknown'}`,
     `Subject: ${input.subject ?? 'unknown'}`,
     'Newsletter body:',
     input.cleanedText,
   ].join('\n\n');
+}
+
+export function normalizePiExtractionShape(input: unknown): unknown {
+  if (!isPlainObject(input)) {
+    return input;
+  }
+
+  return {
+    ...input,
+    artists: normalizeEntityArray(input.artists),
+    albums: normalizeEntityArray(input.albums),
+    tracks: normalizeEntityArray(input.tracks),
+    genres: normalizeEntityArray(input.genres),
+  };
+}
+
+function normalizeEntityArray(value: unknown): unknown {
+  if (!Array.isArray(value)) {
+    return value;
+  }
+
+  return value.map((item) => normalizeEntityItem(item));
+}
+
+function normalizeEntityItem(item: unknown): unknown {
+  if (!isPlainObject(item)) {
+    return item;
+  }
+
+  const normalized = { ...item } as Record<string, unknown>;
+
+  if (normalized.name === undefined && typeof normalized.title === 'string') {
+    normalized.name = normalized.title;
+  }
+
+  if (
+    normalized.primaryArtistName === undefined &&
+    (typeof normalized.artist === 'string' || normalized.artist === null)
+  ) {
+    normalized.primaryArtistName = normalized.artist;
+  }
+
+  delete normalized.title;
+  delete normalized.artist;
+
+  return normalized;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export function getPersistedExtractionJson(
@@ -338,6 +398,81 @@ export function getPersistedExtractionJson(
 
 function sanitizeLogValue(value: string): string {
   return JSON.stringify(value).replace(/^"|"$/g, '');
+}
+
+export function parsePiJsonOutput(stdout: string): unknown {
+  const trimmed = stdout.trim();
+
+  for (let startIndex = 0; startIndex < trimmed.length; startIndex += 1) {
+    const startChar = trimmed[startIndex];
+
+    if (startChar !== '{' && startChar !== '[') {
+      continue;
+    }
+
+    const candidate = extractBalancedJson(trimmed, startIndex);
+
+    if (!candidate) {
+      continue;
+    }
+
+    return JSON.parse(candidate) as unknown;
+  }
+
+  return JSON.parse(trimmed) as unknown;
+}
+
+function extractBalancedJson(input: string, startIndex: number): string | null {
+  const stack: string[] = [];
+  let inString = false;
+  let escaping = false;
+
+  for (let index = startIndex; index < input.length; index += 1) {
+    const char = input[index];
+
+    if (inString) {
+      if (escaping) {
+        escaping = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escaping = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = false;
+      }
+
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === '{' || char === '[') {
+      stack.push(char);
+      continue;
+    }
+
+    if (char === '}' || char === ']') {
+      const expectedOpen = char === '}' ? '{' : '[';
+      const actualOpen = stack.pop();
+
+      if (actualOpen !== expectedOpen) {
+        return null;
+      }
+
+      if (stack.length === 0) {
+        return input.slice(startIndex, index + 1);
+      }
+    }
+  }
+
+  return null;
 }
 
 async function executePiCommand(

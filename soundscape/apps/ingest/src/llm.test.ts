@@ -11,6 +11,7 @@ import { persistRawGmailMessage } from './gmail.js';
 import {
   createPiNewsletterLlmClient,
   extractAndPersistNewsletterMessage,
+  normalizePiExtractionShape,
   readSampleFixture,
   resolveSampleFixturePath,
   type NewsletterLlmClient,
@@ -261,7 +262,9 @@ test('createPiNewsletterLlmClient shells out through pi --print with the configu
   });
   assert.equal(invocations.length, 1);
   assert.equal(invocations[0]?.command, 'pi');
-  assert.deepEqual(invocations[0]?.args.slice(0, 6), [
+  assert.deepEqual(invocations[0]?.args.slice(0, 8), [
+    '--provider',
+    'openai',
     '--model',
     'gpt-5.4-medium',
     '--print',
@@ -269,8 +272,182 @@ test('createPiNewsletterLlmClient shells out through pi --print with the configu
     '--no-tools',
     '--mode',
   ]);
-  assert.equal(invocations[0]?.args[6], 'text');
+  assert.equal(invocations[0]?.args[8], 'text');
   assert.match(invocations[0]?.args.at(-1) ?? '', /Return strict JSON only/);
+});
+
+test('createPiNewsletterLlmClient extracts the first JSON object from noisy pi output', async () => {
+  const client = createPiNewsletterLlmClient(
+    { model: 'gpt-5.4-medium' },
+    async () => ({
+      stdout: `${JSON.stringify({
+        sourceName: 'Noisy Source',
+        summary: 'Noisy summary',
+        artists: [],
+        albums: [],
+        tracks: [],
+        genres: [],
+        links: [],
+        releases: [],
+        events: [],
+      })}\n\u001b]9;Strict JSON Response Only\u0007`,
+      stderr: '',
+      exitCode: 0,
+    })
+  );
+
+  const extraction = await client.extract({
+    sourceName: 'Noisy Source',
+    subject: 'Noisy subject',
+    cleanedText: 'Noisy body',
+  });
+
+  assert.equal((extraction as { summary: string }).summary, 'Noisy summary');
+});
+
+test('normalizePiExtractionShape maps album and track title/artist fields to schema keys', () => {
+  const normalized = normalizePiExtractionShape({
+    sourceName: 'Schema Drift Source',
+    summary: 'Schema Drift summary',
+    artists: [{ name: 'Artist Only', confidence: 0.91, evidence: 'artist evidence' }],
+    albums: [
+      {
+        title: 'Album With Drifted Keys',
+        artist: 'Album Artist',
+        confidence: 0.89,
+        evidence: 'album evidence',
+      },
+    ],
+    tracks: [
+      {
+        title: 'Track With Drifted Keys',
+        artist: 'Track Artist',
+        confidence: 0.87,
+        evidence: 'track evidence',
+      },
+    ],
+    genres: [],
+    links: [],
+    releases: [],
+    events: [],
+  });
+
+  assert.deepEqual(normalized, {
+    sourceName: 'Schema Drift Source',
+    summary: 'Schema Drift summary',
+    artists: [{ name: 'Artist Only', confidence: 0.91, evidence: 'artist evidence' }],
+    albums: [
+      {
+        name: 'Album With Drifted Keys',
+        primaryArtistName: 'Album Artist',
+        confidence: 0.89,
+        evidence: 'album evidence',
+      },
+    ],
+    tracks: [
+      {
+        name: 'Track With Drifted Keys',
+        primaryArtistName: 'Track Artist',
+        confidence: 0.87,
+        evidence: 'track evidence',
+      },
+    ],
+    genres: [],
+    links: [],
+    releases: [],
+    events: [],
+  });
+});
+
+test('extractAndPersistNewsletterMessage accepts pi output with album title/artist schema drift', async () => {
+  const { db, cleanup } = createTestDatabase();
+
+  const client: NewsletterLlmClient = {
+    modelName: 'test-model',
+    async extract() {
+      return {
+        sourceName: 'Schema Drift Source',
+        summary: 'Schema Drift summary',
+        artists: [{ name: 'Artist Only', confidence: 0.91, evidence: 'artist evidence' }],
+        albums: [
+          {
+            title: 'Album With Drifted Keys',
+            artist: 'Album Artist',
+            confidence: 0.89,
+            evidence: 'album evidence',
+          },
+        ],
+        tracks: [
+          {
+            title: 'Track With Drifted Keys',
+            artist: 'Track Artist',
+            confidence: 0.87,
+            evidence: 'track evidence',
+          },
+        ],
+        genres: [],
+        links: [],
+        releases: [],
+        events: [],
+      };
+    },
+  };
+
+  try {
+    const persisted = persistRawGmailMessage(db, {
+      id: 'gmail-llm-schema-drift',
+      subject: 'Schema drift extraction',
+      senderEmail: 'news@pitchfork.com',
+      rawText: 'Original message body',
+      cleanedText: 'Original message body',
+    });
+
+    const result = await extractAndPersistNewsletterMessage({
+      db,
+      newsletterMessageId: persisted.newsletterMessageId,
+      message: {
+        id: 'gmail-llm-schema-drift',
+        subject: 'Schema drift extraction',
+        cleanedText: 'Original message body',
+      },
+      llmClient: client,
+      entityConfidenceThreshold: 0.8,
+    });
+
+    assert.equal(result.normalizedCounts.albums, 1);
+    assert.equal(result.normalizedCounts.tracks, 1);
+
+    const extractionJson = getNewsletterMessageByGmailMessageId(db, 'gmail-llm-schema-drift');
+    assert.equal(extractionJson?.extractionStatus, 'extracted');
+
+    const albumRow = db
+      .prepare<[number], { title: string; primary_artist_name: string | null }>(
+        `SELECT albums.title, albums.primary_artist_name
+         FROM newsletter_message_albums
+         JOIN albums ON albums.id = newsletter_message_albums.album_id
+         WHERE newsletter_message_albums.newsletter_message_id = ?`
+      )
+      .get(persisted.newsletterMessageId);
+    const trackRow = db
+      .prepare<[number], { title: string; primary_artist_name: string | null }>(
+        `SELECT tracks.title, tracks.primary_artist_name
+         FROM newsletter_message_tracks
+         JOIN tracks ON tracks.id = newsletter_message_tracks.track_id
+         WHERE newsletter_message_tracks.newsletter_message_id = ?`
+      )
+      .get(persisted.newsletterMessageId);
+
+    assert.deepEqual(albumRow, {
+      title: 'Album With Drifted Keys',
+      primary_artist_name: 'Album Artist',
+    });
+    assert.deepEqual(trackRow, {
+      title: 'Track With Drifted Keys',
+      primary_artist_name: 'Track Artist',
+    });
+  } finally {
+    cleanup();
+  }
 });
 
 test('createPiNewsletterLlmClient retries once before failing', async () => {
