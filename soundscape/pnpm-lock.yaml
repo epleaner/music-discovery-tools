@@ -182,9 +182,6 @@ importers:
       '@soundscape/utils':
         specifier: workspace:*
         version: link:../../packages/utils
-      '@tanstack/solid-query':
-        specifier: ^5.90.7
-        version: 5.97.0(solid-js@1.9.9)
       '@tanstack/solid-virtual':
         specifier: ^3.13.12
         version: 3.13.12(solid-js@1.9.9)
@@ -1392,18 +1389,10 @@ packages:
   '@tanstack/query-core@5.90.7':
     resolution: {integrity: sha512-6PN65csiuTNfBMXqQUxQhCNdtm1rV+9kC9YwWAIKcaxAauq3Wu7p18j3gQY3YIBJU70jT/wzCCZ2uqto/vQgiQ==}
 
-  '@tanstack/query-core@5.97.0':
-    resolution: {integrity: sha512-QdpLP5VzVMgo4VtaPppRA2W04UFjIqX+bxke/ZJhE5cfd5UPkRzqIAJQt9uXkQJjqE8LBOMbKv7f8HCsZltXlg==}
-
   '@tanstack/react-query@5.90.7':
     resolution: {integrity: sha512-wAHc/cgKzW7LZNFloThyHnV/AX9gTg3w5yAv0gvQHPZoCnepwqCMtzbuPbb2UvfvO32XZ46e8bPOYbfZhzVnnQ==}
     peerDependencies:
       react: ^18 || ^19
-
-  '@tanstack/solid-query@5.97.0':
-    resolution: {integrity: sha512-Qy0wbtiEKd2TEQHWWk3cYGC8Go/L2GCik9sBAEEEWmZjk2Y/S787ZUVOLbCyefKbCClILZ2j+SpCxbx+QjIXcA==}
-    peerDependencies:
-      solid-js: ^1.6.0
 
   '@tanstack/solid-virtual@3.13.12':
     resolution: {integrity: sha512-0dS8GkBTmbuM9cUR6Jni0a45eJbd32CAEbZj8HrZMWIj3lu974NpGz5ywcomOGJ9GdeHuDaRzlwtonBbKV1ihQ==}
@@ -2848,12 +2837,11 @@ packages:
 
   glob@10.4.5:
     resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
-    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
-    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+    deprecated: Glob versions prior to v9 are no longer supported
 
   global-directory@4.0.1:
     resolution: {integrity: sha512-wHTUcDUoZ1H5/0iVqEudYW4/kAlN5cZ3j/bXn0Dpbizl9iaUVeWSHqiOjsgk6OW2bkLclbBjzewBz6weQ1zA2Q==}
@@ -5016,7 +5004,6 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
-    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -6291,17 +6278,10 @@ snapshots:
 
   '@tanstack/query-core@5.90.7': {}
 
-  '@tanstack/query-core@5.97.0': {}
-
   '@tanstack/react-query@5.90.7(react@19.1.1)':
     dependencies:
       '@tanstack/query-core': 5.90.7
       react: 19.1.1
-
-  '@tanstack/solid-query@5.97.0(solid-js@1.9.9)':
-    dependencies:
-      '@tanstack/query-core': 5.97.0
-      solid-js: 1.9.9
 
   '@tanstack/solid-virtual@3.13.12(solid-js@1.9.9)':
     dependencies:

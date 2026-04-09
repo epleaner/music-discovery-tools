@@ -13,7 +13,7 @@ import {
   type NewsletterDatabase,
 } from '@soundscape/newsletters-db';
 import { appRouter } from './router.js';
-import type { Context, NewsletterBandcampLookupResult } from './context.js';
+import type { Context } from './context.js';
 
 function createTestDatabase(): { db: NewsletterDatabase; cleanup: () => void } {
   const tempDir = mkdtempSync(join(tmpdir(), 'soundscape-api-router-'));
@@ -87,19 +87,8 @@ function seedNewsletterData(db: NewsletterDatabase) {
   return { sourceId, messageId };
 }
 
-function createCaller(
-  db: NewsletterDatabase,
-  overrides: Partial<Context> = {}
-) {
-  return appRouter.createCaller({
-    db,
-    lookupNewsletterBandcampLinks: async () => ({
-      artists: [],
-      albums: [],
-      tracks: [],
-    }),
-    ...overrides,
-  } satisfies Context);
+function createCaller(db: NewsletterDatabase) {
+  return appRouter.createCaller({ db } satisfies Context);
 }
 
 test('newsletterList returns paginated newsletter summaries', async () => {
@@ -152,46 +141,6 @@ test('newsletterSources returns source filters and newsletterList applies source
     assert.equal(sources[0]?.id, sourceId);
     assert.equal(filtered.newsletters.length, 1);
     assert.deepEqual(empty.newsletters, []);
-  } finally {
-    cleanup();
-  }
-});
-
-test('newsletterBandcampLookup returns cached link candidates for newsletter entities', async () => {
-  const { db, cleanup } = createTestDatabase();
-
-  try {
-    const { messageId } = seedNewsletterData(db);
-    const bandcampResult: NewsletterBandcampLookupResult = {
-      artists: [
-        {
-          name: 'Jessica Pratt',
-          primaryArtistName: null,
-          url: 'https://jessicapratt.bandcamp.com/',
-          label: 'Jessica Pratt',
-        },
-      ],
-      albums: [
-        {
-          name: 'Here in the Pitch',
-          primaryArtistName: 'Jessica Pratt',
-          url: 'https://jessicapratt.bandcamp.com/album/here-in-the-pitch',
-          label: 'Here in the Pitch',
-        },
-      ],
-      tracks: [],
-    };
-
-    const caller = createCaller(db, {
-      lookupNewsletterBandcampLinks: async (newsletterMessageId) => {
-        assert.equal(newsletterMessageId, messageId);
-        return bandcampResult;
-      },
-    });
-
-    const result = await caller.newsletterBandcampLookup({ id: messageId });
-
-    assert.deepEqual(result, bandcampResult);
   } finally {
     cleanup();
   }

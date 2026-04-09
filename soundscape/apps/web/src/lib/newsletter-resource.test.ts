@@ -36,11 +36,6 @@ function createMockApi(overrides: Partial<NewsletterApi> = {}): NewsletterApi {
     list: async () => ({ newsletters: [] }),
     detail: async () => null,
     sources: async () => [],
-    bandcampLookup: async () => ({
-      artists: [],
-      albums: [],
-      tracks: [],
-    }),
     ...overrides,
   };
 }

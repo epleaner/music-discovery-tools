@@ -137,8 +137,7 @@ Expected output includes:
 2. Enter a username so the main layout renders.
 3. In the right-hand panel, click `Newsletters`.
 4. Browse newsletter cards directly in that panel.
-5. Expand `Artists`, `Albums`, `Tracks`, or `Links` inline on any newsletter row.
-6. Click `+` to open the full newsletter modal. Opening the modal or expanding artists/albums/tracks will fetch and cache newsletter-scoped Bandcamp links inline for those entities.
+5. Expand `Text`, `Artists`, `Albums`, `Tracks`, or `Links` inline on any newsletter row.
 
 If the panel is empty, run the fixture ingest command or your local live sync command first so the SQLite DB has newsletter rows.
 

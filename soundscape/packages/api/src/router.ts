@@ -6,13 +6,6 @@ import {
 import { router, publicProcedure } from './trpc.js';
 import { z } from 'zod';
 
-const newsletterBandcampLookupItemSchema = z.object({
-  name: z.string(),
-  primaryArtistName: z.string().nullable(),
-  url: z.string().nullable(),
-  label: z.string().nullable(),
-});
-
 const newsletterRelatedArtistSchema = z.object({
   name: z.string(),
   confidence: z.number().nullable(),
@@ -170,21 +163,6 @@ export const appRouter = router({
       )
     )
     .query(({ ctx }) => listNewsletterSources(ctx.db)),
-
-  newsletterBandcampLookup: publicProcedure
-    .input(
-      z.object({
-        id: z.number().int().positive(),
-      })
-    )
-    .output(
-      z.object({
-        artists: z.array(newsletterBandcampLookupItemSchema),
-        albums: z.array(newsletterBandcampLookupItemSchema),
-        tracks: z.array(newsletterBandcampLookupItemSchema),
-      })
-    )
-    .query(({ ctx, input }) => ctx.lookupNewsletterBandcampLinks(input.id)),
 });
 
 export type AppRouter = typeof appRouter;

@@ -202,8 +202,7 @@ soundscape/
 6. Use `bash scripts/run-newsletter-sync.sh --from-scratch --verbose` when you want a clean full reingest from an empty local DB.
 7. Optionally run `pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json` to load fixture data into the same DB without Gmail access.
 8. Start the app with `pnpm dev`, enter a username if you want Last.fm data, and switch the right-hand panel from `Similar` to `Newsletters`.
-9. Use the inline newsletter cards to expand artists, albums, tracks, and links directly inside the panel.
-10. Click `+` to open the full newsletter modal. Opening the modal or expanding artists/albums/tracks will fetch and cache newsletter-scoped Bandcamp links inline for those entities.
+9. Use the inline newsletter cards to expand text, artists, albums, tracks, and links directly inside the panel.
 
 For ingest-specific setup and scheduler examples, see `apps/ingest/README.md`.
 
