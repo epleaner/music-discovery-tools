@@ -2,7 +2,7 @@ import { Component, For, Show, createMemo, createSignal } from 'solid-js';
 import { createNewsletterDetailResource } from '../lib/newsletter-resource.js';
 import {
   createNewsletterBandcampQuery,
-  findBandcampHref,
+  findBandcampLookupItem,
   shouldEnableBandcampLookup,
 } from '../lib/newsletter-bandcamp-query.js';
 import type {
@@ -76,30 +76,22 @@ const SectionToggle: Component<SectionToggleProps> = (props) => {
   );
 };
 
-const BandcampEntityText: Component<{
-  item: BandcampEntityItem;
-  lookups: NewsletterBandcampLookupItem[];
-  class?: string;
-}> = (props) => {
-  const href = createMemo(() =>
-    findBandcampHref(props.lookups, {
-      name: props.item.name,
-      primaryArtistName: props.item.primaryArtistName,
-    })
-  );
+function formatBandcampLabel(match: NewsletterBandcampLookupItem): string {
+  return match.label?.trim() || 'Bandcamp';
+}
 
+const BandcampInlineLink: Component<{
+  match: NewsletterBandcampLookupItem | null;
+}> = (props) => {
   return (
-    <Show
-      when={href()}
-      fallback={<span class={props.class}>{props.item.text}</span>}
-    >
+    <Show when={props.match?.url}>
       <a
-        href={href() ?? '#'}
+        href={props.match?.url ?? '#'}
         target="_blank"
         rel="noreferrer"
-        class={props.class ?? 'hover:text-fg'}
+        class="text-[10px] uppercase tracking-[0.12em] text-fg-muted hover:text-fg"
       >
-        {props.item.text}
+        {props.match ? formatBandcampLabel(props.match) : 'Bandcamp'}
       </a>
     </Show>
   );
@@ -112,11 +104,21 @@ const BandcampChipList: Component<{
   return (
     <div class="flex flex-wrap gap-1">
       <For each={props.items}>
-        {(item) => (
-          <div class="flex items-center gap-1 px-1.5 py-0.5 text-xs border border-border">
-            <BandcampEntityText item={item} lookups={props.lookups} />
-          </div>
-        )}
+        {(item) => {
+          const match = createMemo(() =>
+            findBandcampLookupItem(props.lookups, {
+              name: item.name,
+              primaryArtistName: item.primaryArtistName,
+            })
+          );
+
+          return (
+            <div class="flex items-center gap-1 px-1.5 py-0.5 text-xs border border-border">
+              <span>{item.text}</span>
+              <BandcampInlineLink match={match()} />
+            </div>
+          );
+        }}
       </For>
     </div>
   );
@@ -129,15 +131,21 @@ const BandcampTextList: Component<{
   return (
     <div class="space-y-1 text-xs">
       <For each={props.items}>
-        {(item) => (
-          <div class="flex items-center justify-between gap-2">
-            <BandcampEntityText
-              item={item}
-              lookups={props.lookups}
-              class="text-fg-muted hover:text-fg"
-            />
-          </div>
-        )}
+        {(item) => {
+          const match = createMemo(() =>
+            findBandcampLookupItem(props.lookups, {
+              name: item.name,
+              primaryArtistName: item.primaryArtistName,
+            })
+          );
+
+          return (
+            <div class="flex items-center justify-between gap-2">
+              <span>{item.text}</span>
+              <BandcampInlineLink match={match()} />
+            </div>
+          );
+        }}
       </For>
     </div>
   );
