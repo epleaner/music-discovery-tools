@@ -79,8 +79,7 @@ const SectionToggle: Component<SectionToggleProps> = (props) => {
 const BandcampEntityText: Component<{
   item: BandcampEntityItem;
   lookups: NewsletterBandcampLookupItem[];
-  linkClass?: string;
-  textClass?: string;
+  class?: string;
 }> = (props) => {
   const href = createMemo(() =>
     findBandcampHref(props.lookups, {
@@ -92,13 +91,13 @@ const BandcampEntityText: Component<{
   return (
     <Show
       when={href()}
-      fallback={<span class={props.textClass}>{props.item.text}</span>}
+      fallback={<span class={props.class}>{props.item.text}</span>}
     >
       <a
         href={href() ?? '#'}
         target="_blank"
         rel="noreferrer"
-        class={props.linkClass ?? 'hover:text-fg'}
+        class={props.class ?? 'hover:text-fg'}
       >
         {props.item.text}
       </a>
@@ -135,8 +134,7 @@ const BandcampTextList: Component<{
             <BandcampEntityText
               item={item}
               lookups={props.lookups}
-              textClass="text-fg-muted"
-              linkClass="text-fg-muted hover:text-fg"
+              class="text-fg-muted hover:text-fg"
             />
           </div>
         )}
