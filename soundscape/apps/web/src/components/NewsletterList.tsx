@@ -283,13 +283,13 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
 
         <Show when={props.newsletter.summary}>
           <div class="mt-1 text-xs leading-5 text-fg-muted">
-            <p class="line-clamp-3">{props.newsletter.summary}</p>
+            <p class="line-clamp-3 inline">{props.newsletter.summary}</p>
             <button
               type="button"
               onClick={() => setShowModal(true)}
-              class="mt-1 text-[10px] tracking-[0.18em] text-fg-muted hover:text-fg"
+              class="ml-1 inline text-xs text-fg-muted hover:text-fg"
             >
-              ... +
+              +
             </button>
           </div>
         </Show>
