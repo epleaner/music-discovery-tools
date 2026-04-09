@@ -21,8 +21,11 @@ bash scripts/run-newsletter-sync.sh
 # Explicit live Gmail sync
 pnpm --filter @soundscape/ingest start -- --sync-now
 
-# Live Gmail sync with structured progress logs
+# Live Gmail sync with readable progress output
 pnpm --filter @soundscape/ingest start -- --sync-now --verbose
+
+# Reset the local newsletter DB and reingest everything from scratch
+bash scripts/run-newsletter-sync.sh --from-scratch --verbose
 
 # Config-only dry run: initialize DB, record a dry-run sync, and print the Gmail query
 pnpm --filter @soundscape/ingest start -- --dry-run
@@ -71,6 +74,7 @@ Notes:
 - `--sync-now` requires the Gmail OAuth fields and a working local `pi` CLI install.
 - `PI_LLM_MODEL` defaults to `gpt-5.4-mini` when unset.
 - Live extraction uses pi headless (`pi --print`) and retries once per message before marking that extraction failed.
+- `--from-scratch` deletes the local newsletter DB before the run starts, including SQLite `-wal` and `-shm` sidecar files.
 - The fixture sample path also works without live Gmail credentials or pi.
 
 ## Sync behavior
@@ -107,10 +111,11 @@ Use the wrapper for manual runs and schedulers:
 ```bash
 bash scripts/run-newsletter-sync.sh
 bash scripts/run-newsletter-sync.sh --verbose
+bash scripts/run-newsletter-sync.sh --from-scratch --verbose
 bash scripts/run-newsletter-sync.sh --dry-run
 ```
 
-`--verbose` emits structured `key=value` progress logs for Gmail phases, per-message progress, and pi extraction attempts/retries.
+`--verbose` emits readable one-line progress updates with indented details for Gmail phases, per-message progress, and pi extraction attempts/retries. `--from-scratch` clears the local newsletter DB before the run starts.
 
 Example cron entry for a daily live sync at 7:30 AM:
 

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -8,7 +8,12 @@ import {
   getSyncRunById,
   openInitializedNewsletterDatabase,
 } from '@soundscape/newsletters-db';
-import { parseCliOptions, runLiveNewsletterSync } from './index.js';
+import {
+  formatVerboseError,
+  parseCliOptions,
+  resetNewsletterDatabase,
+  runLiveNewsletterSync,
+} from './index.js';
 import { startSyncRun } from './sync-state.js';
 import { getPersistedExtractionJson } from './llm.js';
 import type { GmailApiClient } from './gmail.js';
@@ -32,31 +37,91 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
     dryRun: false,
     syncNow: true,
     verbose: false,
+    fromScratch: false,
     samplePath: undefined,
   });
   assert.deepEqual(parseCliOptions(['--dry-run']), {
     dryRun: true,
     syncNow: false,
     verbose: false,
+    fromScratch: false,
     samplePath: undefined,
   });
   assert.deepEqual(parseCliOptions(['--sample', 'fixture.json']), {
     dryRun: false,
     syncNow: false,
     verbose: false,
+    fromScratch: false,
     samplePath: 'fixture.json',
   });
   assert.deepEqual(parseCliOptions(['--sync-now', '--verbose']), {
     dryRun: false,
     syncNow: true,
     verbose: true,
+    fromScratch: false,
     samplePath: undefined,
   });
-  assert.throws(() => parseCliOptions(['--sync-now', '--dry-run']), /either --sync-now or --dry-run/);
-  assert.throws(() => parseCliOptions(['--sync-now', '--sample', 'fixture.json']), /either --sync-now or --sample/);
+  assert.deepEqual(
+    parseCliOptions(['--sync-now', '--verbose', '--from-scratch']),
+    {
+      dryRun: false,
+      syncNow: true,
+      verbose: true,
+      fromScratch: true,
+      samplePath: undefined,
+    }
+  );
+  assert.throws(
+    () => parseCliOptions(['--sync-now', '--dry-run']),
+    /either --sync-now or --dry-run/
+  );
+  assert.throws(
+    () => parseCliOptions(['--sync-now', '--sample', 'fixture.json']),
+    /either --sync-now or --sample/
+  );
 });
 
-test('runLiveNewsletterSync emits structured verbose progress logs', async () => {
+test('resetNewsletterDatabase removes sqlite db and sidecar files', () => {
+  const { cleanup } = createTestDatabase();
+  const tempDir = mkdtempSync(join(tmpdir(), 'soundscape-reset-db-'));
+  const dbPath = join(tempDir, 'newsletters.sqlite');
+  writeFileSync(dbPath, 'placeholder', 'utf8');
+  writeFileSync(`${dbPath}-wal`, 'wal', 'utf8');
+  writeFileSync(`${dbPath}-shm`, 'shm', 'utf8');
+
+  try {
+    assert.equal(existsSync(dbPath), true);
+    assert.equal(existsSync(`${dbPath}-wal`), true);
+    assert.equal(existsSync(`${dbPath}-shm`), true);
+    resetNewsletterDatabase(dbPath);
+    assert.equal(existsSync(dbPath), false);
+    assert.equal(existsSync(`${dbPath}-wal`), false);
+    assert.equal(existsSync(`${dbPath}-shm`), false);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+    cleanup();
+  }
+});
+
+test('formatVerboseError collapses issue arrays into a single readable line', () => {
+  assert.equal(
+    formatVerboseError({
+      issues: [
+        {
+          path: ['links', 0, 'url'],
+          message: 'Invalid url',
+        },
+        {
+          path: [],
+          message: 'Expected object, received array',
+        },
+      ],
+    }),
+    'links.0.url: Invalid url; Expected object, received array'
+  );
+});
+
+test('runLiveNewsletterSync emits readable verbose progress logs', async () => {
   const { db, cleanup } = createTestDatabase();
   const logs: string[] = [];
 
@@ -83,7 +148,9 @@ test('runLiveNewsletterSync emits structured verbose progress logs', async () =>
               {
                 mimeType: 'text/plain',
                 body: {
-                  data: Buffer.from('Verbose Artist', 'utf8').toString('base64url'),
+                  data: Buffer.from('Verbose Artist', 'utf8').toString(
+                    'base64url'
+                  ),
                 },
               },
             ],
@@ -98,7 +165,13 @@ test('runLiveNewsletterSync emits structured verbose progress logs', async () =>
         return {
           sourceName: 'Verbose Sender',
           summary: 'Verbose summary',
-          artists: [{ name: 'Verbose Artist', confidence: 0.95, evidence: 'Verbose Artist' }],
+          artists: [
+            {
+              name: 'Verbose Artist',
+              confidence: 0.95,
+              evidence: 'Verbose Artist',
+            },
+          ],
           albums: [],
           tracks: [],
           genres: [],
@@ -135,11 +208,14 @@ test('runLiveNewsletterSync emits structured verbose progress logs', async () =>
       logger: (line) => logs.push(line),
     });
 
-    assert.ok(logs.some((line) => line.includes('event=gmail_sync.start')));
-    assert.ok(logs.some((line) => line.includes('event=gmail_sync.messages_listed')));
-    assert.ok(logs.some((line) => line.includes('event=newsletter_message.persisted')));
-    assert.ok(logs.some((line) => line.includes('event=newsletter_message.extracted')));
-    assert.ok(logs.some((line) => line.includes('event=gmail_sync.completed')));
+    assert.ok(logs.some((line) => line.includes('Starting Gmail sync')));
+    assert.ok(logs.some((line) => line.includes('Found Gmail messages')));
+    assert.ok(
+      logs.some((line) => line.includes('[1/1] Verbose Sender — Verbose picks'))
+    );
+    assert.ok(logs.some((line) => line.includes('Saved raw newsletter as #1')));
+    assert.ok(logs.some((line) => line.includes('Extraction saved')));
+    assert.ok(logs.some((line) => line.includes('Sync complete')));
   } finally {
     cleanup();
   }
@@ -171,7 +247,9 @@ test('runLiveNewsletterSync does not advance the cursor when extraction fails', 
               {
                 mimeType: 'text/plain',
                 body: {
-                  data: Buffer.from('Broken Artist', 'utf8').toString('base64url'),
+                  data: Buffer.from('Broken Artist', 'utf8').toString(
+                    'base64url'
+                  ),
                 },
               },
             ],
@@ -248,7 +326,10 @@ test('runLiveNewsletterSync persists live Gmail messages, extractions, and the s
               {
                 mimeType: 'text/plain',
                 body: {
-                  data: Buffer.from('Artist Alpha\nAlbum Beta\nTrack Gamma', 'utf8').toString('base64url'),
+                  data: Buffer.from(
+                    'Artist Alpha\nAlbum Beta\nTrack Gamma',
+                    'utf8'
+                  ).toString('base64url'),
                 },
               },
             ],
@@ -263,11 +344,38 @@ test('runLiveNewsletterSync persists live Gmail messages, extractions, and the s
         return {
           sourceName: 'Test Sender',
           summary: 'A concise summary',
-          artists: [{ name: 'Artist Alpha', confidence: 0.95, evidence: 'Artist Alpha' }],
-          albums: [{ name: 'Album Beta', primaryArtistName: 'Artist Alpha', confidence: 0.93, evidence: 'Album Beta' }],
-          tracks: [{ name: 'Track Gamma', primaryArtistName: 'Artist Alpha', confidence: 0.91, evidence: 'Track Gamma' }],
+          artists: [
+            {
+              name: 'Artist Alpha',
+              confidence: 0.95,
+              evidence: 'Artist Alpha',
+            },
+          ],
+          albums: [
+            {
+              name: 'Album Beta',
+              primaryArtistName: 'Artist Alpha',
+              confidence: 0.93,
+              evidence: 'Album Beta',
+            },
+          ],
+          tracks: [
+            {
+              name: 'Track Gamma',
+              primaryArtistName: 'Artist Alpha',
+              confidence: 0.91,
+              evidence: 'Track Gamma',
+            },
+          ],
           genres: [],
-          links: [{ url: 'https://example.com/listen', domain: 'example.com', title: 'Listen', confidence: 0.88 }],
+          links: [
+            {
+              url: 'https://example.com/listen',
+              domain: 'example.com',
+              title: 'Listen',
+              confidence: 0.88,
+            },
+          ],
           releases: [],
           events: [],
         };
@@ -299,9 +407,10 @@ test('runLiveNewsletterSync persists live Gmail messages, extractions, and the s
     });
 
     const row = db
-      .prepare<[string], { id: number; extraction_status: string; cleaned_text: string | null }>(
-        'SELECT id, extraction_status, cleaned_text FROM newsletter_messages WHERE gmail_message_id = ?'
-      )
+      .prepare<
+        [string],
+        { id: number; extraction_status: string; cleaned_text: string | null }
+      >('SELECT id, extraction_status, cleaned_text FROM newsletter_messages WHERE gmail_message_id = ?')
       .get('gmail-live-1');
 
     assert.equal(result.messageCount, 1);

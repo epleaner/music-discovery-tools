@@ -1,4 +1,12 @@
-import { openInitializedNewsletterDatabase, resolveNewsletterDbPath, type NewsletterDatabase } from '@soundscape/newsletters-db';
+import { existsSync, rmSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { ZodError } from 'zod';
+import {
+  openInitializedNewsletterDatabase,
+  resolveNewsletterDbPath,
+  type NewsletterDatabase,
+} from '@soundscape/newsletters-db';
 import {
   formatConfigSummary,
   loadIngestConfig,
@@ -34,6 +42,7 @@ interface IngestCliOptions {
   dryRun: boolean;
   syncNow: boolean;
   verbose: boolean;
+  fromScratch: boolean;
   samplePath?: string;
 }
 
@@ -59,6 +68,7 @@ export function parseCliOptions(argv: string[]): IngestCliOptions {
   const syncNow = argv.includes('--sync-now');
   const dryRun = argv.includes('--dry-run');
   const verbose = argv.includes('--verbose');
+  const fromScratch = argv.includes('--from-scratch');
 
   if (syncNow && dryRun) {
     throw new Error('Use either --sync-now or --dry-run, not both.');
@@ -72,8 +82,19 @@ export function parseCliOptions(argv: string[]): IngestCliOptions {
     dryRun,
     syncNow,
     verbose,
+    fromScratch,
     samplePath,
   };
+}
+
+export function resetNewsletterDatabase(dbPath: string): void {
+  for (const path of [dbPath, `${dbPath}-wal`, `${dbPath}-shm`]) {
+    if (!existsSync(path)) {
+      continue;
+    }
+
+    rmSync(path, { force: true });
+  }
 }
 
 export async function runLiveNewsletterSync(input: {
@@ -88,7 +109,7 @@ export async function runLiveNewsletterSync(input: {
 }): Promise<LiveSyncResult> {
   const verbose = input.verbose ?? false;
   const logger = input.logger ?? console.log;
-  const log = createStructuredLogWriter(verbose, logger);
+  const log = createVerboseProgressLogger(verbose, logger);
 
   const gmailQuery = buildGmailSearchQuery({
     label: input.config.gmailLabel,
@@ -123,10 +144,13 @@ export async function runLiveNewsletterSync(input: {
       totalMessages: fetched.messages.length,
       gmailMessageId: messageMetadata.id,
       subject: messageMetadata.subject ?? 'none',
-      source: messageMetadata.sourceName ?? messageMetadata.senderEmail ?? 'unknown',
+      source:
+        messageMetadata.sourceName ?? messageMetadata.senderEmail ?? 'unknown',
     });
 
-    const normalizedBody = normalizeGmailMessagePayload(rawMessage.payload ?? null);
+    const normalizedBody = normalizeGmailMessagePayload(
+      rawMessage.payload ?? null
+    );
     const persisted = persistRawGmailMessage(input.db, {
       ...messageMetadata,
       ...normalizedBody,
@@ -142,7 +166,8 @@ export async function runLiveNewsletterSync(input: {
 
     if (
       messageMetadata.sentAt &&
-      (!newestMessageTimestamp || messageMetadata.sentAt > newestMessageTimestamp)
+      (!newestMessageTimestamp ||
+        messageMetadata.sentAt > newestMessageTimestamp)
     ) {
       newestMessageTimestamp = messageMetadata.sentAt;
     }
@@ -159,7 +184,8 @@ export async function runLiveNewsletterSync(input: {
         newsletterMessageId: persisted.newsletterMessageId,
         message: {
           id: messageMetadata.id,
-          sourceName: messageMetadata.sourceName ?? messageMetadata.senderName ?? null,
+          sourceName:
+            messageMetadata.sourceName ?? messageMetadata.senderName ?? null,
           subject: messageMetadata.subject ?? null,
           cleanedText: normalizedBody.cleanedText,
         },
@@ -174,14 +200,15 @@ export async function runLiveNewsletterSync(input: {
       });
     } catch (error) {
       extractionFailureCount += 1;
+      const formattedError = formatVerboseError(error);
       log('newsletter_message.extract_failed', {
         index: index + 1,
         totalMessages: fetched.messages.length,
         gmailMessageId: messageMetadata.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: formattedError,
       });
       console.error(
-        `Failed to extract newsletter message ${messageMetadata.id}: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to extract newsletter message ${messageMetadata.id}: ${formattedError}`
       );
     }
   }
@@ -221,10 +248,22 @@ export async function runLiveNewsletterSync(input: {
   };
 }
 
-export async function runIngest(argv: string[] = process.argv.slice(2)): Promise<void> {
+export async function runIngest(
+  argv: string[] = process.argv.slice(2)
+): Promise<void> {
   const options = parseCliOptions(argv);
   const config = loadIngestConfig();
   const dbPath = resolveNewsletterDbPath(config.dbPath);
+
+  if (options.fromScratch) {
+    resetNewsletterDatabase(dbPath);
+
+    if (options.verbose) {
+      console.log('Reset newsletter database');
+      console.log(`  path: ${dbPath}`);
+    }
+  }
+
   const db = openInitializedNewsletterDatabase({ dbPath });
   const syncRunId = startSyncRun(
     db,
@@ -294,9 +333,13 @@ export async function runIngest(argv: string[] = process.argv.slice(2)): Promise
     console.log(`gmailQuery=${gmailQuery}`);
     console.log(`lastSuccessfulSyncAt=${lastSuccessfulSyncAt ?? 'none'}`);
     console.log(`syncRunId=${syncRunId}`);
-    console.log(`syncRunStatus=${options.dryRun ? 'dry_run_completed' : 'succeeded'}`);
+    console.log(
+      `syncRunStatus=${options.dryRun ? 'dry_run_completed' : 'succeeded'}`
+    );
     console.log(`dbPath=${dbPath}`);
-    console.log('nextAction=run with --sync-now for live Gmail ingest or --sample for fixture validation');
+    console.log(
+      'nextAction=run with --sync-now for live Gmail ingest or --sample for fixture validation'
+    );
   } catch (error) {
     finalizeSyncRun(db, {
       syncRunId,
@@ -340,7 +383,8 @@ async function runSampleIngest(input: {
     newsletterMessageId: persisted.newsletterMessageId,
     message: {
       id: fixture.message.id,
-      sourceName: fixture.message.sourceName ?? fixture.message.senderName ?? null,
+      sourceName:
+        fixture.message.sourceName ?? fixture.message.senderName ?? null,
       subject: fixture.message.subject ?? null,
       cleanedText: normalizedBody.cleanedText,
     },
@@ -392,32 +436,122 @@ function logLiveSyncSummary(input: {
   console.log(`dbPath=${input.dbPath}`);
   console.log(`messageCount=${input.result.messageCount}`);
   console.log(`extractionFailureCount=${input.result.extractionFailureCount}`);
-  console.log(`newestMessageTimestamp=${input.result.newestMessageTimestamp ?? 'none'}`);
+  console.log(
+    `newestMessageTimestamp=${input.result.newestMessageTimestamp ?? 'none'}`
+  );
 }
 
-function createStructuredLogWriter(
+export function formatVerboseError(error: unknown): string {
+  if (error instanceof ZodError) {
+    return error.issues
+      .map((issue) => {
+        const path = issue.path.length > 0 ? `${issue.path.join('.')}: ` : '';
+        return `${path}${issue.message}`;
+      })
+      .join('; ');
+  }
+
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'issues' in error &&
+    Array.isArray((error as { issues?: unknown }).issues)
+  ) {
+    const issues = (
+      error as {
+        issues: Array<{ path?: unknown[]; message?: unknown }>;
+      }
+    ).issues;
+
+    return issues
+      .map((issue) => {
+        const path =
+          Array.isArray(issue.path) && issue.path.length > 0
+            ? `${issue.path.join('.')}: `
+            : '';
+        const message =
+          typeof issue.message === 'string'
+            ? issue.message
+            : String(issue.message ?? 'Unknown error');
+        return `${path}${message}`;
+      })
+      .join('; ');
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
+}
+
+function createVerboseProgressLogger(
   verbose: boolean,
   logger: StructuredLogger
-): (event: string, fields: Record<string, string | number | boolean | null | undefined>) => void {
+): (
+  event: string,
+  fields: Record<string, string | number | boolean | null | undefined>
+) => void {
   return (event, fields) => {
     if (!verbose) {
       return;
     }
 
-    const renderedFields = Object.entries(fields)
-      .filter(([, value]) => value !== undefined)
-      .map(([key, value]) => `${key}=${sanitizeStructuredLogValue(value ?? null)}`)
-      .join(' ');
-
-    logger(`event=${event}${renderedFields ? ` ${renderedFields}` : ''}`);
+    switch (event) {
+      case 'gmail_sync.start':
+        logger('Starting Gmail sync');
+        logger(`  sync run: ${fields.syncRunId}`);
+        logger(`  label: ${fields.gmailLabel}`);
+        logger(`  last successful sync: ${fields.lastSuccessfulSyncAt}`);
+        logger(`  Gmail query: ${fields.gmailQuery}`);
+        return;
+      case 'gmail_sync.messages_listed':
+        logger('Found Gmail messages');
+        logger(`  count: ${fields.messageCount}`);
+        logger(`  label id: ${fields.resolvedLabelId}`);
+        logger(`  API query: ${fields.gmailApiQuery}`);
+        return;
+      case 'newsletter_message.fetch_complete':
+        logger(
+          `[${fields.index}/${fields.totalMessages}] ${fields.source} — ${fields.subject}`
+        );
+        logger(`  gmail id: ${fields.gmailMessageId}`);
+        return;
+      case 'newsletter_message.persisted':
+        logger(`  Saved raw newsletter as #${fields.newsletterMessageId}`);
+        logger(
+          `  cleaned text present: ${fields.cleanedTextPresent ? 'yes' : 'no'}`
+        );
+        return;
+      case 'newsletter_message.extract_start':
+        logger('  Starting extraction');
+        return;
+      case 'newsletter_message.extracted':
+        logger('  Extraction saved');
+        return;
+      case 'newsletter_message.extract_failed':
+        logger(`  Extraction failed: ${fields.error}`);
+        return;
+      case 'gmail_sync.completed':
+        logger('Sync complete');
+        logger(`  status: ${fields.syncRunStatus}`);
+        logger(`  messages: ${fields.messageCount}`);
+        logger(`  extraction failures: ${fields.extractionFailureCount}`);
+        logger(`  newest message: ${fields.newestMessageTimestamp}`);
+        return;
+      default:
+        logger(`${event}: ${JSON.stringify(fields)}`);
+    }
   };
 }
 
-function sanitizeStructuredLogValue(value: string | number | boolean | null): string {
-  return JSON.stringify(value ?? 'none').replace(/^"|"$/g, '');
-}
+const isEntrypoint =
+  process.argv[1] != null &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
-runIngest().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
+if (isEntrypoint) {
+  runIngest().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
+}

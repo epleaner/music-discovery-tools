@@ -108,15 +108,19 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 bash scripts/run-newsletter-sync.sh --dry-run
 bash scripts/run-newsletter-sync.sh
 bash scripts/run-newsletter-sync.sh --verbose
+bash scripts/run-newsletter-sync.sh --from-scratch --verbose
 pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json
 ```
 
 Expected output includes:
+
 - `Soundscape newsletter ingest dry run`
 - `mode=dry-run`
 - `syncRunStatus=dry_run_completed`
 - `dbPath=` with either the default `soundscape/data/newsletters.sqlite` path or your override
 - `gmailQuery=` showing the configured label and sync cursor boundary
+- readable `--verbose` progress sections such as `Starting Gmail sync`, `Found Gmail messages`, `[3/1955] ...`, and `PI extraction attempt 1/2 ...`
+- `Reset newsletter database` when `--from-scratch` is used
 - `Soundscape newsletter ingest live sync` after `--sync-now` succeeds
 - `messageCount=` and `newestMessageTimestamp=` for live sync runs
 - `Soundscape newsletter ingest sample run`
@@ -140,10 +144,11 @@ Use the wrapper directly for manual runs or scheduler hooks:
 ```bash
 bash scripts/run-newsletter-sync.sh
 bash scripts/run-newsletter-sync.sh --verbose
+bash scripts/run-newsletter-sync.sh --from-scratch --verbose
 bash scripts/run-newsletter-sync.sh --dry-run
 ```
 
-With no mode flag, the wrapper defaults to `--sync-now`, so `bash scripts/run-newsletter-sync.sh --verbose` runs a live sync with structured progress logs. It still forwards explicit flags to `pnpm --filter @soundscape/ingest start -- ...`, so it is safe to use from cron or `launchd`.
+With no mode flag, the wrapper defaults to `--sync-now`, so `bash scripts/run-newsletter-sync.sh --verbose` runs a live sync with readable progress output. `--from-scratch` clears the local newsletter DB before the run starts. The wrapper still forwards explicit flags to `pnpm --filter @soundscape/ingest start -- ...`, so it is safe to use from cron or `launchd`.
 
 ### Test Real-Time Communication
 

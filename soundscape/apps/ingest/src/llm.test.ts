@@ -43,7 +43,7 @@ test('extractAndPersistNewsletterMessage stores validated extraction JSON and no
 
       return {
         sourceName: 'Pitchfork',
-        summary: 'Jessica Pratt leads this week\'s picks.',
+        summary: "Jessica Pratt leads this week's picks.",
         artists: [
           {
             name: 'Jessica Pratt',
@@ -111,13 +111,17 @@ test('extractAndPersistNewsletterMessage stores validated extraction JSON and no
         id: 'gmail-llm-success',
         subject: 'Best New Music',
         sourceName: 'Pitchfork',
-        cleanedText: 'Jessica Pratt returns with a new single and album details.',
+        cleanedText:
+          'Jessica Pratt returns with a new single and album details.',
       },
       llmClient: client,
       entityConfidenceThreshold: 0.8,
     });
 
-    assert.equal(cleanedTextSentToLlm, 'Jessica Pratt returns with a new single and album details.');
+    assert.equal(
+      cleanedTextSentToLlm,
+      'Jessica Pratt returns with a new single and album details.'
+    );
     assert.equal(result.normalizedCounts.artists, 1);
     assert.equal(result.normalizedCounts.links, 1);
 
@@ -129,28 +133,35 @@ test('extractAndPersistNewsletterMessage stores validated extraction JSON and no
       )
       .get(persisted.newsletterMessageId);
 
-    assert.equal(extractionRow?.summary, 'Jessica Pratt leads this week\'s picks.');
+    assert.equal(
+      extractionRow?.summary,
+      "Jessica Pratt leads this week's picks."
+    );
     assert.match(extractionRow?.extraction_json ?? '', /Maybe Someone Else/);
 
     const artistCount = db
-      .prepare<[number], { count: number }>(
-        'SELECT COUNT(*) as count FROM newsletter_message_artists WHERE newsletter_message_id = ?'
-      )
+      .prepare<
+        [number],
+        { count: number }
+      >('SELECT COUNT(*) as count FROM newsletter_message_artists WHERE newsletter_message_id = ?')
       .get(persisted.newsletterMessageId);
     const albumCount = db
-      .prepare<[number], { count: number }>(
-        'SELECT COUNT(*) as count FROM newsletter_message_albums WHERE newsletter_message_id = ?'
-      )
+      .prepare<
+        [number],
+        { count: number }
+      >('SELECT COUNT(*) as count FROM newsletter_message_albums WHERE newsletter_message_id = ?')
       .get(persisted.newsletterMessageId);
     const trackCount = db
-      .prepare<[number], { count: number }>(
-        'SELECT COUNT(*) as count FROM newsletter_message_tracks WHERE newsletter_message_id = ?'
-      )
+      .prepare<
+        [number],
+        { count: number }
+      >('SELECT COUNT(*) as count FROM newsletter_message_tracks WHERE newsletter_message_id = ?')
       .get(persisted.newsletterMessageId);
     const linkCount = db
-      .prepare<[number], { count: number }>(
-        'SELECT COUNT(*) as count FROM newsletter_links WHERE newsletter_message_id = ?'
-      )
+      .prepare<
+        [number],
+        { count: number }
+      >('SELECT COUNT(*) as count FROM newsletter_links WHERE newsletter_message_id = ?')
       .get(persisted.newsletterMessageId);
 
     assert.equal(artistCount?.count, 1);
@@ -158,7 +169,10 @@ test('extractAndPersistNewsletterMessage stores validated extraction JSON and no
     assert.equal(trackCount?.count, 1);
     assert.equal(linkCount?.count, 1);
 
-    const messageRow = getNewsletterMessageByGmailMessageId(db, 'gmail-llm-success');
+    const messageRow = getNewsletterMessageByGmailMessageId(
+      db,
+      'gmail-llm-success'
+    );
     assert.equal(messageRow?.extractionStatus, 'extracted');
   } finally {
     cleanup();
@@ -201,15 +215,19 @@ test('extractAndPersistNewsletterMessage marks extraction failure without removi
       })
     );
 
-    const messageRow = getNewsletterMessageByGmailMessageId(db, 'gmail-llm-failure');
+    const messageRow = getNewsletterMessageByGmailMessageId(
+      db,
+      'gmail-llm-failure'
+    );
     assert.equal(messageRow?.rawText, 'Original message body');
     assert.equal(messageRow?.cleanedText, 'Original message body');
     assert.equal(messageRow?.extractionStatus, 'failed');
 
     const extractionCount = db
-      .prepare<[number], { count: number }>(
-        'SELECT COUNT(*) as count FROM newsletter_extractions WHERE newsletter_message_id = ?'
-      )
+      .prepare<
+        [number],
+        { count: number }
+      >('SELECT COUNT(*) as count FROM newsletter_extractions WHERE newsletter_message_id = ?')
       .get(persisted.newsletterMessageId);
 
     assert.equal(extractionCount?.count, 0);
@@ -305,11 +323,64 @@ test('createPiNewsletterLlmClient extracts the first JSON object from noisy pi o
   assert.equal((extraction as { summary: string }).summary, 'Noisy summary');
 });
 
+test('normalizePiExtractionShape unwraps root arrays and normalizes bare-domain links', () => {
+  const normalized = normalizePiExtractionShape([
+    {
+      sourceName: 'Array Root Source',
+      summary: 'Array Root summary',
+      artists: [],
+      albums: [],
+      tracks: [],
+      genres: [],
+      links: [
+        {
+          url: 'homenormal.bandcamp.com/album/repetitioneer-suite-i-ii',
+          domain: 'homenormal.bandcamp.com',
+          title: 'Repetitioneer Suite I & II',
+          confidence: 0.99,
+          evidence: 'Album link in newsletter.',
+        },
+        {
+          url: 'not a url',
+          domain: null,
+          title: 'Broken link',
+          confidence: 0.2,
+          evidence: 'Bad output',
+        },
+      ],
+      releases: [],
+      events: [],
+    },
+  ]);
+
+  assert.deepEqual(normalized, {
+    sourceName: 'Array Root Source',
+    summary: 'Array Root summary',
+    artists: [],
+    albums: [],
+    tracks: [],
+    genres: [],
+    links: [
+      {
+        url: 'https://homenormal.bandcamp.com/album/repetitioneer-suite-i-ii',
+        domain: 'homenormal.bandcamp.com',
+        title: 'Repetitioneer Suite I & II',
+        confidence: 0.99,
+        evidence: 'Album link in newsletter.',
+      },
+    ],
+    releases: [],
+    events: [],
+  });
+});
+
 test('normalizePiExtractionShape maps album and track title/artist fields to schema keys', () => {
   const normalized = normalizePiExtractionShape({
     sourceName: 'Schema Drift Source',
     summary: 'Schema Drift summary',
-    artists: [{ name: 'Artist Only', confidence: 0.91, evidence: 'artist evidence' }],
+    artists: [
+      { name: 'Artist Only', confidence: 0.91, evidence: 'artist evidence' },
+    ],
     albums: [
       {
         title: 'Album With Drifted Keys',
@@ -335,7 +406,9 @@ test('normalizePiExtractionShape maps album and track title/artist fields to sch
   assert.deepEqual(normalized, {
     sourceName: 'Schema Drift Source',
     summary: 'Schema Drift summary',
-    artists: [{ name: 'Artist Only', confidence: 0.91, evidence: 'artist evidence' }],
+    artists: [
+      { name: 'Artist Only', confidence: 0.91, evidence: 'artist evidence' },
+    ],
     albums: [
       {
         name: 'Album With Drifted Keys',
@@ -368,7 +441,13 @@ test('extractAndPersistNewsletterMessage accepts pi output with album title/arti
       return {
         sourceName: 'Schema Drift Source',
         summary: 'Schema Drift summary',
-        artists: [{ name: 'Artist Only', confidence: 0.91, evidence: 'artist evidence' }],
+        artists: [
+          {
+            name: 'Artist Only',
+            confidence: 0.91,
+            evidence: 'artist evidence',
+          },
+        ],
         albums: [
           {
             title: 'Album With Drifted Keys',
@@ -417,7 +496,10 @@ test('extractAndPersistNewsletterMessage accepts pi output with album title/arti
     assert.equal(result.normalizedCounts.albums, 1);
     assert.equal(result.normalizedCounts.tracks, 1);
 
-    const extractionJson = getNewsletterMessageByGmailMessageId(db, 'gmail-llm-schema-drift');
+    const extractionJson = getNewsletterMessageByGmailMessageId(
+      db,
+      'gmail-llm-schema-drift'
+    );
     assert.equal(extractionJson?.extractionStatus, 'extracted');
 
     const albumRow = db
@@ -492,16 +574,23 @@ test('createPiNewsletterLlmClient retries once before failing', async () => {
 
   assert.equal(attempts, 2);
   assert.equal((extraction as { summary: string }).summary, 'Recovered');
-  assert.ok(logs.some((line) => line.includes('event=pi_extract.attempt attempt=1')));
-  assert.ok(logs.some((line) => line.includes('event=pi_extract.retry attempt=1')));
-  assert.ok(logs.some((line) => line.includes('event=pi_extract.attempt attempt=2')));
-  assert.ok(logs.some((line) => line.includes('event=pi_extract.succeeded attempt=2')));
+  assert.ok(logs.some((line) => line.includes('PI extraction attempt 1/2')));
+  assert.ok(
+    logs.some((line) => line.includes('PI extraction failed; retrying'))
+  );
+  assert.ok(logs.some((line) => line.includes('PI extraction attempt 2/2')));
+  assert.ok(logs.some((line) => line.includes('PI extraction succeeded')));
 });
 
 test('resolveSampleFixturePath supports repo-root-relative fixture paths', () => {
-  const resolvedPath = resolveSampleFixturePath('apps/ingest/fixtures/sample-newsletter.json');
+  const resolvedPath = resolveSampleFixturePath(
+    'apps/ingest/fixtures/sample-newsletter.json'
+  );
 
-  assert.match(resolvedPath, /apps\/ingest\/fixtures\/sample-newsletter\.json$/);
+  assert.match(
+    resolvedPath,
+    /apps\/ingest\/fixtures\/sample-newsletter\.json$/
+  );
 });
 
 test('readSampleFixture loads local sample content for CLI verification', () => {

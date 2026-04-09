@@ -120,9 +120,7 @@ export function createPiNewsletterLlmClient(
         try {
           if (verbose) {
             logger(
-              `event=pi_extract.attempt attempt=${attemptNumber} model=${model} source=${sanitizeLogValue(
-                llmInput.sourceName ?? 'unknown'
-              )} subject=${sanitizeLogValue(llmInput.subject ?? 'unknown')}`
+              `  PI extraction attempt ${attemptNumber}/${retries + 1} with ${model} for ${llmInput.sourceName ?? 'unknown'} — ${llmInput.subject ?? 'unknown'}`
             );
           }
 
@@ -140,13 +138,15 @@ export function createPiNewsletterLlmClient(
           ]);
 
           if (result.exitCode !== 0) {
-            throw new Error(result.stderr.trim() || `pi exited with code ${result.exitCode}`);
+            throw new Error(
+              result.stderr.trim() || `pi exited with code ${result.exitCode}`
+            );
           }
 
           const parsedOutput = parsePiJsonOutput(result.stdout);
 
           if (verbose) {
-            logger(`event=pi_extract.succeeded attempt=${attemptNumber} model=${model}`);
+            logger('  PI extraction succeeded');
           }
 
           return parsedOutput;
@@ -156,9 +156,7 @@ export function createPiNewsletterLlmClient(
           if (attempt === retries) {
             if (verbose) {
               logger(
-                `event=pi_extract.failed attempt=${attemptNumber} model=${model} error=${sanitizeLogValue(
-                  error instanceof Error ? error.message : String(error)
-                )}`
+                `  PI extraction failed: ${error instanceof Error ? error.message : String(error)}`
               );
             }
             throw lastError;
@@ -166,9 +164,7 @@ export function createPiNewsletterLlmClient(
 
           if (verbose) {
             logger(
-              `event=pi_extract.retry attempt=${attemptNumber} model=${model} error=${sanitizeLogValue(
-                error instanceof Error ? error.message : String(error)
-              )}`
+              `  PI extraction failed; retrying: ${error instanceof Error ? error.message : String(error)}`
             );
           }
         }
@@ -185,11 +181,19 @@ export async function extractAndPersistNewsletterMessage(
   const cleanedText = input.message.cleanedText?.trim();
 
   if (!cleanedText) {
-    updateNewsletterMessageExtractionStatus(input.db, input.newsletterMessageId, 'failed');
+    updateNewsletterMessageExtractionStatus(
+      input.db,
+      input.newsletterMessageId,
+      'failed'
+    );
     throw new Error('Cannot extract newsletter entities without cleaned text.');
   }
 
-  updateNewsletterMessageExtractionStatus(input.db, input.newsletterMessageId, 'extracting');
+  updateNewsletterMessageExtractionStatus(
+    input.db,
+    input.newsletterMessageId,
+    'extracting'
+  );
 
   try {
     const rawExtraction = await input.llmClient.extract({
@@ -197,7 +201,9 @@ export async function extractAndPersistNewsletterMessage(
       subject: input.message.subject ?? null,
       cleanedText,
     });
-    const extraction = parseNewsletterExtraction(normalizePiExtractionShape(rawExtraction));
+    const extraction = parseNewsletterExtraction(
+      normalizePiExtractionShape(rawExtraction)
+    );
     const normalizedExtraction = filterNormalizedExtraction(
       extraction,
       input.entityConfidenceThreshold
@@ -207,7 +213,8 @@ export async function extractAndPersistNewsletterMessage(
       const extractionId = insertNewsletterExtraction(input.db, {
         newsletterMessageId: input.newsletterMessageId,
         modelName: input.llmClient.modelName,
-        promptVersion: input.promptVersion ?? NEWSLETTER_EXTRACTION_PROMPT_VERSION,
+        promptVersion:
+          input.promptVersion ?? NEWSLETTER_EXTRACTION_PROMPT_VERSION,
         extractionJson: JSON.stringify(extraction),
         summary: extraction.summary,
       });
@@ -250,7 +257,11 @@ export async function extractAndPersistNewsletterMessage(
           confidence: link.confidence,
         })),
       });
-      updateNewsletterMessageExtractionStatus(input.db, input.newsletterMessageId, 'extracted');
+      updateNewsletterMessageExtractionStatus(
+        input.db,
+        input.newsletterMessageId,
+        'extracted'
+      );
 
       return extractionId;
     });
@@ -269,12 +280,18 @@ export async function extractAndPersistNewsletterMessage(
       },
     };
   } catch (error) {
-    updateNewsletterMessageExtractionStatus(input.db, input.newsletterMessageId, 'failed');
+    updateNewsletterMessageExtractionStatus(
+      input.db,
+      input.newsletterMessageId,
+      'failed'
+    );
     throw error;
   }
 }
 
-export function normalizeFixtureMessageBodies(fixture: SampleNewsletterFixture) {
+export function normalizeFixtureMessageBodies(
+  fixture: SampleNewsletterFixture
+) {
   return normalizeGmailMessagePayload(fixture.message.payload ?? null);
 }
 
@@ -308,7 +325,9 @@ export function resolveSampleFixturePath(fixturePath: string): string {
   return resolvedPath;
 }
 
-export function readSampleFixture(fixturePath: string): SampleNewsletterFixture {
+export function readSampleFixture(
+  fixturePath: string
+): SampleNewsletterFixture {
   const rawFixture = JSON.parse(
     readFileSync(resolveSampleFixturePath(fixturePath), 'utf8')
   ) as unknown;
@@ -321,7 +340,9 @@ export function readSampleFixture(fixturePath: string): SampleNewsletterFixture 
   };
 }
 
-export function buildNewsletterExtractionPrompt(input: NewsletterLlmInput): string {
+export function buildNewsletterExtractionPrompt(
+  input: NewsletterLlmInput
+): string {
   return [
     'Return strict JSON only.',
     'Return exactly one JSON object with these top-level keys only: sourceName, summary, artists, albums, tracks, genres, links, releases, events.',
@@ -340,6 +361,11 @@ export function buildNewsletterExtractionPrompt(input: NewsletterLlmInput): stri
 }
 
 export function normalizePiExtractionShape(input: unknown): unknown {
+  if (Array.isArray(input)) {
+    const firstObject = input.find((item) => isPlainObject(item));
+    return firstObject ? normalizePiExtractionShape(firstObject) : input;
+  }
+
   if (!isPlainObject(input)) {
     return input;
   }
@@ -350,7 +376,75 @@ export function normalizePiExtractionShape(input: unknown): unknown {
     albums: normalizeEntityArray(input.albums),
     tracks: normalizeEntityArray(input.tracks),
     genres: normalizeEntityArray(input.genres),
+    links: normalizeLinkArray(input.links),
   };
+}
+
+function normalizeLinkArray(value: unknown): unknown {
+  if (!Array.isArray(value)) {
+    return value;
+  }
+
+  return value
+    .map((item) => normalizeLinkItem(item))
+    .filter((item) => item !== null);
+}
+
+function normalizeLinkItem(
+  item: unknown
+): Record<string, unknown> | null | unknown {
+  if (!isPlainObject(item)) {
+    return item;
+  }
+
+  const normalizedUrl = normalizeExtractedUrl(item.url);
+
+  if (!normalizedUrl) {
+    return null;
+  }
+
+  return {
+    ...item,
+    url: normalizedUrl,
+  };
+}
+
+function normalizeExtractedUrl(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  let candidate = value.trim();
+
+  while (candidate.length > 0 && /[),.;]$/.test(candidate)) {
+    candidate = candidate.slice(0, -1).trim();
+  }
+
+  if (!candidate) {
+    return null;
+  }
+
+  const directUrl = tryParseUrl(candidate);
+
+  if (directUrl) {
+    return directUrl;
+  }
+
+  const httpsUrl = tryParseUrl(`https://${candidate}`);
+
+  if (httpsUrl && /^https:\/\/[A-Za-z0-9.-]+\.[A-Za-z]{2,}/.test(httpsUrl)) {
+    return httpsUrl;
+  }
+
+  return null;
+}
+
+function tryParseUrl(value: string): string | null {
+  try {
+    return new URL(value).toString();
+  } catch {
+    return null;
+  }
 }
 
 function normalizeEntityArray(value: unknown): unknown {
@@ -393,7 +487,10 @@ export function getPersistedExtractionJson(
   db: NewsletterDatabase,
   newsletterMessageId: number
 ): string | null {
-  return getLatestNewsletterExtractionByMessageId(db, newsletterMessageId)?.extractionJson ?? null;
+  return (
+    getLatestNewsletterExtractionByMessageId(db, newsletterMessageId)
+      ?.extractionJson ?? null
+  );
 }
 
 function sanitizeLogValue(value: string): string {
