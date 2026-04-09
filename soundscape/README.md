@@ -58,6 +58,9 @@ bash scripts/run-newsletter-sync.sh
 # Live Gmail sync with readable progress output
 bash scripts/run-newsletter-sync.sh --verbose
 
+# Retry extraction for every newsletter row currently marked failed in SQLite
+pnpm --filter @soundscape/ingest start -- --retry-failed
+
 # Reset the newsletter DB and reingest everything from scratch
 bash scripts/run-newsletter-sync.sh --from-scratch --verbose
 
@@ -114,6 +117,7 @@ Setup notes:
 - `NEWSLETTER_DB_PATH` is optional; if unset, the default DB is `soundscape/data/newsletters.sqlite`.
 - Gmail credentials are optional for `--dry-run`.
 - `--sync-now` requires all Gmail OAuth fields plus a working local `pi` CLI install.
+- `--retry-failed` reuses already-persisted raw newsletter rows from SQLite, so it skips Gmail entirely and only needs a working local `pi` CLI install.
 - `PI_LLM_MODEL` defaults to `gpt-5.4-mini` when unset.
 - Live extraction uses pi headless (`pi --print`) and retries once per message before marking that extraction failed.
 - `--from-scratch` deletes the local newsletter SQLite DB before the run starts, including SQLite `-wal` and `-shm` sidecar files.
@@ -194,10 +198,11 @@ soundscape/
 2. Create or choose a Gmail label for newsletters and set `NEWSLETTER_GMAIL_LABEL`.
 3. Run `bash scripts/run-newsletter-sync.sh --dry-run` to initialize the DB and verify config loading.
 4. Run `bash scripts/run-newsletter-sync.sh` or `pnpm --filter @soundscape/ingest start -- --sync-now` for live Gmail ingestion once credentials are configured.
-5. Use `bash scripts/run-newsletter-sync.sh --from-scratch --verbose` when you want a clean full reingest from an empty local DB.
-6. Optionally run `pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json` to load fixture data into the same DB without Gmail access.
-7. Start the app with `pnpm dev`, enter a username, and switch the right-hand panel from `Similar` to `Newsletters`.
-8. Use the newsletter list on the left side of that panel and the detail view on the right to inspect summaries, extracted artists/albums/tracks, and links.
+5. Run `pnpm --filter @soundscape/ingest start -- --retry-failed` when you want to retry only the newsletter rows whose extraction previously failed without making a fresh Gmail fetch.
+6. Use `bash scripts/run-newsletter-sync.sh --from-scratch --verbose` when you want a clean full reingest from an empty local DB.
+7. Optionally run `pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json` to load fixture data into the same DB without Gmail access.
+8. Start the app with `pnpm dev`, enter a username, and switch the right-hand panel from `Similar` to `Newsletters`.
+9. Use the newsletter list on the left side of that panel and the detail view on the right to inspect summaries, extracted artists/albums/tracks, and links.
 
 For ingest-specific setup and scheduler examples, see `apps/ingest/README.md`.
 

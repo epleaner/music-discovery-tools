@@ -13,10 +13,11 @@ import {
   parseCliOptions,
   resetNewsletterDatabase,
   runLiveNewsletterSync,
+  runRetryFailedNewsletterExtractions,
 } from './index.js';
-import { startSyncRun } from './sync-state.js';
+import { persistRawGmailMessage, type GmailApiClient } from './gmail.js';
 import { getPersistedExtractionJson } from './llm.js';
-import type { GmailApiClient } from './gmail.js';
+import { startSyncRun } from './sync-state.js';
 
 function createTestDatabase() {
   const tempDir = mkdtempSync(join(tmpdir(), 'soundscape-live-sync-'));
@@ -36,6 +37,7 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
   assert.deepEqual(parseCliOptions(['--sync-now']), {
     dryRun: false,
     syncNow: true,
+    retryFailed: false,
     verbose: false,
     fromScratch: false,
     samplePath: undefined,
@@ -43,6 +45,7 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
   assert.deepEqual(parseCliOptions(['--dry-run']), {
     dryRun: true,
     syncNow: false,
+    retryFailed: false,
     verbose: false,
     fromScratch: false,
     samplePath: undefined,
@@ -50,6 +53,7 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
   assert.deepEqual(parseCliOptions(['--sample', 'fixture.json']), {
     dryRun: false,
     syncNow: false,
+    retryFailed: false,
     verbose: false,
     fromScratch: false,
     samplePath: 'fixture.json',
@@ -57,6 +61,7 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
   assert.deepEqual(parseCliOptions(['--sync-now', '--verbose']), {
     dryRun: false,
     syncNow: true,
+    retryFailed: false,
     verbose: true,
     fromScratch: false,
     samplePath: undefined,
@@ -66,11 +71,20 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
     {
       dryRun: false,
       syncNow: true,
+      retryFailed: false,
       verbose: true,
       fromScratch: true,
       samplePath: undefined,
     }
   );
+  assert.deepEqual(parseCliOptions(['--retry-failed', '--verbose']), {
+    dryRun: false,
+    syncNow: false,
+    retryFailed: true,
+    verbose: true,
+    fromScratch: false,
+    samplePath: undefined,
+  });
   assert.throws(
     () => parseCliOptions(['--sync-now', '--dry-run']),
     /either --sync-now or --dry-run/
@@ -79,6 +93,212 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
     () => parseCliOptions(['--sync-now', '--sample', 'fixture.json']),
     /either --sync-now or --sample/
   );
+  assert.throws(
+    () => parseCliOptions(['--retry-failed', '--sync-now']),
+    /--retry-failed cannot be combined with --sync-now/
+  );
+  assert.throws(
+    () => parseCliOptions(['--retry-failed', '--dry-run']),
+    /--retry-failed cannot be combined with --dry-run/
+  );
+  assert.throws(
+    () => parseCliOptions(['--retry-failed', '--sample', 'fixture.json']),
+    /--retry-failed cannot be combined with --sample/
+  );
+  assert.throws(
+    () => parseCliOptions(['--retry-failed', '--from-scratch']),
+    /--retry-failed cannot be combined with --from-scratch/
+  );
+});
+
+test('runRetryFailedNewsletterExtractions retries only failed messages without advancing the cursor', async () => {
+  const { db, cleanup } = createTestDatabase();
+
+  try {
+    persistRawGmailMessage(db, {
+      id: 'gmail-retry-failed',
+      subject: 'Retry me',
+      senderName: 'Retry Sender',
+      senderEmail: 'retry@example.com',
+      sentAt: '2026-04-08T12:10:00.000Z',
+      rawText: 'Retry Artist',
+      cleanedText: 'Retry Artist',
+    });
+    persistRawGmailMessage(db, {
+      id: 'gmail-retry-pending',
+      subject: 'Leave me pending',
+      senderName: 'Pending Sender',
+      senderEmail: 'pending@example.com',
+      sentAt: '2026-04-08T12:11:00.000Z',
+      rawText: 'Pending Artist',
+      cleanedText: 'Pending Artist',
+    });
+
+    db.prepare(
+      'UPDATE newsletter_messages SET extraction_status = ? WHERE gmail_message_id = ?'
+    ).run('failed', 'gmail-retry-failed');
+    db.prepare(
+      'UPDATE newsletter_messages SET extraction_status = ? WHERE gmail_message_id = ?'
+    ).run('pending', 'gmail-retry-pending');
+    db.prepare('INSERT INTO app_state (key, value) VALUES (?, ?)').run(
+      'newsletters.lastSuccessfulSyncAt',
+      '2026-04-08T12:11:00.000Z'
+    );
+
+    const syncRunId = startSyncRun(db, '2026-04-09T09:00:00.000Z');
+    const extractedMessageIds: string[] = [];
+    const result = await runRetryFailedNewsletterExtractions({
+      db,
+      config: {
+        gmailLabel: 'music',
+        dbPath: undefined,
+        entityConfidenceThreshold: 0.8,
+        gmail: {
+          clientId: 'unused',
+          clientSecret: 'unused',
+          refreshToken: 'unused',
+          redirectUri: 'unused',
+        },
+        llm: {
+          model: 'gpt-5.4-medium',
+        },
+      },
+      llmClient: {
+        modelName: 'test-retry-model',
+        async extract(input) {
+          extractedMessageIds.push(input.subject ?? 'unknown');
+          return {
+            sourceName: input.sourceName ?? 'Retry Sender',
+            summary: 'Retried summary',
+            artists: [
+              {
+                name: 'Retry Artist',
+                confidence: 0.95,
+                evidence: 'Retry Artist',
+              },
+            ],
+            albums: [],
+            tracks: [],
+            genres: [],
+            links: [],
+            releases: [],
+            events: [],
+          };
+        },
+      },
+      syncRunId,
+    });
+
+    const failedRow = db
+      .prepare<
+        [string],
+        { extraction_status: string; id: number }
+      >('SELECT extraction_status, id FROM newsletter_messages WHERE gmail_message_id = ?')
+      .get('gmail-retry-failed');
+    const pendingRow = db
+      .prepare<
+        [string],
+        { extraction_status: string }
+      >('SELECT extraction_status FROM newsletter_messages WHERE gmail_message_id = ?')
+      .get('gmail-retry-pending');
+    const syncRun = getSyncRunById(db, syncRunId);
+
+    assert.deepEqual(extractedMessageIds, ['Retry me']);
+    assert.equal(result.messageCount, 1);
+    assert.equal(result.extractionFailureCount, 0);
+    assert.equal(result.syncRunStatus, 'succeeded');
+    assert.equal(failedRow?.extraction_status, 'extracted');
+    assert.equal(pendingRow?.extraction_status, 'pending');
+    assert.match(
+      getPersistedExtractionJson(db, failedRow!.id) ?? '',
+      /Retry Artist/
+    );
+    assert.equal(
+      getAppState(db, 'newsletters.lastSuccessfulSyncAt'),
+      '2026-04-08T12:11:00.000Z'
+    );
+    assert.equal(syncRun?.status, 'succeeded');
+    assert.equal(syncRun?.newestMessageTimestamp, null);
+  } finally {
+    cleanup();
+  }
+});
+
+test('runRetryFailedNewsletterExtractions emits readable verbose progress logs', async () => {
+  const { db, cleanup } = createTestDatabase();
+  const logs: string[] = [];
+
+  try {
+    persistRawGmailMessage(db, {
+      id: 'gmail-retry-verbose-1',
+      subject: 'Verbose retry',
+      senderName: 'Verbose Retry Sender',
+      senderEmail: 'retry-verbose@example.com',
+      sentAt: '2026-04-08T12:12:00.000Z',
+      rawText: 'Verbose Retry Artist',
+      cleanedText: 'Verbose Retry Artist',
+    });
+
+    db.prepare(
+      'UPDATE newsletter_messages SET extraction_status = ? WHERE gmail_message_id = ?'
+    ).run('failed', 'gmail-retry-verbose-1');
+
+    const syncRunId = startSyncRun(db, '2026-04-09T09:10:00.000Z');
+
+    await runRetryFailedNewsletterExtractions({
+      db,
+      config: {
+        gmailLabel: 'music',
+        dbPath: undefined,
+        entityConfidenceThreshold: 0.8,
+        gmail: {},
+        llm: {
+          model: 'gpt-5.4-medium',
+        },
+      },
+      llmClient: {
+        modelName: 'test-retry-model',
+        async extract() {
+          return {
+            sourceName: 'Verbose Retry Sender',
+            summary: 'Retried summary',
+            artists: [
+              {
+                name: 'Verbose Retry Artist',
+                confidence: 0.95,
+                evidence: 'Verbose Retry Artist',
+              },
+            ],
+            albums: [],
+            tracks: [],
+            genres: [],
+            links: [],
+            releases: [],
+            events: [],
+          };
+        },
+      },
+      syncRunId,
+      verbose: true,
+      logger: (line) => logs.push(line),
+    });
+
+    assert.ok(
+      logs.some((line) =>
+        line.includes('Retrying failed newsletter extractions')
+      )
+    );
+    assert.ok(
+      logs.some((line) =>
+        line.includes('[1/1] Verbose Retry Sender — Verbose retry')
+      )
+    );
+    assert.ok(logs.some((line) => line.includes('Starting extraction')));
+    assert.ok(logs.some((line) => line.includes('Extraction saved')));
+    assert.ok(logs.some((line) => line.includes('Retry run complete')));
+  } finally {
+    cleanup();
+  }
 });
 
 test('resetNewsletterDatabase removes sqlite db and sidecar files', () => {

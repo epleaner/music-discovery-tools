@@ -52,8 +52,9 @@ Newsletter-specific setup:
 3. Leave `NEWSLETTER_DB_PATH` unset if you want the default SQLite DB at `soundscape/data/newsletters.sqlite`.
 4. `--dry-run` does not require Gmail or pi credentials.
 5. `--sync-now` requires all Gmail OAuth fields plus a working local `pi` CLI install.
-6. `PI_LLM_MODEL` defaults to `gpt-5.4-mini` when unset.
-7. Live extraction uses pi headless (`pi --print`) and retries once per message before marking that extraction failed.
+6. `--retry-failed` reuses already-persisted raw newsletter rows from SQLite, so it skips Gmail entirely and only needs a working local `pi` CLI install.
+7. `PI_LLM_MODEL` defaults to `gpt-5.4-mini` when unset.
+8. Live extraction uses pi headless (`pi --print`) and retries once per message before marking that extraction failed.
 
 ### 4. Start Development
 
@@ -109,6 +110,8 @@ bash scripts/run-newsletter-sync.sh --dry-run
 bash scripts/run-newsletter-sync.sh
 bash scripts/run-newsletter-sync.sh --verbose
 bash scripts/run-newsletter-sync.sh --from-scratch --verbose
+pnpm --filter @soundscape/ingest start -- --retry-failed
+pnpm --filter @soundscape/ingest start -- --retry-failed --verbose
 pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json
 ```
 
@@ -123,6 +126,7 @@ Expected output includes:
 - `Reset newsletter database` when `--from-scratch` is used
 - `Soundscape newsletter ingest live sync` after `--sync-now` succeeds
 - `messageCount=` and `newestMessageTimestamp=` for live sync runs
+- `Soundscape newsletter ingest failed-message retry` plus `mode=retry-failed` when you run the retry path
 - `Soundscape newsletter ingest sample run`
 - `mode=sample`
 - `normalizedArtists=1`
@@ -146,9 +150,11 @@ bash scripts/run-newsletter-sync.sh
 bash scripts/run-newsletter-sync.sh --verbose
 bash scripts/run-newsletter-sync.sh --from-scratch --verbose
 bash scripts/run-newsletter-sync.sh --dry-run
+pnpm --filter @soundscape/ingest start -- --retry-failed
+pnpm --filter @soundscape/ingest start -- --retry-failed --verbose
 ```
 
-With no mode flag, the wrapper defaults to `--sync-now`, so `bash scripts/run-newsletter-sync.sh --verbose` runs a live sync with readable progress output. `--from-scratch` clears the local newsletter DB before the run starts. The wrapper still forwards explicit flags to `pnpm --filter @soundscape/ingest start -- ...`, so it is safe to use from cron or `launchd`.
+With no mode flag, the wrapper defaults to `--sync-now`, so `bash scripts/run-newsletter-sync.sh --verbose` runs a live sync with readable progress output. `--from-scratch` clears the local newsletter DB before the run starts. Use the direct ingest CLI for `--retry-failed`; that path intentionally skips Gmail fetches and only reprocesses rows already marked `failed` in SQLite.
 
 ### Test Real-Time Communication
 

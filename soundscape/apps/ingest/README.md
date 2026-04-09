@@ -24,6 +24,12 @@ pnpm --filter @soundscape/ingest start -- --sync-now
 # Live Gmail sync with readable progress output
 pnpm --filter @soundscape/ingest start -- --sync-now --verbose
 
+# Retry extraction for every newsletter row currently marked failed in SQLite
+pnpm --filter @soundscape/ingest start -- --retry-failed
+
+# Retry failed extractions with readable progress output
+pnpm --filter @soundscape/ingest start -- --retry-failed --verbose
+
 # Reset the local newsletter DB and reingest everything from scratch
 bash scripts/run-newsletter-sync.sh --from-scratch --verbose
 
@@ -72,6 +78,7 @@ Notes:
 - `NEWSLETTER_DB_PATH` is optional. If unset, the app uses `soundscape/data/newsletters.sqlite`.
 - `--dry-run` does not require Gmail or pi credentials.
 - `--sync-now` requires the Gmail OAuth fields and a working local `pi` CLI install.
+- `--retry-failed` reuses already-persisted raw newsletter rows from SQLite, so it does not make Gmail API calls. It still requires a working local `pi` CLI install.
 - `PI_LLM_MODEL` defaults to `gpt-5.4-mini` when unset.
 - Live extraction uses pi headless (`pi --print`) and retries once per message before marking that extraction failed.
 - `--from-scratch` deletes the local newsletter DB before the run starts, including SQLite `-wal` and `-shm` sidecar files.
@@ -81,6 +88,7 @@ Notes:
 
 - The live Gmail query always targets the configured label and is bounded by the last successful sync timestamp when one exists.
 - Successful live syncs update the cursor to the newest processed message timestamp.
+- `--retry-failed` retries only rows where `newsletter_messages.extraction_status='failed'` and leaves the successful Gmail cursor unchanged.
 - Re-running without new messages is idempotent: the sync completes with `messageCount=0` and keeps the prior successful cursor.
 - Duplicate Gmail message ids are upserted safely.
 - If extraction fails for a specific message, raw content is still persisted and the sync summary reports the extraction failure count.
@@ -113,9 +121,11 @@ bash scripts/run-newsletter-sync.sh
 bash scripts/run-newsletter-sync.sh --verbose
 bash scripts/run-newsletter-sync.sh --from-scratch --verbose
 bash scripts/run-newsletter-sync.sh --dry-run
+pnpm --filter @soundscape/ingest start -- --retry-failed
+pnpm --filter @soundscape/ingest start -- --retry-failed --verbose
 ```
 
-`--verbose` emits readable one-line progress updates with indented details for Gmail phases, per-message progress, and pi extraction attempts/retries. `--from-scratch` clears the local newsletter DB before the run starts.
+`--verbose` emits readable one-line progress updates with indented details for Gmail phases, failed-message retries, per-message progress, and pi extraction attempts/retries. `--from-scratch` clears the local newsletter DB before the run starts. `--retry-failed` is only exposed on the direct ingest CLI because the wrapper intentionally defaults to fresh live syncs.
 
 Example cron entry for a daily live sync at 7:30 AM:
 
