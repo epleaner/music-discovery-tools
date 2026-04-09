@@ -2,7 +2,6 @@ import { Component, For, Show, createMemo, createSignal } from 'solid-js';
 import { createNewsletterDetailResource } from '../lib/newsletter-resource.js';
 import type { NewsletterApi, NewsletterSummary } from '../lib/newsletters.js';
 import {
-  buildNewsletterEntityLabels,
   formatNewsletterDate,
   type NewsletterLinkModel,
 } from './newsletter-panel-model.js';
@@ -26,6 +25,20 @@ interface SectionToggleProps {
   count?: number;
 }
 
+interface NewsletterModalProps {
+  title: string;
+  sourceLabel: string;
+  summary: string | null;
+  text: string | null;
+  artists: string[];
+  albums: string[];
+  tracks: string[];
+  links: NewsletterLinkModel[];
+  isLoading: boolean;
+  error: Error | null;
+  onClose: () => void;
+}
+
 const SectionToggle: Component<SectionToggleProps> = (props) => {
   const suffix = () => (props.count != null ? ` (${props.count})` : '');
 
@@ -43,6 +56,129 @@ const SectionToggle: Component<SectionToggleProps> = (props) => {
   );
 };
 
+const NewsletterModal: Component<NewsletterModalProps> = (props) => {
+  return (
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-fg/20 px-4 py-6">
+      <div class="flex max-h-full w-full max-w-3xl flex-col overflow-hidden border border-border bg-bg">
+        <div class="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+          <div class="min-w-0">
+            <div class="text-[10px] uppercase tracking-[0.18em] text-fg-muted">
+              {props.sourceLabel}
+            </div>
+            <div class="mt-1 text-sm font-medium">{props.title}</div>
+          </div>
+          <button
+            type="button"
+            onClick={props.onClose}
+            class="px-2 py-1 text-xs border border-border text-fg-muted hover:text-fg"
+          >
+            Close
+          </button>
+        </div>
+
+        <div class="overflow-y-auto px-4 py-3">
+          <Show when={props.error}>
+            <div class="text-xs text-fg-muted">{props.error?.message}</div>
+          </Show>
+
+          <Show when={props.isLoading}>
+            <div class="text-xs text-fg-muted">Loading full newsletter…</div>
+          </Show>
+
+          <Show when={!props.isLoading && !props.error && props.summary}>
+            <section class="mb-4">
+              <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
+                Summary
+              </div>
+              <p class="text-xs leading-5 text-fg-muted">{props.summary}</p>
+            </section>
+          </Show>
+
+          <Show when={!props.isLoading && !props.error && props.text}>
+            <section class="mb-4">
+              <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
+                Full text
+              </div>
+              <p class="text-xs leading-5 whitespace-pre-wrap text-fg-muted">
+                {props.text}
+              </p>
+            </section>
+          </Show>
+
+          <Show
+            when={!props.isLoading && !props.error && props.artists.length > 0}
+          >
+            <section class="mb-4">
+              <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
+                Artists
+              </div>
+              <div class="flex flex-wrap gap-1">
+                <For each={props.artists}>
+                  {(artist) => (
+                    <span class="px-1.5 py-0.5 text-xs border border-border">
+                      {artist}
+                    </span>
+                  )}
+                </For>
+              </div>
+            </section>
+          </Show>
+
+          <Show
+            when={!props.isLoading && !props.error && props.albums.length > 0}
+          >
+            <section class="mb-4">
+              <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
+                Albums
+              </div>
+              <div class="space-y-1 text-xs">
+                <For each={props.albums}>{(album) => <div>{album}</div>}</For>
+              </div>
+            </section>
+          </Show>
+
+          <Show
+            when={!props.isLoading && !props.error && props.tracks.length > 0}
+          >
+            <section class="mb-4">
+              <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
+                Tracks
+              </div>
+              <div class="space-y-1 text-xs">
+                <For each={props.tracks}>{(track) => <div>{track}</div>}</For>
+              </div>
+            </section>
+          </Show>
+
+          <Show
+            when={!props.isLoading && !props.error && props.links.length > 0}
+          >
+            <section>
+              <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
+                Links
+              </div>
+              <div class="space-y-1 text-xs">
+                <For each={props.links}>
+                  {(link) => (
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      class="block truncate text-fg-muted hover:text-fg"
+                    >
+                      {link.label}
+                    </a>
+                  )}
+                </For>
+              </div>
+            </section>
+          </Show>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function formatSectionItems(items: string[]): string[] {
   return items.filter((item) => item.trim().length > 0);
 }
@@ -57,22 +193,19 @@ function buildLinkItems(newsletter: NewsletterSummary): NewsletterLinkModel[] {
 const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
   props
 ) => {
-  const [showText, setShowText] = createSignal(false);
   const [showArtists, setShowArtists] = createSignal(false);
   const [showAlbums, setShowAlbums] = createSignal(false);
   const [showTracks, setShowTracks] = createSignal(false);
   const [showLinks, setShowLinks] = createSignal(false);
+  const [showModal, setShowModal] = createSignal(false);
 
   const detailResource = createNewsletterDetailResource(
-    () => (showText() ? props.newsletter.id : null),
+    () => (showModal() ? props.newsletter.id : null),
     {
       api: props.api,
     }
   );
 
-  const entitySummary = createMemo(() =>
-    buildNewsletterEntityLabels(props.newsletter)
-  );
   const artists = createMemo(() =>
     formatSectionItems(props.newsletter.artists.map((artist) => artist.name))
   );
@@ -95,16 +228,50 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
     )
   );
   const links = createMemo(() => buildLinkItems(props.newsletter));
+  const sourceLabel = createMemo(
+    () =>
+      props.newsletter.source.canonicalName ??
+      props.newsletter.source.senderEmail ??
+      'Unknown source'
+  );
+  const modalArtists = createMemo(
+    () =>
+      detailResource.newsletter()?.artists.map((artist) => artist.name) ??
+      artists()
+  );
+  const modalAlbums = createMemo(
+    () =>
+      detailResource
+        .newsletter()
+        ?.albums.map((album) =>
+          album.primaryArtistName
+            ? `${album.name} — ${album.primaryArtistName}`
+            : album.name
+        ) ?? albums()
+  );
+  const modalTracks = createMemo(
+    () =>
+      detailResource
+        .newsletter()
+        ?.tracks.map((track) =>
+          track.primaryArtistName
+            ? `${track.name} — ${track.primaryArtistName}`
+            : track.name
+        ) ?? tracks()
+  );
+  const modalLinks = createMemo(
+    () =>
+      detailResource.newsletter()?.links.map((link) => ({
+        label: link.title ?? link.domain ?? link.url,
+        url: link.url,
+      })) ?? links()
+  );
 
   return (
     <article class="border-b border-border bg-bg">
       <div class="px-2.5 py-2">
         <div class="flex justify-between items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
-          <span class="truncate">
-            {props.newsletter.source.canonicalName ??
-              props.newsletter.source.senderEmail ??
-              'Unknown source'}
-          </span>
+          <span class="truncate">{sourceLabel()}</span>
           <span class="flex-shrink-0">
             {formatNewsletterDate(props.newsletter.sentAt)}
           </span>
@@ -116,28 +283,28 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
 
         <Show when={props.newsletter.summary}>
           <div class="mt-1 text-xs leading-5 text-fg-muted">
-            {props.newsletter.summary}
+            <p class="line-clamp-3">{props.newsletter.summary}</p>
+            <button
+              type="button"
+              onClick={() => setShowModal(true)}
+              class="mt-1 text-[10px] tracking-[0.18em] text-fg-muted hover:text-fg"
+            >
+              ... +
+            </button>
           </div>
         </Show>
 
-        <Show when={entitySummary().length > 0}>
-          <div class="flex flex-wrap gap-1 mt-2">
-            <For each={entitySummary()}>
-              {(item) => (
-                <span class="px-1.5 py-0.5 text-[10px] border border-border text-fg-muted">
-                  {item}
-                </span>
-              )}
-            </For>
-          </div>
+        <Show when={!props.newsletter.summary}>
+          <button
+            type="button"
+            onClick={() => setShowModal(true)}
+            class="mt-2 text-[10px] tracking-[0.18em] text-fg-muted hover:text-fg"
+          >
+            +
+          </button>
         </Show>
 
         <div class="flex flex-wrap gap-1 mt-2">
-          <SectionToggle
-            label="Text"
-            expanded={showText()}
-            onToggle={() => setShowText((value) => !value)}
-          />
           <Show when={artists().length > 0}>
             <SectionToggle
               label="Artists"
@@ -172,44 +339,6 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
           </Show>
         </div>
       </div>
-
-      <Show when={showText()}>
-        <section class="px-2.5 py-2 border-t border-border bg-bg-subtle">
-          <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
-            Text
-          </div>
-          <Show when={detailResource.error()}>
-            <div class="text-xs text-fg-muted">
-              {detailResource.error()?.message}
-            </div>
-          </Show>
-          <Show when={detailResource.status() === 'loading'}>
-            <div class="text-xs text-fg-muted">Loading text…</div>
-          </Show>
-          <Show
-            when={
-              detailResource.status() !== 'loading' &&
-              !detailResource.error() &&
-              detailResource.newsletter()?.cleanedText
-            }
-          >
-            <p class="text-xs leading-5 whitespace-pre-wrap text-fg-muted">
-              {detailResource.newsletter()?.cleanedText}
-            </p>
-          </Show>
-          <Show
-            when={
-              detailResource.status() !== 'loading' &&
-              !detailResource.error() &&
-              !detailResource.newsletter()?.cleanedText
-            }
-          >
-            <div class="text-xs text-fg-muted">
-              No extracted text available.
-            </div>
-          </Show>
-        </section>
-      </Show>
 
       <Show when={showArtists()}>
         <section class="px-2.5 py-2 border-t border-border bg-bg-subtle">
@@ -270,6 +399,22 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
             </For>
           </div>
         </section>
+      </Show>
+
+      <Show when={showModal()}>
+        <NewsletterModal
+          title={props.newsletter.subject ?? 'Untitled newsletter'}
+          sourceLabel={`${sourceLabel()} · ${formatNewsletterDate(props.newsletter.sentAt)}`}
+          summary={props.newsletter.summary}
+          text={detailResource.newsletter()?.cleanedText ?? null}
+          artists={modalArtists()}
+          albums={modalAlbums()}
+          tracks={modalTracks()}
+          links={modalLinks()}
+          isLoading={detailResource.status() === 'loading'}
+          error={detailResource.error()}
+          onClose={() => setShowModal(false)}
+        />
       </Show>
     </article>
   );
