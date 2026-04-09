@@ -1,6 +1,15 @@
 import { Component, For, Show, createMemo, createSignal } from 'solid-js';
 import { createNewsletterDetailResource } from '../lib/newsletter-resource.js';
-import type { NewsletterApi, NewsletterSummary } from '../lib/newsletters.js';
+import {
+  createNewsletterBandcampQuery,
+  findBandcampLookupItem,
+  shouldEnableBandcampLookup,
+} from '../lib/newsletter-bandcamp-query.js';
+import type {
+  NewsletterApi,
+  NewsletterBandcampLookupItem,
+  NewsletterSummary,
+} from '../lib/newsletters.js';
 import {
   formatNewsletterDate,
   type NewsletterLinkModel,
@@ -25,17 +34,28 @@ interface SectionToggleProps {
   count?: number;
 }
 
+interface BandcampEntityItem {
+  name: string;
+  primaryArtistName: string | null;
+  text: string;
+}
+
 interface NewsletterModalProps {
   title: string;
   sourceLabel: string;
   summary: string | null;
   text: string | null;
-  artists: string[];
-  albums: string[];
-  tracks: string[];
+  artists: BandcampEntityItem[];
+  albums: BandcampEntityItem[];
+  tracks: BandcampEntityItem[];
   links: NewsletterLinkModel[];
+  artistLookups: NewsletterBandcampLookupItem[];
+  albumLookups: NewsletterBandcampLookupItem[];
+  trackLookups: NewsletterBandcampLookupItem[];
   isLoading: boolean;
   error: Error | null;
+  bandcampError: Error | null;
+  isBandcampLoading: boolean;
   onClose: () => void;
 }
 
@@ -53,6 +73,81 @@ const SectionToggle: Component<SectionToggleProps> = (props) => {
       {props.expanded ? '−' : '+'} {props.label}
       {suffix()}
     </button>
+  );
+};
+
+function formatBandcampLabel(match: NewsletterBandcampLookupItem): string {
+  return match.label?.trim() || 'Bandcamp';
+}
+
+const BandcampInlineLink: Component<{
+  match: NewsletterBandcampLookupItem | null;
+}> = (props) => {
+  return (
+    <Show when={props.match?.url}>
+      <a
+        href={props.match?.url ?? '#'}
+        target="_blank"
+        rel="noreferrer"
+        class="text-[10px] uppercase tracking-[0.12em] text-fg-muted hover:text-fg"
+      >
+        {props.match ? formatBandcampLabel(props.match) : 'Bandcamp'}
+      </a>
+    </Show>
+  );
+};
+
+const BandcampChipList: Component<{
+  items: BandcampEntityItem[];
+  lookups: NewsletterBandcampLookupItem[];
+}> = (props) => {
+  return (
+    <div class="flex flex-wrap gap-1">
+      <For each={props.items}>
+        {(item) => {
+          const match = createMemo(() =>
+            findBandcampLookupItem(props.lookups, {
+              name: item.name,
+              primaryArtistName: item.primaryArtistName,
+            })
+          );
+
+          return (
+            <div class="flex items-center gap-1 px-1.5 py-0.5 text-xs border border-border">
+              <span>{item.text}</span>
+              <BandcampInlineLink match={match()} />
+            </div>
+          );
+        }}
+      </For>
+    </div>
+  );
+};
+
+const BandcampTextList: Component<{
+  items: BandcampEntityItem[];
+  lookups: NewsletterBandcampLookupItem[];
+}> = (props) => {
+  return (
+    <div class="space-y-1 text-xs">
+      <For each={props.items}>
+        {(item) => {
+          const match = createMemo(() =>
+            findBandcampLookupItem(props.lookups, {
+              name: item.name,
+              primaryArtistName: item.primaryArtistName,
+            })
+          );
+
+          return (
+            <div class="flex items-center justify-between gap-2">
+              <span>{item.text}</span>
+              <BandcampInlineLink match={match()} />
+            </div>
+          );
+        }}
+      </For>
+    </div>
   );
 };
 
@@ -81,8 +176,18 @@ const NewsletterModal: Component<NewsletterModalProps> = (props) => {
             <div class="text-xs text-fg-muted">{props.error?.message}</div>
           </Show>
 
+          <Show when={props.bandcampError && !props.error}>
+            <div class="mb-2 text-xs text-fg-muted">
+              {props.bandcampError?.message}
+            </div>
+          </Show>
+
           <Show when={props.isLoading}>
             <div class="text-xs text-fg-muted">Loading full newsletter…</div>
+          </Show>
+
+          <Show when={props.isBandcampLoading && !props.isLoading}>
+            <div class="mb-2 text-xs text-fg-muted">Loading Bandcamp links…</div>
           </Show>
 
           <Show when={!props.isLoading && !props.error && props.summary}>
@@ -112,15 +217,10 @@ const NewsletterModal: Component<NewsletterModalProps> = (props) => {
               <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
                 Artists
               </div>
-              <div class="flex flex-wrap gap-1">
-                <For each={props.artists}>
-                  {(artist) => (
-                    <span class="px-1.5 py-0.5 text-xs border border-border">
-                      {artist}
-                    </span>
-                  )}
-                </For>
-              </div>
+              <BandcampChipList
+                items={props.artists}
+                lookups={props.artistLookups}
+              />
             </section>
           </Show>
 
@@ -131,9 +231,10 @@ const NewsletterModal: Component<NewsletterModalProps> = (props) => {
               <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
                 Albums
               </div>
-              <div class="space-y-1 text-xs">
-                <For each={props.albums}>{(album) => <div>{album}</div>}</For>
-              </div>
+              <BandcampTextList
+                items={props.albums}
+                lookups={props.albumLookups}
+              />
             </section>
           </Show>
 
@@ -144,9 +245,10 @@ const NewsletterModal: Component<NewsletterModalProps> = (props) => {
               <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
                 Tracks
               </div>
-              <div class="space-y-1 text-xs">
-                <For each={props.tracks}>{(track) => <div>{track}</div>}</For>
-              </div>
+              <BandcampTextList
+                items={props.tracks}
+                lookups={props.trackLookups}
+              />
             </section>
           </Show>
 
@@ -183,6 +285,32 @@ function formatSectionItems(items: string[]): string[] {
   return items.filter((item) => item.trim().length > 0);
 }
 
+function buildArtistItems(
+  artists: Array<{ name: string }>
+): BandcampEntityItem[] {
+  return artists
+    .filter((artist) => artist.name.trim().length > 0)
+    .map((artist) => ({
+      name: artist.name,
+      primaryArtistName: null,
+      text: artist.name,
+    }));
+}
+
+function buildReleaseItems(
+  items: Array<{ name: string; primaryArtistName: string | null }>
+): BandcampEntityItem[] {
+  return items
+    .filter((item) => item.name.trim().length > 0)
+    .map((item) => ({
+      name: item.name,
+      primaryArtistName: item.primaryArtistName,
+      text: item.primaryArtistName
+        ? `${item.name} — ${item.primaryArtistName}`
+        : item.name,
+    }));
+}
+
 function buildLinkItems(newsletter: NewsletterSummary): NewsletterLinkModel[] {
   return newsletter.links.map((link) => ({
     label: link.title ?? link.domain ?? link.url,
@@ -205,6 +333,19 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
       api: props.api,
     }
   );
+  const bandcampEnabled = createMemo(() =>
+    shouldEnableBandcampLookup({
+      isModalOpen: showModal(),
+      showArtists: showArtists(),
+      showAlbums: showAlbums(),
+      showTracks: showTracks(),
+    })
+  );
+  const bandcampQuery = createNewsletterBandcampQuery({
+    newsletterId: () => props.newsletter.id,
+    enabled: bandcampEnabled,
+    api: props.api,
+  });
 
   const artists = createMemo(() =>
     formatSectionItems(props.newsletter.artists.map((artist) => artist.name))
@@ -234,30 +375,17 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
       props.newsletter.source.senderEmail ??
       'Unknown source'
   );
+  const artistItems = createMemo(() => buildArtistItems(props.newsletter.artists));
+  const albumItems = createMemo(() => buildReleaseItems(props.newsletter.albums));
+  const trackItems = createMemo(() => buildReleaseItems(props.newsletter.tracks));
   const modalArtists = createMemo(
-    () =>
-      detailResource.newsletter()?.artists.map((artist) => artist.name) ??
-      artists()
+    () => buildArtistItems(detailResource.newsletter()?.artists ?? props.newsletter.artists)
   );
   const modalAlbums = createMemo(
-    () =>
-      detailResource
-        .newsletter()
-        ?.albums.map((album) =>
-          album.primaryArtistName
-            ? `${album.name} — ${album.primaryArtistName}`
-            : album.name
-        ) ?? albums()
+    () => buildReleaseItems(detailResource.newsletter()?.albums ?? props.newsletter.albums)
   );
   const modalTracks = createMemo(
-    () =>
-      detailResource
-        .newsletter()
-        ?.tracks.map((track) =>
-          track.primaryArtistName
-            ? `${track.name} — ${track.primaryArtistName}`
-            : track.name
-        ) ?? tracks()
+    () => buildReleaseItems(detailResource.newsletter()?.tracks ?? props.newsletter.tracks)
   );
   const modalLinks = createMemo(
     () =>
@@ -345,15 +473,10 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
           <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
             Artists
           </div>
-          <div class="flex flex-wrap gap-1">
-            <For each={artists()}>
-              {(artist) => (
-                <span class="px-1.5 py-0.5 text-xs border border-border">
-                  {artist}
-                </span>
-              )}
-            </For>
-          </div>
+          <BandcampChipList
+            items={artistItems()}
+            lookups={bandcampQuery.data?.artists ?? []}
+          />
         </section>
       </Show>
 
@@ -362,9 +485,10 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
           <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
             Albums
           </div>
-          <div class="space-y-1 text-xs">
-            <For each={albums()}>{(album) => <div>{album}</div>}</For>
-          </div>
+          <BandcampTextList
+            items={albumItems()}
+            lookups={bandcampQuery.data?.albums ?? []}
+          />
         </section>
       </Show>
 
@@ -373,9 +497,10 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
           <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
             Tracks
           </div>
-          <div class="space-y-1 text-xs">
-            <For each={tracks()}>{(track) => <div>{track}</div>}</For>
-          </div>
+          <BandcampTextList
+            items={trackItems()}
+            lookups={bandcampQuery.data?.tracks ?? []}
+          />
         </section>
       </Show>
 
@@ -411,8 +536,13 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
           albums={modalAlbums()}
           tracks={modalTracks()}
           links={modalLinks()}
+          artistLookups={bandcampQuery.data?.artists ?? []}
+          albumLookups={bandcampQuery.data?.albums ?? []}
+          trackLookups={bandcampQuery.data?.tracks ?? []}
           isLoading={detailResource.status() === 'loading'}
           error={detailResource.error()}
+          bandcampError={bandcampQuery.error ?? null}
+          isBandcampLoading={bandcampQuery.isLoading}
           onClose={() => setShowModal(false)}
         />
       </Show>
