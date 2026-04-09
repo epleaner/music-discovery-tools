@@ -46,6 +46,16 @@ export function findBandcampLookupItem(
   );
 }
 
+export function findBandcampHref(
+  items: NewsletterBandcampLookupItem[],
+  input: {
+    name: string;
+    primaryArtistName?: string | null;
+  }
+): string | null {
+  return findBandcampLookupItem(items, input)?.url ?? null;
+}
+
 export function createNewsletterBandcampQuery(input: {
   newsletterId: Accessor<number | null | undefined>;
   enabled: Accessor<boolean>;

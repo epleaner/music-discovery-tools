@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildBandcampLookupKey,
+  findBandcampHref,
   findBandcampLookupItem,
   shouldEnableBandcampLookup,
 } from './newsletter-bandcamp-query.js';
@@ -97,6 +98,33 @@ test('findBandcampLookupItem matches by name and primary artist', () => {
     findBandcampLookupItem(items, {
       name: 'Sunset',
       primaryArtistName: 'Wrong Artist',
+    }),
+    null
+  );
+});
+
+test('findBandcampHref returns the matched Bandcamp URL for direct text linking', () => {
+  const items = [
+    {
+      name: 'Jessica Pratt',
+      primaryArtistName: null,
+      url: 'https://jessicapratt.bandcamp.com/',
+      label: 'Jessica Pratt',
+    },
+  ];
+
+  assert.equal(
+    findBandcampHref(items, {
+      name: 'Jessica Pratt',
+      primaryArtistName: null,
+    }),
+    'https://jessicapratt.bandcamp.com/'
+  );
+
+  assert.equal(
+    findBandcampHref(items, {
+      name: 'No Match',
+      primaryArtistName: null,
     }),
     null
   );
