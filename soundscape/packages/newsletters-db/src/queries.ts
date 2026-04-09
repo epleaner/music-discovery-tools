@@ -115,6 +115,61 @@ function toKeyString(value?: string | null): string {
   return value ?? '';
 }
 
+function preferHigherConfidence(
+  current?: number | null,
+  candidate?: number | null
+): number | null {
+  if (current == null) {
+    return candidate ?? null;
+  }
+
+  if (candidate == null) {
+    return current;
+  }
+
+  return candidate > current ? candidate : current;
+}
+
+function dedupeRelatedEntities(
+  entities: RelatedEntityInput[],
+  getKey: (entity: RelatedEntityInput) => string
+): RelatedEntityInput[] {
+  const deduped = new Map<string, RelatedEntityInput>();
+
+  for (const entity of entities) {
+    const key = getKey(entity);
+    const existing = deduped.get(key);
+
+    if (!existing) {
+      deduped.set(key, {
+        ...entity,
+        primaryArtistName: entity.primaryArtistName ?? null,
+        confidence: entity.confidence ?? null,
+        evidence: entity.evidence ?? null,
+      });
+      continue;
+    }
+
+    const mergedConfidence = preferHigherConfidence(
+      existing.confidence,
+      entity.confidence
+    );
+    const candidateHasHigherConfidence =
+      entity.confidence != null && mergedConfidence === entity.confidence;
+
+    deduped.set(key, {
+      name: existing.name,
+      primaryArtistName: existing.primaryArtistName ?? entity.primaryArtistName ?? null,
+      confidence: mergedConfidence,
+      evidence: candidateHasHigherConfidence
+        ? entity.evidence ?? existing.evidence ?? null
+        : existing.evidence ?? entity.evidence ?? null,
+    });
+  }
+
+  return [...deduped.values()];
+}
+
 export function getAppState(
   db: NewsletterDatabase,
   key: string
@@ -541,7 +596,7 @@ export function replaceMessageArtists(
   const transaction = db.transaction(() => {
     deleteStatement.run(newsletterMessageId);
 
-    for (const artist of artists) {
+    for (const artist of dedupeRelatedEntities(artists, (entity) => normalizeText(entity.name))) {
       const normalizedName = normalizeText(artist.name);
       upsertArtistStatement.run(artist.name, normalizedName);
       const row = selectArtistStatement.get(normalizedName);
@@ -598,7 +653,10 @@ export function replaceMessageAlbums(
   const transaction = db.transaction(() => {
     deleteStatement.run(newsletterMessageId);
 
-    for (const album of albums) {
+    for (const album of dedupeRelatedEntities(
+      albums,
+      (entity) => `${normalizeText(entity.name)}::${toKeyString(entity.primaryArtistName)}`
+    )) {
       const normalizedTitle = normalizeText(album.name);
       const primaryArtistName = toKeyString(album.primaryArtistName);
       upsertAlbumStatement.run(album.name, normalizedTitle, primaryArtistName);
@@ -656,7 +714,10 @@ export function replaceMessageTracks(
   const transaction = db.transaction(() => {
     deleteStatement.run(newsletterMessageId);
 
-    for (const track of tracks) {
+    for (const track of dedupeRelatedEntities(
+      tracks,
+      (entity) => `${normalizeText(entity.name)}::${toKeyString(entity.primaryArtistName)}`
+    )) {
       const normalizedTitle = normalizeText(track.name);
       const primaryArtistName = toKeyString(track.primaryArtistName);
       upsertTrackStatement.run(track.name, normalizedTitle, primaryArtistName);

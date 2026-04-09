@@ -229,6 +229,95 @@ test('listNewsletters applies a source filter explicitly', () => {
   }
 });
 
+test('replaceMessage entity writers dedupe duplicate per-message relations', () => {
+  const { db, cleanup } = createTestDatabase();
+
+  try {
+    const sourceId = upsertNewsletterSource(db, {
+      canonicalName: 'Home Normal',
+      senderEmail: 'news@homenormal.com',
+    });
+    const newsletterMessageId = upsertNewsletterMessage(db, {
+      gmailMessageId: 'gmail-duplicate-relations',
+      sourceId,
+      subject: 'Duplicate entities',
+      extractionStatus: 'extracting',
+    });
+
+    replaceMessageArtists(db, newsletterMessageId, [
+      {
+        name: 'Repetitioneer',
+        confidence: 0.81,
+        evidence: 'First mention.',
+      },
+      {
+        name: 'repetitioneer',
+        confidence: 0.95,
+        evidence: 'Stronger duplicate mention.',
+      },
+    ]);
+    replaceMessageAlbums(db, newsletterMessageId, [
+      {
+        name: 'Repetitioneer Suite I & II',
+        primaryArtistName: 'Repetitioneer',
+        confidence: 0.83,
+        evidence: 'Album mention.',
+      },
+      {
+        name: 'Repetitioneer Suite I & II',
+        primaryArtistName: 'Repetitioneer',
+        confidence: 0.97,
+        evidence: 'Duplicate album mention.',
+      },
+    ]);
+    replaceMessageTracks(db, newsletterMessageId, [
+      {
+        name: 'Part I',
+        primaryArtistName: 'Repetitioneer',
+        confidence: 0.72,
+        evidence: 'Track mention.',
+      },
+      {
+        name: 'Part I',
+        primaryArtistName: 'Repetitioneer',
+        confidence: 0.9,
+        evidence: 'Duplicate track mention.',
+      },
+    ]);
+
+    const artistCount = db
+      .prepare<[number], { count: number }>(
+        'SELECT COUNT(*) as count FROM newsletter_message_artists WHERE newsletter_message_id = ?'
+      )
+      .get(newsletterMessageId);
+    const albumCount = db
+      .prepare<[number], { count: number }>(
+        'SELECT COUNT(*) as count FROM newsletter_message_albums WHERE newsletter_message_id = ?'
+      )
+      .get(newsletterMessageId);
+    const trackCount = db
+      .prepare<[number], { count: number }>(
+        'SELECT COUNT(*) as count FROM newsletter_message_tracks WHERE newsletter_message_id = ?'
+      )
+      .get(newsletterMessageId);
+
+    assert.equal(artistCount?.count, 1);
+    assert.equal(albumCount?.count, 1);
+    assert.equal(trackCount?.count, 1);
+
+    const albumRelation = db
+      .prepare<[number], { confidence: number | null; evidence: string | null }>(
+        'SELECT confidence, evidence FROM newsletter_message_albums WHERE newsletter_message_id = ?'
+      )
+      .get(newsletterMessageId);
+
+    assert.equal(albumRelation?.confidence, 0.97);
+    assert.equal(albumRelation?.evidence, 'Duplicate album mention.');
+  } finally {
+    cleanup();
+  }
+});
+
 test('getNewsletterDetail returns extracted entities and links for one message', () => {
   const { db, cleanup, newerMessageId } = seedNewsletterFixture();
 
