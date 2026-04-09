@@ -136,8 +136,8 @@ Expected output includes:
 1. Start the app with `pnpm dev` or run the server and web app separately.
 2. Enter a username so the main layout renders.
 3. In the right-hand panel, click `Newsletters`.
-4. Use the left column to browse newsletter messages.
-5. Use the detail pane to inspect summaries, extracted entities, and links.
+4. Browse newsletter cards directly in that panel.
+5. Expand `Text`, `Artists`, `Albums`, `Tracks`, or `Links` inline on any newsletter row.
 
 If the panel is empty, run the fixture ingest command or your local live sync command first so the SQLite DB has newsletter rows.
 

@@ -109,8 +109,8 @@ Override it with `NEWSLETTER_DB_PATH` when you want a separate local DB.
 2. Start the API server with `pnpm --filter @soundscape/server dev` or `pnpm dev:server`.
 3. Check health with `curl -I http://localhost:3001/health`.
 4. Start the web app with `pnpm --filter @soundscape/web dev` or `pnpm dev:web`.
-5. Open the app, enter a username, and switch the right-hand panel from `Similar` to `Newsletters`.
-6. Use the newsletter list on the left side of that panel and the detail view on the right to inspect summaries, extracted artists/albums/tracks, and links.
+5. Open the app, enter a username if you want Last.fm data, and switch the right-hand panel from `Similar` to `Newsletters`.
+6. Browse the inline newsletter cards and expand `Text`, `Artists`, `Albums`, `Tracks`, or `Links` directly in the panel.
 
 ## Daily runner usage
 
