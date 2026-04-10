@@ -37,12 +37,10 @@ Then fill in the values you need:
 ```bash
 NEWSLETTER_GMAIL_LABEL=music
 NEWSLETTER_DB_PATH=../../data/newsletters.sqlite
-NEWSLETTER_ENTITY_CONFIDENCE_THRESHOLD=0.8
 GMAIL_CLIENT_ID=
 GMAIL_CLIENT_SECRET=
 GMAIL_REFRESH_TOKEN=
 GMAIL_REDIRECT_URI=
-PI_LLM_MODEL=gpt-5.4-mini
 ```
 
 Newsletter-specific setup:
@@ -50,11 +48,10 @@ Newsletter-specific setup:
 1. In Gmail, create a label named `music`, or set `NEWSLETTER_GMAIL_LABEL` to your chosen label. Label resolution is case-insensitive.
 2. Apply that label only to newsletters you want Soundscape to ingest.
 3. Leave `NEWSLETTER_DB_PATH` unset if you want the default SQLite DB at `soundscape/data/newsletters.sqlite`.
-4. `--dry-run` does not require Gmail or pi credentials.
-5. `--sync-now` requires all Gmail OAuth fields plus a working local `pi` CLI install.
-6. `--retry-failed` reuses already-persisted raw newsletter rows from SQLite, so it skips Gmail entirely and only needs a working local `pi` CLI install.
-7. `PI_LLM_MODEL` defaults to `gpt-5.4-mini` when unset.
-8. Live extraction uses pi headless (`pi --print`) and retries once per message before marking that extraction failed.
+4. `--dry-run`, `--sample`, and `--reprocess-bandcamp-links` do not require Gmail credentials.
+5. `--sync-now` requires all Gmail OAuth fields.
+6. Newsletter ingest no longer requires pi or LLM configuration.
+7. Redirect resolution is best-effort. Failed trackers and timeouts are skipped without failing the whole newsletter.
 
 ### 4. Start Development
 
@@ -110,8 +107,8 @@ bash scripts/run-newsletter-sync.sh --dry-run
 bash scripts/run-newsletter-sync.sh
 bash scripts/run-newsletter-sync.sh --verbose
 bash scripts/run-newsletter-sync.sh --from-scratch --verbose
-pnpm --filter @soundscape/ingest start -- --retry-failed
-pnpm --filter @soundscape/ingest start -- --retry-failed --verbose
+pnpm --filter @soundscape/ingest start -- --reprocess-bandcamp-links
+pnpm --filter @soundscape/ingest start -- --reprocess-bandcamp-links --verbose
 pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json
 ```
 
@@ -122,14 +119,14 @@ Expected output includes:
 - `syncRunStatus=dry_run_completed`
 - `dbPath=` with either the default `soundscape/data/newsletters.sqlite` path or your override
 - `gmailQuery=` showing the configured label and sync cursor boundary
-- readable `--verbose` progress sections such as `Starting Gmail sync`, `Found Gmail messages`, `[3/1955] ...`, and `PI extraction attempt 1/2 ...`
+- readable `--verbose` progress sections such as `Starting Gmail sync`, `Found Gmail messages`, `[3/1955] ...`, and `Saved 2 Bandcamp link(s)`
 - `Reset newsletter database` when `--from-scratch` is used
 - `Soundscape newsletter ingest live sync` after `--sync-now` succeeds
-- `messageCount=` and `newestMessageTimestamp=` for live sync runs
-- `Soundscape newsletter ingest failed-message retry` plus `mode=retry-failed` when you run the retry path
+- `messageCount=` and `linkCount=` for live sync runs
+- `Soundscape newsletter Bandcamp link reprocess` plus `mode=reprocess-bandcamp-links` when you run the reprocess path
 - `Soundscape newsletter ingest sample run`
 - `mode=sample`
-- `normalizedArtists=1`
+- `linkCount=`
 
 ### Use the Newsletter Panel
 
@@ -137,8 +134,7 @@ Expected output includes:
 2. Enter a username so the main layout renders.
 3. In the right-hand panel, click `Newsletters`.
 4. Browse newsletter cards directly in that panel.
-5. Expand `Text`, `Artists`, `Albums`, `Tracks`, or `Links` inline on any newsletter row.
-6. Artists, albums, and tracks are only linked when that newsletter already contains an extracted URL whose text exactly matches the entity.
+5. Open Bandcamp links directly from the inline view or expanded newsletter detail.
 
 If the panel is empty, run the fixture ingest command or your local live sync command first so the SQLite DB has newsletter rows.
 
@@ -151,11 +147,11 @@ bash scripts/run-newsletter-sync.sh
 bash scripts/run-newsletter-sync.sh --verbose
 bash scripts/run-newsletter-sync.sh --from-scratch --verbose
 bash scripts/run-newsletter-sync.sh --dry-run
-pnpm --filter @soundscape/ingest start -- --retry-failed
-pnpm --filter @soundscape/ingest start -- --retry-failed --verbose
+pnpm --filter @soundscape/ingest start -- --reprocess-bandcamp-links
+pnpm --filter @soundscape/ingest start -- --reprocess-bandcamp-links --verbose
 ```
 
-With no mode flag, the wrapper defaults to `--sync-now`, so `bash scripts/run-newsletter-sync.sh --verbose` runs a live sync with readable progress output. `--from-scratch` clears the local newsletter DB before the run starts. Use the direct ingest CLI for `--retry-failed`; that path intentionally skips Gmail fetches and only reprocesses rows already marked `failed` in SQLite.
+With no mode flag, the wrapper defaults to `--sync-now`, so `bash scripts/run-newsletter-sync.sh --verbose` runs a live sync with readable progress output. `--from-scratch` clears the local newsletter DB before the run starts. Use the direct ingest CLI for `--reprocess-bandcamp-links`; that path intentionally skips Gmail fetches and only reprocesses rows already stored in SQLite.
 
 ### Test Real-Time Communication
 

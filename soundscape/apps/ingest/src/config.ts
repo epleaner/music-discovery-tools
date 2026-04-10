@@ -2,7 +2,6 @@ import { config as loadDotenv } from 'dotenv';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
-import { DEFAULT_PI_LLM_MODEL } from './llm.js';
 
 const ingestRoot = fileURLToPath(new URL('..', import.meta.url));
 const repoRoot = resolve(ingestRoot, '../..');
@@ -18,7 +17,6 @@ const envSchema = z.object({
   GMAIL_CLIENT_SECRET: z.string().trim().min(1).optional(),
   GMAIL_REFRESH_TOKEN: z.string().trim().min(1).optional(),
   GMAIL_REDIRECT_URI: z.string().trim().min(1).optional(),
-  PI_LLM_MODEL: z.string().trim().min(1).default(DEFAULT_PI_LLM_MODEL),
 });
 
 export interface IngestConfig {
@@ -31,9 +29,6 @@ export interface IngestConfig {
     refreshToken?: string;
     redirectUri?: string;
   };
-  llm: {
-    model: string;
-  };
 }
 
 export interface LiveSyncConfig {
@@ -45,9 +40,6 @@ export interface LiveSyncConfig {
     clientSecret: string;
     refreshToken: string;
     redirectUri: string;
-  };
-  llm: {
-    model: string;
   };
 }
 
@@ -67,9 +59,6 @@ export function loadIngestConfig(env: NodeJS.ProcessEnv = process.env): IngestCo
       clientSecret: parsed.GMAIL_CLIENT_SECRET,
       refreshToken: parsed.GMAIL_REFRESH_TOKEN,
       redirectUri: parsed.GMAIL_REDIRECT_URI,
-    },
-    llm: {
-      model: parsed.PI_LLM_MODEL,
     },
   };
 }
@@ -109,9 +98,6 @@ export function requireLiveSyncConfig(config: IngestConfig): LiveSyncConfig {
       refreshToken: config.gmail.refreshToken!,
       redirectUri: config.gmail.redirectUri!,
     },
-    llm: {
-      model: config.llm.model,
-    },
   };
 }
 
@@ -122,6 +108,5 @@ export function formatConfigSummary(config: IngestConfig): string[] {
     `entityConfidenceThreshold=${config.entityConfidenceThreshold}`,
     `gmailConfigured=${Boolean(config.gmail.clientId && config.gmail.clientSecret)}`,
     `gmailRefreshTokenConfigured=${Boolean(config.gmail.refreshToken)}`,
-    `piModel=${config.llm.model}`,
   ];
 }

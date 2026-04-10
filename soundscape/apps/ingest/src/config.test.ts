@@ -2,25 +2,26 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadIngestConfig, requireLiveSyncConfig } from './config.js';
 
-test('loadIngestConfig defaults the pi model for live sync', () => {
+test('loadIngestConfig defaults newsletter Gmail settings without an LLM requirement', () => {
   const config = loadIngestConfig({
     NEWSLETTER_GMAIL_LABEL: 'music',
   });
 
-  assert.equal(config.llm.model, 'gpt-5.4-mini');
+  assert.equal(config.gmailLabel, 'music');
+  assert.equal(config.gmail.clientId, undefined);
 });
 
-test('requireLiveSyncConfig no longer requires LLM_API_KEY and keeps the configured pi model', () => {
+test('requireLiveSyncConfig only requires Gmail credentials for live sync', () => {
   const config = loadIngestConfig({
     NEWSLETTER_GMAIL_LABEL: 'music',
     GMAIL_CLIENT_ID: 'client-id',
     GMAIL_CLIENT_SECRET: 'client-secret',
     GMAIL_REFRESH_TOKEN: 'refresh-token',
     GMAIL_REDIRECT_URI: 'http://localhost/callback',
-    PI_LLM_MODEL: 'gpt-5.4-mini',
   });
 
   const liveConfig = requireLiveSyncConfig(config);
 
-  assert.equal(liveConfig.llm.model, 'gpt-5.4-mini');
+  assert.equal(liveConfig.gmail.clientId, 'client-id');
+  assert.equal(liveConfig.gmail.refreshToken, 'refresh-token');
 });

@@ -15,31 +15,18 @@ function createNewsletterSummary(
       senderEmail: 'news@pitchfork.com',
     },
     subject: 'Best New Music',
-    summary: "Jessica Pratt leads this week's picks.",
+    summary: null,
     sentAt: '2026-04-08T12:00:00.000Z',
-    extractionStatus: 'extracted',
-    artists: [
-      {
-        name: 'Jessica Pratt',
-        confidence: 0.96,
-        evidence: 'Lead blurb',
-      },
-    ],
-    albums: [
-      {
-        name: 'Here in the Pitch',
-        primaryArtistName: 'Jessica Pratt',
-        confidence: 0.93,
-        evidence: 'Album of the week',
-      },
-    ],
+    extractionStatus: 'processed',
+    artists: [],
+    albums: [],
     tracks: [],
     links: [
       {
-        url: 'https://pitchfork.com/reviews/albums/jessica-pratt-here-in-the-pitch/',
-        domain: 'pitchfork.com',
-        title: 'Review',
-        confidence: 0.92,
+        url: 'https://artist.bandcamp.com/album/here-in-the-pitch',
+        domain: 'artist.bandcamp.com',
+        title: 'Jessica Pratt — Here in the Pitch',
+        confidence: 1,
       },
     ],
     ...overrides,
@@ -57,36 +44,18 @@ test('buildNewsletterPanelModel exposes compact loading state before data is rea
   assert.deepEqual(model.listItems, []);
 });
 
-test('buildNewsletterPanelModel renders inline newsletter rows with expandable section content', () => {
+test('buildNewsletterPanelModel renders link-only newsletter rows', () => {
   const first = createNewsletterSummary();
   const second = createNewsletterSummary({
     id: 8,
     gmailMessageId: 'gmail-8',
     subject: 'New Songs You Need',
-    summary: 'Kali Uchis and Nourished by Time headline this week.',
-    artists: [
-      { name: 'Kali Uchis', confidence: 0.94, evidence: 'Lead item' },
-      {
-        name: 'Nourished by Time',
-        confidence: 0.9,
-        evidence: 'Secondary item',
-      },
-    ],
-    albums: [],
-    tracks: [
-      {
-        name: 'Sunshine & Rain...',
-        primaryArtistName: 'Kali Uchis',
-        confidence: 0.91,
-        evidence: 'Single callout',
-      },
-    ],
     links: [
       {
-        url: 'https://example.com/kali-uchis',
-        domain: 'example.com',
-        title: 'Feature',
-        confidence: 0.85,
+        url: 'https://artist.bandcamp.com/track/sunshine-and-rain',
+        domain: 'artist.bandcamp.com',
+        title: null,
+        confidence: 1,
       },
     ],
   });
@@ -101,22 +70,17 @@ test('buildNewsletterPanelModel renders inline newsletter rows with expandable s
     model.listItems.map((item) => item.subject),
     ['Best New Music', 'New Songs You Need']
   );
-  assert.equal(
-    model.listItems[1]?.summary,
-    'Kali Uchis and Nourished by Time headline this week.'
-  );
-  assert.equal(model.listItems[1]?.summary?.endsWith('week.'), true);
-  assert.deepEqual(model.listItems[1]?.artists, [
-    'Kali Uchis',
-    'Nourished by Time',
-  ]);
-  assert.deepEqual(model.listItems[1]?.tracks, [
-    'Sunshine & Rain... — Kali Uchis',
+  assert.equal(model.listItems[0]?.summary, null);
+  assert.deepEqual(model.listItems[0]?.links, [
+    {
+      label: 'Jessica Pratt — Here in the Pitch',
+      url: 'https://artist.bandcamp.com/album/here-in-the-pitch',
+    },
   ]);
   assert.deepEqual(model.listItems[1]?.links, [
     {
-      label: 'Feature',
-      url: 'https://example.com/kali-uchis',
+      label: 'artist.bandcamp.com',
+      url: 'https://artist.bandcamp.com/track/sunshine-and-rain',
     },
   ]);
 });

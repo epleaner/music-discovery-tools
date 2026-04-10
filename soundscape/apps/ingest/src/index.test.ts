@@ -13,6 +13,7 @@ import {
   parseCliOptions,
   resetNewsletterDatabase,
   runLiveNewsletterSync,
+  runReprocessBandcampLinks,
   runRetryFailedNewsletterExtractions,
 } from './index.js';
 import { persistRawGmailMessage, type GmailApiClient } from './gmail.js';
@@ -38,6 +39,7 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
     dryRun: false,
     syncNow: true,
     retryFailed: false,
+    reprocessBandcampLinks: false,
     verbose: false,
     fromScratch: false,
     samplePath: undefined,
@@ -46,6 +48,7 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
     dryRun: true,
     syncNow: false,
     retryFailed: false,
+    reprocessBandcampLinks: false,
     verbose: false,
     fromScratch: false,
     samplePath: undefined,
@@ -54,6 +57,7 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
     dryRun: false,
     syncNow: false,
     retryFailed: false,
+    reprocessBandcampLinks: false,
     verbose: false,
     fromScratch: false,
     samplePath: 'fixture.json',
@@ -62,6 +66,7 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
     dryRun: false,
     syncNow: true,
     retryFailed: false,
+    reprocessBandcampLinks: false,
     verbose: true,
     fromScratch: false,
     samplePath: undefined,
@@ -72,6 +77,7 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
       dryRun: false,
       syncNow: true,
       retryFailed: false,
+      reprocessBandcampLinks: false,
       verbose: true,
       fromScratch: true,
       samplePath: undefined,
@@ -81,7 +87,17 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
     dryRun: false,
     syncNow: false,
     retryFailed: true,
+    reprocessBandcampLinks: false,
     verbose: true,
+    fromScratch: false,
+    samplePath: undefined,
+  });
+  assert.deepEqual(parseCliOptions(['--reprocess-bandcamp-links']), {
+    dryRun: false,
+    syncNow: false,
+    retryFailed: false,
+    reprocessBandcampLinks: true,
+    verbose: false,
     fromScratch: false,
     samplePath: undefined,
   });
@@ -109,6 +125,66 @@ test('parseCliOptions accepts explicit sync mode flags', () => {
     () => parseCliOptions(['--retry-failed', '--from-scratch']),
     /--retry-failed cannot be combined with --from-scratch/
   );
+  assert.throws(
+    () => parseCliOptions(['--reprocess-bandcamp-links', '--sync-now']),
+    /--reprocess-bandcamp-links cannot be combined with --sync-now/
+  );
+});
+
+test('runReprocessBandcampLinks extracts Bandcamp links from stored newsletter content without refetching Gmail', async () => {
+  const { db, cleanup } = createTestDatabase();
+
+  try {
+    const persisted = persistRawGmailMessage(db, {
+      id: 'gmail-bandcamp-reprocess-1',
+      subject: 'Bandcamp picks',
+      senderName: 'Bandcamp Sender',
+      senderEmail: 'bandcamp@example.com',
+      sentAt: '2026-04-08T12:10:00.000Z',
+      rawHtml:
+        '<a href="https://tracker.example.com/out?id=1">Tracked Bandcamp</a>',
+      rawText: 'https://artist.bandcamp.com/track/direct-song',
+      cleanedText: 'bandcamp picks',
+    });
+
+    const syncRunId = startSyncRun(db, '2026-04-09T09:00:00.000Z');
+    const result = await runReprocessBandcampLinks({
+      db,
+      syncRunId,
+      resolveUrl: async (url) =>
+        url === 'https://tracker.example.com/out?id=1'
+          ? 'https://artist.bandcamp.com/album/tracked-record'
+          : null,
+    });
+
+    const links = db
+      .prepare<[number], Array<{ url: string; title: string | null }>>(
+        'SELECT url, title FROM newsletter_links WHERE newsletter_message_id = ? ORDER BY url ASC'
+      )
+      .all(persisted.newsletterMessageId);
+    const row = db
+      .prepare<[string], { extraction_status: string }>(
+        'SELECT extraction_status FROM newsletter_messages WHERE gmail_message_id = ?'
+      )
+      .get('gmail-bandcamp-reprocess-1');
+
+    assert.equal(result.messageCount, 1);
+    assert.equal(result.linkCount, 2);
+    assert.equal(result.syncRunStatus, 'succeeded');
+    assert.equal(row?.extraction_status, 'processed');
+    assert.deepEqual(links, [
+      {
+        url: 'https://artist.bandcamp.com/album/tracked-record',
+        title: 'Tracked Bandcamp',
+      },
+      {
+        url: 'https://artist.bandcamp.com/track/direct-song',
+        title: null,
+      },
+    ]);
+  } finally {
+    cleanup();
+  }
 });
 
 test('runRetryFailedNewsletterExtractions retries only failed messages without advancing the cursor', async () => {
@@ -158,9 +234,6 @@ test('runRetryFailedNewsletterExtractions retries only failed messages without a
           clientSecret: 'unused',
           refreshToken: 'unused',
           redirectUri: 'unused',
-        },
-        llm: {
-          model: 'gpt-5.4-medium',
         },
       },
       llmClient: {
@@ -252,9 +325,6 @@ test('runRetryFailedNewsletterExtractions emits readable verbose progress logs',
         dbPath: undefined,
         entityConfidenceThreshold: 0.8,
         gmail: {},
-        llm: {
-          model: 'gpt-5.4-medium',
-        },
       },
       llmClient: {
         modelName: 'test-retry-model',
@@ -368,36 +438,14 @@ test('runLiveNewsletterSync emits readable verbose progress logs', async () => {
               {
                 mimeType: 'text/plain',
                 body: {
-                  data: Buffer.from('Verbose Artist', 'utf8').toString(
-                    'base64url'
-                  ),
+                  data: Buffer.from(
+                    'https://artist.bandcamp.com/track/verbose-song',
+                    'utf8'
+                  ).toString('base64url'),
                 },
               },
             ],
           },
-        };
-      },
-    };
-
-    const llmClient = {
-      modelName: 'test-live-model',
-      async extract() {
-        return {
-          sourceName: 'Verbose Sender',
-          summary: 'Verbose summary',
-          artists: [
-            {
-              name: 'Verbose Artist',
-              confidence: 0.95,
-              evidence: 'Verbose Artist',
-            },
-          ],
-          albums: [],
-          tracks: [],
-          genres: [],
-          links: [],
-          releases: [],
-          events: [],
         };
       },
     };
@@ -416,12 +464,8 @@ test('runLiveNewsletterSync emits readable verbose progress logs', async () => {
           refreshToken: 'refresh-token',
           redirectUri: 'http://localhost/callback',
         },
-        llm: {
-          model: 'gpt-5.4-medium',
-        },
       },
       gmailClient,
-      llmClient,
       syncRunId,
       lastSuccessfulSyncAt: null,
       verbose: true,
@@ -434,17 +478,25 @@ test('runLiveNewsletterSync emits readable verbose progress logs', async () => {
       logs.some((line) => line.includes('[1/1] Verbose Sender — Verbose picks'))
     );
     assert.ok(logs.some((line) => line.includes('Saved raw newsletter as #1')));
-    assert.ok(logs.some((line) => line.includes('Extraction saved')));
+    assert.ok(
+      logs.some((line) => line.includes('Starting Bandcamp link extraction'))
+    );
+    assert.ok(logs.some((line) => line.includes('Saved 1 Bandcamp link(s)')));
     assert.ok(logs.some((line) => line.includes('Sync complete')));
   } finally {
     cleanup();
   }
 });
 
-test('runLiveNewsletterSync does not advance the cursor when extraction fails', async () => {
+test('runLiveNewsletterSync skips redirect resolution failures and still advances the cursor', async () => {
   const { db, cleanup } = createTestDatabase();
+  const originalFetch = globalThis.fetch;
 
   try {
+    globalThis.fetch = (async () => {
+      throw new Error('timeout');
+    }) as typeof fetch;
+
     const gmailClient: GmailApiClient = {
       async resolveLabelByName(labelName) {
         return { id: 'Label_music', name: labelName };
@@ -465,23 +517,17 @@ test('runLiveNewsletterSync does not advance the cursor when extraction fails', 
             ],
             parts: [
               {
-                mimeType: 'text/plain',
+                mimeType: 'text/html',
                 body: {
-                  data: Buffer.from('Broken Artist', 'utf8').toString(
-                    'base64url'
-                  ),
+                  data: Buffer.from(
+                    '<a href="https://tracker.example.com/out?id=1">Tracked</a>',
+                    'utf8'
+                  ).toString('base64url'),
                 },
               },
             ],
           },
         };
-      },
-    };
-
-    const llmClient = {
-      modelName: 'test-live-model',
-      async extract() {
-        throw new Error('pi parse failed');
       },
     };
 
@@ -499,31 +545,45 @@ test('runLiveNewsletterSync does not advance the cursor when extraction fails', 
           refreshToken: 'refresh-token',
           redirectUri: 'http://localhost/callback',
         },
-        llm: {
-          model: 'gpt-5.4-medium',
-        },
       },
       gmailClient,
-      llmClient,
       syncRunId,
       lastSuccessfulSyncAt: null,
     });
 
     const syncRun = getSyncRunById(db, syncRunId);
-    assert.equal(result.extractionFailureCount, 1);
-    assert.equal(result.syncRunStatus, 'failed');
-    assert.equal(getAppState(db, 'newsletters.lastSuccessfulSyncAt'), null);
-    assert.equal(syncRun?.status, 'failed');
-    assert.match(syncRun?.errorText ?? '', /failed extraction/);
+    assert.equal(result.processingFailureCount, 0);
+    assert.equal(result.linkCount, 0);
+    assert.equal(result.syncRunStatus, 'succeeded');
+    assert.equal(getAppState(db, 'newsletters.lastSuccessfulSyncAt'), '2026-04-08T12:10:00.000Z');
+    assert.equal(syncRun?.status, 'succeeded');
+    assert.equal(syncRun?.errorText, null);
   } finally {
+    globalThis.fetch = originalFetch;
     cleanup();
   }
 });
 
-test('runLiveNewsletterSync persists live Gmail messages, extractions, and the successful cursor', async () => {
+test('runLiveNewsletterSync persists live Gmail messages, Bandcamp links, and the successful cursor', async () => {
   const { db, cleanup } = createTestDatabase();
+  const originalFetch = globalThis.fetch;
 
   try {
+    globalThis.fetch = (async (input) => {
+      const url = String(input);
+
+      if (url === 'https://tracker.example.com/out?id=1') {
+        return new Response('', {
+          status: 302,
+          headers: {
+            location: 'https://artist.bandcamp.com/album/tracked-record',
+          },
+        });
+      }
+
+      return new Response('', { status: 200 });
+    }) as typeof fetch;
+
     const gmailClient: GmailApiClient = {
       async resolveLabelByName(labelName) {
         return { id: 'Label_music', name: labelName };
@@ -544,60 +604,25 @@ test('runLiveNewsletterSync persists live Gmail messages, extractions, and the s
             ],
             parts: [
               {
+                mimeType: 'text/html',
+                body: {
+                  data: Buffer.from(
+                    '<a href="https://tracker.example.com/out?id=1">Tracked record</a>',
+                    'utf8'
+                  ).toString('base64url'),
+                },
+              },
+              {
                 mimeType: 'text/plain',
                 body: {
                   data: Buffer.from(
-                    'Artist Alpha\nAlbum Beta\nTrack Gamma',
+                    'https://artist.bandcamp.com/track/direct-song',
                     'utf8'
                   ).toString('base64url'),
                 },
               },
             ],
           },
-        };
-      },
-    };
-
-    const llmClient = {
-      modelName: 'test-live-model',
-      async extract() {
-        return {
-          sourceName: 'Test Sender',
-          summary: 'A concise summary',
-          artists: [
-            {
-              name: 'Artist Alpha',
-              confidence: 0.95,
-              evidence: 'Artist Alpha',
-            },
-          ],
-          albums: [
-            {
-              name: 'Album Beta',
-              primaryArtistName: 'Artist Alpha',
-              confidence: 0.93,
-              evidence: 'Album Beta',
-            },
-          ],
-          tracks: [
-            {
-              name: 'Track Gamma',
-              primaryArtistName: 'Artist Alpha',
-              confidence: 0.91,
-              evidence: 'Track Gamma',
-            },
-          ],
-          genres: [],
-          links: [
-            {
-              url: 'https://example.com/listen',
-              domain: 'example.com',
-              title: 'Listen',
-              confidence: 0.88,
-            },
-          ],
-          releases: [],
-          events: [],
         };
       },
     };
@@ -616,12 +641,8 @@ test('runLiveNewsletterSync persists live Gmail messages, extractions, and the s
           refreshToken: 'refresh-token',
           redirectUri: 'http://localhost/callback',
         },
-        llm: {
-          model: 'gpt-5.4-medium',
-        },
       },
       gmailClient,
-      llmClient,
       syncRunId,
       lastSuccessfulSyncAt: null,
     });
@@ -632,19 +653,36 @@ test('runLiveNewsletterSync persists live Gmail messages, extractions, and the s
         { id: number; extraction_status: string; cleaned_text: string | null }
       >('SELECT id, extraction_status, cleaned_text FROM newsletter_messages WHERE gmail_message_id = ?')
       .get('gmail-live-1');
+    const links = db
+      .prepare<[number], Array<{ url: string; title: string | null }>>(
+        'SELECT url, title FROM newsletter_links WHERE newsletter_message_id = ? ORDER BY url ASC'
+      )
+      .all(row!.id);
 
     assert.equal(result.messageCount, 1);
-    assert.equal(result.extractionFailureCount, 0);
+    assert.equal(result.processingFailureCount, 0);
+    assert.equal(result.linkCount, 2);
     assert.equal(result.syncRunStatus, 'succeeded');
     assert.equal(result.resolvedLabelId, 'Label_music');
-    assert.equal(row?.extraction_status, 'extracted');
-    assert.equal(row?.cleaned_text, 'Artist Alpha\nAlbum Beta\nTrack Gamma');
+    assert.equal(row?.extraction_status, 'processed');
+    assert.equal(row?.cleaned_text, 'Tracked record');
     assert.equal(
       getAppState(db, 'newsletters.lastSuccessfulSyncAt'),
       '2026-04-08T12:10:00.000Z'
     );
-    assert.match(getPersistedExtractionJson(db, row!.id) ?? '', /Artist Alpha/);
+    assert.equal(getPersistedExtractionJson(db, row!.id), null);
+    assert.deepEqual(links, [
+      {
+        url: 'https://artist.bandcamp.com/album/tracked-record',
+        title: 'Tracked record',
+      },
+      {
+        url: 'https://artist.bandcamp.com/track/direct-song',
+        title: null,
+      },
+    ]);
   } finally {
+    globalThis.fetch = originalFetch;
     cleanup();
   }
 });

@@ -1,10 +1,5 @@
 import { Component, For, Show, createMemo, createSignal } from 'solid-js';
 import { createNewsletterDetailResource } from '../lib/newsletter-resource.js';
-import {
-  buildNewsletterDetailEntityLinks,
-  buildNewsletterSummaryEntityLinks,
-  type MatchedNewsletterEntityLink,
-} from '../lib/newsletter-link-matcher.js';
 import type { NewsletterApi, NewsletterSummary } from '../lib/newsletters.js';
 import {
   formatNewsletterDate,
@@ -30,19 +25,11 @@ interface SectionToggleProps {
   count?: number;
 }
 
-interface EntityDisplayItem {
-  text: string;
-  url: string | null;
-}
-
 interface NewsletterModalProps {
   title: string;
   sourceLabel: string;
   summary: string | null;
   text: string | null;
-  artists: EntityDisplayItem[];
-  albums: EntityDisplayItem[];
-  tracks: EntityDisplayItem[];
   links: NewsletterLinkModel[];
   isLoading: boolean;
   error: Error | null;
@@ -63,27 +50,6 @@ const SectionToggle: Component<SectionToggleProps> = (props) => {
       {props.expanded ? '−' : '+'} {props.label}
       {suffix()}
     </button>
-  );
-};
-
-const EntityText: Component<{
-  item: EntityDisplayItem;
-  class?: string;
-}> = (props) => {
-  return (
-    <Show
-      when={props.item.url}
-      fallback={<span class={props.class}>{props.item.text}</span>}
-    >
-      <a
-        href={props.item.url ?? '#'}
-        target="_blank"
-        rel="noreferrer"
-        class={props.class ?? 'hover:text-fg'}
-      >
-        {props.item.text}
-      </a>
-    </Show>
   );
 };
 
@@ -136,69 +102,10 @@ const NewsletterModal: Component<NewsletterModalProps> = (props) => {
             </section>
           </Show>
 
-          <Show
-            when={!props.isLoading && !props.error && props.artists.length > 0}
-          >
-            <section class="mb-4">
-              <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
-                Artists
-              </div>
-              <div class="flex flex-wrap gap-1">
-                <For each={props.artists}>
-                  {(artist) => (
-                    <span class="px-1.5 py-0.5 text-xs border border-border">
-                      <EntityText item={artist} />
-                    </span>
-                  )}
-                </For>
-              </div>
-            </section>
-          </Show>
-
-          <Show
-            when={!props.isLoading && !props.error && props.albums.length > 0}
-          >
-            <section class="mb-4">
-              <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
-                Albums
-              </div>
-              <div class="space-y-1 text-xs">
-                <For each={props.albums}>
-                  {(album) => (
-                    <div>
-                      <EntityText item={album} class="text-fg-muted" />
-                    </div>
-                  )}
-                </For>
-              </div>
-            </section>
-          </Show>
-
-          <Show
-            when={!props.isLoading && !props.error && props.tracks.length > 0}
-          >
-            <section class="mb-4">
-              <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
-                Tracks
-              </div>
-              <div class="space-y-1 text-xs">
-                <For each={props.tracks}>
-                  {(track) => (
-                    <div>
-                      <EntityText item={track} class="text-fg-muted" />
-                    </div>
-                  )}
-                </For>
-              </div>
-            </section>
-          </Show>
-
-          <Show
-            when={!props.isLoading && !props.error && props.links.length > 0}
-          >
+          <Show when={!props.isLoading && !props.error && props.links.length > 0}>
             <section>
               <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
-                Links
+                Bandcamp links
               </div>
               <div class="space-y-1 text-xs">
                 <For each={props.links}>
@@ -222,20 +129,6 @@ const NewsletterModal: Component<NewsletterModalProps> = (props) => {
   );
 };
 
-function formatSectionItems(items: string[]): string[] {
-  return items.filter((item) => item.trim().length > 0);
-}
-
-function buildEntityDisplayItems(
-  labels: string[],
-  matches: MatchedNewsletterEntityLink[]
-): EntityDisplayItem[] {
-  return labels.map((text, index) => ({
-    text,
-    url: matches[index]?.url ?? null,
-  }));
-}
-
 function buildLinkItems(newsletter: NewsletterSummary): NewsletterLinkModel[] {
   return newsletter.links.map((link) => ({
     label: link.title ?? link.domain ?? link.url,
@@ -246,9 +139,6 @@ function buildLinkItems(newsletter: NewsletterSummary): NewsletterLinkModel[] {
 const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
   props
 ) => {
-  const [showArtists, setShowArtists] = createSignal(false);
-  const [showAlbums, setShowAlbums] = createSignal(false);
-  const [showTracks, setShowTracks] = createSignal(false);
   const [showLinks, setShowLinks] = createSignal(false);
   const [showModal, setShowModal] = createSignal(false);
 
@@ -259,27 +149,6 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
     }
   );
 
-  const artists = createMemo(() =>
-    formatSectionItems(props.newsletter.artists.map((artist) => artist.name))
-  );
-  const albums = createMemo(() =>
-    formatSectionItems(
-      props.newsletter.albums.map((album) =>
-        album.primaryArtistName
-          ? `${album.name} — ${album.primaryArtistName}`
-          : album.name
-      )
-    )
-  );
-  const tracks = createMemo(() =>
-    formatSectionItems(
-      props.newsletter.tracks.map((track) =>
-        track.primaryArtistName
-          ? `${track.name} — ${track.primaryArtistName}`
-          : track.name
-      )
-    )
-  );
   const links = createMemo(() => buildLinkItems(props.newsletter));
   const sourceLabel = createMemo(
     () =>
@@ -287,49 +156,6 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
       props.newsletter.source.senderEmail ??
       'Unknown source'
   );
-  const summaryEntityLinks = createMemo(() =>
-    buildNewsletterSummaryEntityLinks(props.newsletter)
-  );
-  const detailEntityLinks = createMemo(() =>
-    buildNewsletterDetailEntityLinks(detailResource.newsletter())
-  );
-  const artistItems = createMemo(() =>
-    buildEntityDisplayItems(artists(), summaryEntityLinks().artists)
-  );
-  const albumItems = createMemo(() =>
-    buildEntityDisplayItems(albums(), summaryEntityLinks().albums)
-  );
-  const trackItems = createMemo(() =>
-    buildEntityDisplayItems(tracks(), summaryEntityLinks().tracks)
-  );
-  const modalArtists = createMemo(() => {
-    const detail = detailResource.newsletter();
-    const labels = detail?.artists.map((artist) => artist.name) ?? artists();
-    const matches = detail ? detailEntityLinks().artists : summaryEntityLinks().artists;
-    return buildEntityDisplayItems(labels, matches);
-  });
-  const modalAlbums = createMemo(() => {
-    const detail = detailResource.newsletter();
-    const labels =
-      detail?.albums.map((album) =>
-        album.primaryArtistName
-          ? `${album.name} — ${album.primaryArtistName}`
-          : album.name
-      ) ?? albums();
-    const matches = detail ? detailEntityLinks().albums : summaryEntityLinks().albums;
-    return buildEntityDisplayItems(labels, matches);
-  });
-  const modalTracks = createMemo(() => {
-    const detail = detailResource.newsletter();
-    const labels =
-      detail?.tracks.map((track) =>
-        track.primaryArtistName
-          ? `${track.name} — ${track.primaryArtistName}`
-          : track.name
-      ) ?? tracks();
-    const matches = detail ? detailEntityLinks().tracks : summaryEntityLinks().tracks;
-    return buildEntityDisplayItems(labels, matches);
-  });
   const modalLinks = createMemo(
     () =>
       detailResource.newsletter()?.links.map((link) => ({
@@ -375,97 +201,22 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
           </button>
         </Show>
 
-        <div class="flex flex-wrap gap-1 mt-2">
-          <Show when={artists().length > 0}>
-            <SectionToggle
-              label="Artists"
-              count={artists().length}
-              expanded={showArtists()}
-              onToggle={() => setShowArtists((value) => !value)}
-            />
-          </Show>
-          <Show when={albums().length > 0}>
-            <SectionToggle
-              label="Albums"
-              count={albums().length}
-              expanded={showAlbums()}
-              onToggle={() => setShowAlbums((value) => !value)}
-            />
-          </Show>
-          <Show when={tracks().length > 0}>
-            <SectionToggle
-              label="Tracks"
-              count={tracks().length}
-              expanded={showTracks()}
-              onToggle={() => setShowTracks((value) => !value)}
-            />
-          </Show>
-          <Show when={links().length > 0}>
+        <Show when={links().length > 0}>
+          <div class="flex flex-wrap gap-1 mt-2">
             <SectionToggle
               label="Links"
               count={links().length}
               expanded={showLinks()}
               onToggle={() => setShowLinks((value) => !value)}
             />
-          </Show>
-        </div>
+          </div>
+        </Show>
       </div>
-
-      <Show when={showArtists()}>
-        <section class="px-2.5 py-2 border-t border-border bg-bg-subtle">
-          <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
-            Artists
-          </div>
-          <div class="flex flex-wrap gap-1">
-            <For each={artistItems()}>
-              {(artist) => (
-                <span class="px-1.5 py-0.5 text-xs border border-border">
-                  <EntityText item={artist} />
-                </span>
-              )}
-            </For>
-          </div>
-        </section>
-      </Show>
-
-      <Show when={showAlbums()}>
-        <section class="px-2.5 py-2 border-t border-border bg-bg-subtle">
-          <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
-            Albums
-          </div>
-          <div class="space-y-1 text-xs">
-            <For each={albumItems()}>
-              {(album) => (
-                <div>
-                  <EntityText item={album} class="text-fg-muted" />
-                </div>
-              )}
-            </For>
-          </div>
-        </section>
-      </Show>
-
-      <Show when={showTracks()}>
-        <section class="px-2.5 py-2 border-t border-border bg-bg-subtle">
-          <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
-            Tracks
-          </div>
-          <div class="space-y-1 text-xs">
-            <For each={trackItems()}>
-              {(track) => (
-                <div>
-                  <EntityText item={track} class="text-fg-muted" />
-                </div>
-              )}
-            </For>
-          </div>
-        </section>
-      </Show>
 
       <Show when={showLinks()}>
         <section class="px-2.5 py-2 border-t border-border bg-bg-subtle">
           <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
-            Links
+            Bandcamp links
           </div>
           <div class="space-y-1 text-xs">
             <For each={links()}>
@@ -490,9 +241,6 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
           sourceLabel={`${sourceLabel()} · ${formatNewsletterDate(props.newsletter.sentAt)}`}
           summary={props.newsletter.summary}
           text={detailResource.newsletter()?.cleanedText ?? null}
-          artists={modalArtists()}
-          albums={modalAlbums()}
-          tracks={modalTracks()}
           links={modalLinks()}
           isLoading={detailResource.status() === 'loading'}
           error={detailResource.error()}

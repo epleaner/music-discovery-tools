@@ -1,11 +1,14 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ZodError } from 'zod';
 import {
   openInitializedNewsletterDatabase,
+  replaceNewsletterLinks,
   resolveNewsletterDbPath,
+  updateNewsletterMessageExtractionStatus,
   type NewsletterDatabase,
+  type NewsletterLinkInput,
 } from '@soundscape/newsletters-db';
 import {
   formatConfigSummary,
@@ -23,14 +26,12 @@ import {
   type GmailApiClient,
 } from './gmail.js';
 import {
-  createFixtureBackedLlmClient,
   createPiNewsletterLlmClient,
   extractAndPersistNewsletterMessage,
-  normalizeFixtureMessageBodies,
-  readSampleFixture,
+  resolveSampleFixturePath,
   type NewsletterLlmClient,
-  type StructuredLogger,
 } from './llm.js';
+import { extractBandcampLinksFromNewsletter } from './bandcamp-links.js';
 import { normalizeGmailMessagePayload } from './normalize-email.js';
 import {
   finalizeSyncRun,
@@ -42,16 +43,34 @@ interface IngestCliOptions {
   dryRun: boolean;
   syncNow: boolean;
   retryFailed: boolean;
+  reprocessBandcampLinks: boolean;
   verbose: boolean;
   fromScratch: boolean;
   samplePath?: string;
+}
+
+type StructuredLogger = (line: string) => void;
+
+interface SampleMessageFixture {
+  message: {
+    id: string;
+    threadId?: string | null;
+    internalDate?: string | null;
+    sentAt?: string | null;
+    subject?: string | null;
+    senderName?: string | null;
+    senderEmail?: string | null;
+    sourceName?: string | null;
+    payload?: unknown;
+  };
 }
 
 export interface LiveSyncResult {
   syncRunId: number;
   syncRunStatus: 'succeeded' | 'failed';
   messageCount: number;
-  extractionFailureCount: number;
+  processingFailureCount: number;
+  linkCount: number;
   newestMessageTimestamp: string | null;
   gmailQuery: string;
   gmailApiQuery: string;
@@ -63,6 +82,13 @@ export interface RetryFailedResult {
   syncRunStatus: 'succeeded' | 'failed';
   messageCount: number;
   extractionFailureCount: number;
+}
+
+export interface ReprocessBandcampLinksResult {
+  syncRunId: number;
+  syncRunStatus: 'succeeded' | 'failed';
+  messageCount: number;
+  linkCount: number;
 }
 
 export function parseCliOptions(argv: string[]): IngestCliOptions {
@@ -78,6 +104,7 @@ export function parseCliOptions(argv: string[]): IngestCliOptions {
   const retryFailed = argv.includes('--retry-failed');
   const verbose = argv.includes('--verbose');
   const fromScratch = argv.includes('--from-scratch');
+  const reprocessBandcampLinks = argv.includes('--reprocess-bandcamp-links');
 
   if (syncNow && dryRun) {
     throw new Error('Use either --sync-now or --dry-run, not both.');
@@ -89,6 +116,10 @@ export function parseCliOptions(argv: string[]): IngestCliOptions {
 
   if (retryFailed && syncNow) {
     throw new Error('--retry-failed cannot be combined with --sync-now.');
+  }
+
+  if (reprocessBandcampLinks && syncNow) {
+    throw new Error('--reprocess-bandcamp-links cannot be combined with --sync-now.');
   }
 
   if (retryFailed && dryRun) {
@@ -107,6 +138,7 @@ export function parseCliOptions(argv: string[]): IngestCliOptions {
     dryRun,
     syncNow,
     retryFailed,
+    reprocessBandcampLinks,
     verbose,
     fromScratch,
     samplePath,
@@ -123,11 +155,38 @@ export function resetNewsletterDatabase(dbPath: string): void {
   }
 }
 
+async function extractAndPersistBandcampLinks(input: {
+  db: NewsletterDatabase;
+  newsletterMessageId: number;
+  rawHtml?: string | null;
+  rawText?: string | null;
+  cleanedText?: string | null;
+  resolveUrl?: (url: string) => Promise<string | null>;
+}): Promise<NewsletterLinkInput[]> {
+  const links = await extractBandcampLinksFromNewsletter(
+    {
+      rawHtml: input.rawHtml,
+      rawText: input.rawText,
+      cleanedText: input.cleanedText,
+    },
+    {
+      resolveUrl: input.resolveUrl,
+    }
+  );
+
+  replaceNewsletterLinks(input.db, {
+    newsletterMessageId: input.newsletterMessageId,
+    links,
+  });
+  updateNewsletterMessageExtractionStatus(input.db, input.newsletterMessageId, 'processed');
+
+  return links;
+}
+
 export async function runLiveNewsletterSync(input: {
   db: NewsletterDatabase;
   config: LiveSyncConfig;
   gmailClient: GmailApiClient;
-  llmClient: NewsletterLlmClient;
   syncRunId: number;
   lastSuccessfulSyncAt: string | null;
   verbose?: boolean;
@@ -160,7 +219,8 @@ export async function runLiveNewsletterSync(input: {
     messageCount: fetched.messageRefs.length,
   });
 
-  let extractionFailureCount = 0;
+  let processingFailureCount = 0;
+  let linkCount = 0;
   let newestMessageTimestamp: string | null = null;
 
   for (const [index, rawMessage] of fetched.messages.entries()) {
@@ -199,50 +259,51 @@ export async function runLiveNewsletterSync(input: {
     }
 
     try {
-      log('newsletter_message.extract_start', {
+      log('newsletter_message.bandcamp_start', {
         index: index + 1,
         totalMessages: fetched.messages.length,
         gmailMessageId: messageMetadata.id,
       });
 
-      await extractAndPersistNewsletterMessage({
+      const links = await extractAndPersistBandcampLinks({
         db: input.db,
         newsletterMessageId: persisted.newsletterMessageId,
-        message: {
-          id: messageMetadata.id,
-          sourceName:
-            messageMetadata.sourceName ?? messageMetadata.senderName ?? null,
-          subject: messageMetadata.subject ?? null,
-          cleanedText: normalizedBody.cleanedText,
-        },
-        llmClient: input.llmClient,
-        entityConfidenceThreshold: input.config.entityConfidenceThreshold,
+        rawHtml: normalizedBody.rawHtml,
+        rawText: normalizedBody.rawText,
+        cleanedText: normalizedBody.cleanedText,
       });
 
-      log('newsletter_message.extracted', {
+      linkCount += links.length;
+      log('newsletter_message.bandcamp_saved', {
         index: index + 1,
         totalMessages: fetched.messages.length,
         gmailMessageId: messageMetadata.id,
+        linkCount: links.length,
       });
     } catch (error) {
-      extractionFailureCount += 1;
+      processingFailureCount += 1;
+      updateNewsletterMessageExtractionStatus(
+        input.db,
+        persisted.newsletterMessageId,
+        'failed'
+      );
       const formattedError = formatVerboseError(error);
-      log('newsletter_message.extract_failed', {
+      log('newsletter_message.bandcamp_failed', {
         index: index + 1,
         totalMessages: fetched.messages.length,
         gmailMessageId: messageMetadata.id,
         error: formattedError,
       });
       console.error(
-        `Failed to extract newsletter message ${messageMetadata.id}: ${formattedError}`
+        `Failed to process newsletter message ${messageMetadata.id}: ${formattedError}`
       );
     }
   }
 
-  const syncStatus = extractionFailureCount > 0 ? 'failed' : 'succeeded';
+  const syncStatus = processingFailureCount > 0 ? 'failed' : 'succeeded';
   const syncErrorText =
-    extractionFailureCount > 0
-      ? `${extractionFailureCount} message(s) failed extraction; raw content persisted for retry/debugging.`
+    processingFailureCount > 0
+      ? `${processingFailureCount} message(s) failed Bandcamp link processing; raw content persisted for retry/debugging.`
       : null;
 
   finalizeSyncRun(input.db, {
@@ -258,7 +319,8 @@ export async function runLiveNewsletterSync(input: {
     syncRunId: input.syncRunId,
     syncRunStatus: syncStatus,
     messageCount: fetched.messages.length,
-    extractionFailureCount,
+    processingFailureCount,
+    linkCount,
     newestMessageTimestamp: newestMessageTimestamp ?? 'none',
   });
 
@@ -266,11 +328,77 @@ export async function runLiveNewsletterSync(input: {
     syncRunId: input.syncRunId,
     syncRunStatus: syncStatus,
     messageCount: fetched.messages.length,
-    extractionFailureCount,
+    processingFailureCount,
+    linkCount,
     newestMessageTimestamp,
     gmailQuery,
     gmailApiQuery: fetched.query,
     resolvedLabelId: fetched.label.id,
+  };
+}
+
+export async function runReprocessBandcampLinks(input: {
+  db: NewsletterDatabase;
+  syncRunId: number;
+  resolveUrl?: (url: string) => Promise<string | null>;
+  verbose?: boolean;
+  logger?: StructuredLogger;
+}): Promise<ReprocessBandcampLinksResult> {
+  const verbose = input.verbose ?? false;
+  const logger = input.logger ?? console.log;
+  const log = createVerboseProgressLogger(verbose, logger);
+  const rows = input.db
+    .prepare<
+      [],
+      {
+        id: number;
+        gmail_message_id: string;
+        raw_html: string | null;
+        raw_text: string | null;
+        cleaned_text: string | null;
+      }
+    >(
+      `SELECT id, gmail_message_id, raw_html, raw_text, cleaned_text
+       FROM newsletter_messages
+       ORDER BY id ASC`
+    )
+    .all();
+
+  let linkCount = 0;
+
+  for (const row of rows) {
+    const links = await extractAndPersistBandcampLinks({
+      db: input.db,
+      newsletterMessageId: row.id,
+      rawHtml: row.raw_html,
+      rawText: row.raw_text,
+      cleanedText: row.cleaned_text,
+      resolveUrl: input.resolveUrl,
+    });
+
+    linkCount += links.length;
+  }
+
+  finalizeSyncRun(input.db, {
+    syncRunId: input.syncRunId,
+    status: 'succeeded',
+    completedAt: new Date().toISOString(),
+    messageCount: rows.length,
+    newestMessageTimestamp: null,
+    errorText: null,
+  });
+
+  log('reprocess_bandcamp.completed', {
+    syncRunId: input.syncRunId,
+    messageCount: rows.length,
+    linkCount,
+  });
+
+  return {
+    syncRunId: input.syncRunId,
+    syncRunStatus: 'succeeded',
+    messageCount: rows.length,
+    linkCount,
   };
 }
 
@@ -448,12 +576,6 @@ export async function runIngest(
         db,
         config: liveConfig,
         gmailClient: createGmailApiClient(liveConfig.gmail),
-        llmClient: createPiNewsletterLlmClient({
-          model: liveConfig.llm.model,
-          retries: 1,
-          verbose: options.verbose,
-          logger: console.log,
-        }),
         syncRunId,
         lastSuccessfulSyncAt,
         verbose: options.verbose,
@@ -474,7 +596,7 @@ export async function runIngest(
         db,
         config,
         llmClient: createPiNewsletterLlmClient({
-          model: config.llm.model,
+          model: 'gpt-5.4-mini',
           retries: 1,
           verbose: options.verbose,
           logger: console.log,
@@ -490,6 +612,24 @@ export async function runIngest(
         lastSuccessfulSyncAt,
         result,
       });
+      return;
+    }
+
+    if (options.reprocessBandcampLinks) {
+      const result = await runReprocessBandcampLinks({
+        db,
+        syncRunId,
+        verbose: options.verbose,
+        logger: console.log,
+      });
+
+      console.log('Soundscape newsletter Bandcamp link reprocess');
+      console.log('mode=reprocess-bandcamp-links');
+      console.log(`syncRunId=${result.syncRunId}`);
+      console.log(`syncRunStatus=${result.syncRunStatus}`);
+      console.log(`dbPath=${dbPath}`);
+      console.log(`messageCount=${result.messageCount}`);
+      console.log(`linkCount=${result.linkCount}`);
       return;
     }
 
@@ -513,7 +653,7 @@ export async function runIngest(
     );
     console.log(`dbPath=${dbPath}`);
     console.log(
-      'nextAction=run with --sync-now for live Gmail ingest or --sample for fixture validation'
+      'nextAction=run with --sync-now for live Gmail ingest, --reprocess-bandcamp-links for stored newsletters, or --sample for fixture validation'
     );
   } catch (error) {
     finalizeSyncRun(db, {
@@ -540,8 +680,10 @@ async function runSampleIngest(input: {
   samplePath: string;
   syncRunId: number;
 }): Promise<void> {
-  const fixture = readSampleFixture(input.samplePath);
-  const normalizedBody = normalizeFixtureMessageBodies(fixture);
+  const fixture = readSampleMessageFixture(input.samplePath);
+  const normalizedBody = normalizeGmailMessagePayload(
+    fixture.message.payload ?? null
+  );
   const persisted = persistRawGmailMessage(input.db, {
     id: fixture.message.id,
     threadId: fixture.message.threadId ?? null,
@@ -553,18 +695,12 @@ async function runSampleIngest(input: {
     sourceName: fixture.message.sourceName ?? null,
     ...normalizedBody,
   });
-  const extractionResult = await extractAndPersistNewsletterMessage({
+  const links = await extractAndPersistBandcampLinks({
     db: input.db,
     newsletterMessageId: persisted.newsletterMessageId,
-    message: {
-      id: fixture.message.id,
-      sourceName:
-        fixture.message.sourceName ?? fixture.message.senderName ?? null,
-      subject: fixture.message.subject ?? null,
-      cleanedText: normalizedBody.cleanedText,
-    },
-    llmClient: createFixtureBackedLlmClient(fixture),
-    entityConfidenceThreshold: input.config.entityConfidenceThreshold,
+    rawHtml: normalizedBody.rawHtml,
+    rawText: normalizedBody.rawText,
+    cleanedText: normalizedBody.cleanedText,
   });
 
   finalizeSyncRun(input.db, {
@@ -586,11 +722,7 @@ async function runSampleIngest(input: {
   console.log(`dbPath=${input.dbPath}`);
   console.log(`samplePath=${input.samplePath}`);
   console.log(`newsletterMessageId=${persisted.newsletterMessageId}`);
-  console.log(`extractionId=${extractionResult.extractionId}`);
-  console.log(`normalizedArtists=${extractionResult.normalizedCounts.artists}`);
-  console.log(`normalizedAlbums=${extractionResult.normalizedCounts.albums}`);
-  console.log(`normalizedTracks=${extractionResult.normalizedCounts.tracks}`);
-  console.log(`normalizedLinks=${extractionResult.normalizedCounts.links}`);
+  console.log(`linkCount=${links.length}`);
 }
 
 function logLiveSyncSummary(input: {
@@ -610,7 +742,8 @@ function logLiveSyncSummary(input: {
   console.log(`syncRunStatus=${input.result.syncRunStatus}`);
   console.log(`dbPath=${input.dbPath}`);
   console.log(`messageCount=${input.result.messageCount}`);
-  console.log(`extractionFailureCount=${input.result.extractionFailureCount}`);
+  console.log(`processingFailureCount=${input.result.processingFailureCount}`);
+  console.log(`linkCount=${input.result.linkCount}`);
   console.log(
     `newestMessageTimestamp=${input.result.newestMessageTimestamp ?? 'none'}`
   );
@@ -715,20 +848,21 @@ function createVerboseProgressLogger(
           `  cleaned text present: ${fields.cleanedTextPresent ? 'yes' : 'no'}`
         );
         return;
-      case 'newsletter_message.extract_start':
-        logger('  Starting extraction');
+      case 'newsletter_message.bandcamp_start':
+        logger('  Starting Bandcamp link extraction');
         return;
-      case 'newsletter_message.extracted':
-        logger('  Extraction saved');
+      case 'newsletter_message.bandcamp_saved':
+        logger(`  Saved ${fields.linkCount} Bandcamp link(s)`);
         return;
-      case 'newsletter_message.extract_failed':
-        logger(`  Extraction failed: ${fields.error}`);
+      case 'newsletter_message.bandcamp_failed':
+        logger(`  Bandcamp link extraction failed: ${fields.error}`);
         return;
       case 'gmail_sync.completed':
         logger('Sync complete');
         logger(`  status: ${fields.syncRunStatus}`);
         logger(`  messages: ${fields.messageCount}`);
-        logger(`  extraction failures: ${fields.extractionFailureCount}`);
+        logger(`  Bandcamp processing failures: ${fields.processingFailureCount}`);
+        logger(`  Bandcamp links saved: ${fields.linkCount}`);
         logger(`  newest message: ${fields.newestMessageTimestamp}`);
         return;
       case 'retry_failed.start':
@@ -755,6 +889,11 @@ function createVerboseProgressLogger(
         logger(`  messages: ${fields.messageCount}`);
         logger(`  extraction failures: ${fields.extractionFailureCount}`);
         return;
+      case 'reprocess_bandcamp.completed':
+        logger('Bandcamp reprocess complete');
+        logger(`  messages: ${fields.messageCount}`);
+        logger(`  Bandcamp links saved: ${fields.linkCount}`);
+        return;
       default:
         logger(`${event}: ${JSON.stringify(fields)}`);
     }
@@ -764,6 +903,28 @@ function createVerboseProgressLogger(
 const isEntrypoint =
   process.argv[1] != null &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+function readSampleMessageFixture(fixturePath: string): SampleMessageFixture {
+  const rawFixture = JSON.parse(
+    readFileSync(resolveSampleFixturePath(fixturePath), 'utf8')
+  ) as unknown;
+
+  if (
+    typeof rawFixture !== 'object' ||
+    rawFixture === null ||
+    !('message' in rawFixture)
+  ) {
+    throw new Error('Sample fixture must include a top-level message object.');
+  }
+
+  const fixture = rawFixture as SampleMessageFixture;
+
+  if (!fixture.message?.id) {
+    throw new Error('Sample fixture message.id is required.');
+  }
+
+  return fixture;
+}
 
 if (isEntrypoint) {
   runIngest().catch((error: unknown) => {
