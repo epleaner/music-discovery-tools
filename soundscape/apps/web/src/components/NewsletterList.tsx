@@ -3,6 +3,7 @@ import { createNewsletterDetailResource } from '../lib/newsletter-resource.js';
 import type { NewsletterApi, NewsletterSummary } from '../lib/newsletters.js';
 import {
   formatNewsletterDate,
+  formatNewsletterLinkLabel,
   type NewsletterLinkModel,
 } from './newsletter-panel-model.js';
 
@@ -131,7 +132,7 @@ const NewsletterModal: Component<NewsletterModalProps> = (props) => {
 
 function buildLinkItems(newsletter: NewsletterSummary): NewsletterLinkModel[] {
   return newsletter.links.map((link) => ({
-    label: link.title ?? link.domain ?? link.url,
+    label: formatNewsletterLinkLabel(link),
     url: link.url,
   }));
 }
@@ -159,7 +160,7 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
   const modalLinks = createMemo(
     () =>
       detailResource.newsletter()?.links.map((link) => ({
-        label: link.title ?? link.domain ?? link.url,
+        label: formatNewsletterLinkLabel(link),
         url: link.url,
       })) ?? links()
   );

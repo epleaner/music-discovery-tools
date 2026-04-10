@@ -79,8 +79,33 @@ test('buildNewsletterPanelModel renders link-only newsletter rows', () => {
   ]);
   assert.deepEqual(model.listItems[1]?.links, [
     {
-      label: 'artist.bandcamp.com',
+      label: 'Sunshine And Rain',
       url: 'https://artist.bandcamp.com/track/sunshine-and-rain',
+    },
+  ]);
+});
+
+test('buildNewsletterPanelModel derives a readable label from Bandcamp URLs when title is missing', () => {
+  const model = buildNewsletterPanelModel({
+    newsletters: [
+      createNewsletterSummary({
+        links: [
+          {
+            url: 'https://artist.bandcamp.com/album/a-grand-dont-come-for-free',
+            domain: 'artist.bandcamp.com',
+            title: null,
+            confidence: 1,
+          },
+        ],
+      }),
+    ],
+    listStatus: 'ready',
+  });
+
+  assert.deepEqual(model.listItems[0]?.links, [
+    {
+      label: 'A Grand Dont Come For Free',
+      url: 'https://artist.bandcamp.com/album/a-grand-dont-come-for-free',
     },
   ]);
 });

@@ -21,6 +21,38 @@ export interface NewsletterPanelModel {
   listItems: NewsletterListItemModel[];
 }
 
+function titleCaseWords(value: string): string {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function deriveLinkLabelFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    const slug = segments.at(-1);
+
+    if (!slug) {
+      return null;
+    }
+
+    return titleCaseWords(decodeURIComponent(slug).replace(/[-_]+/g, ' '));
+  } catch {
+    return null;
+  }
+}
+
+export function formatNewsletterLinkLabel(link: {
+  title: string | null;
+  domain: string | null;
+  url: string;
+}): string {
+  return link.title ?? deriveLinkLabelFromUrl(link.url) ?? link.domain ?? link.url;
+}
+
 export function formatNewsletterDate(sentAt: string | null): string {
   if (!sentAt) return 'Unknown date';
 
@@ -90,7 +122,7 @@ export function buildNewsletterPanelModel(input: {
       subject: newsletter.subject ?? 'Untitled newsletter',
       summary: newsletter.summary,
       links: newsletter.links.map((link) => ({
-        label: link.title ?? link.domain ?? link.url,
+        label: formatNewsletterLinkLabel(link),
         url: link.url,
       })),
     })),
