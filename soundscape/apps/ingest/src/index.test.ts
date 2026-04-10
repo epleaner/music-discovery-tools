@@ -187,6 +187,59 @@ test('runReprocessBandcampLinks extracts Bandcamp links from stored newsletter c
   }
 });
 
+test('runReprocessBandcampLinks caches redirect resolution across newsletters and emits progress logs', async () => {
+  const { db, cleanup } = createTestDatabase();
+  const logs: string[] = [];
+  const resolvedUrls: string[] = [];
+
+  try {
+    persistRawGmailMessage(db, {
+      id: 'gmail-bandcamp-reprocess-1',
+      subject: 'Bandcamp picks 1',
+      senderName: 'Bandcamp Sender',
+      senderEmail: 'bandcamp@example.com',
+      sentAt: '2026-04-08T12:10:00.000Z',
+      rawHtml:
+        '<a href="https://tracker.example.com/out?id=1">Tracked Bandcamp</a>',
+      cleanedText: 'bandcamp picks 1',
+    });
+    persistRawGmailMessage(db, {
+      id: 'gmail-bandcamp-reprocess-2',
+      subject: 'Bandcamp picks 2',
+      senderName: 'Bandcamp Sender',
+      senderEmail: 'bandcamp@example.com',
+      sentAt: '2026-04-08T12:11:00.000Z',
+      rawHtml:
+        '<a href="https://tracker.example.com/out?id=1">Tracked Bandcamp</a>',
+      cleanedText: 'bandcamp picks 2',
+    });
+
+    const syncRunId = startSyncRun(db, '2026-04-09T09:00:00.000Z');
+    const result = await runReprocessBandcampLinks({
+      db,
+      syncRunId,
+      resolveUrl: async (url) => {
+        resolvedUrls.push(url);
+        return url === 'https://tracker.example.com/out?id=1'
+          ? 'https://artist.bandcamp.com/album/tracked-record'
+          : null;
+      },
+      verbose: true,
+      logger: (line) => logs.push(line),
+    });
+
+    assert.equal(result.messageCount, 2);
+    assert.equal(result.linkCount, 2);
+    assert.deepEqual(resolvedUrls, ['https://tracker.example.com/out?id=1']);
+    assert.ok(logs.some((line) => line.includes('Reprocessing Bandcamp links')));
+    assert.ok(logs.some((line) => line.includes('[1/2] gmail-bandcamp-reprocess-1')));
+    assert.ok(logs.some((line) => line.includes('[2/2] gmail-bandcamp-reprocess-2')));
+    assert.ok(logs.some((line) => line.includes('Bandcamp reprocess complete')));
+  } finally {
+    cleanup();
+  }
+});
+
 test('runRetryFailedNewsletterExtractions retries only failed messages without advancing the cursor', async () => {
   const { db, cleanup } = createTestDatabase();
 

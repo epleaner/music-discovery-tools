@@ -191,6 +191,35 @@ test('extractBandcampLinksFromNewsletter resolves tracking links to final Bandca
   ]);
 });
 
+ test('extractBandcampLinksFromNewsletter resolves each unique tracking URL only once per newsletter', async () => {
+  const resolvedUrls: string[] = [];
+  const result = await extractBandcampLinksFromNewsletter(
+    {
+      rawHtml: `
+        <a href="https://tracker.example.com/out?id=1">Tracked link</a>
+        <a href="https://tracker.example.com/out?id=1">Tracked again</a>
+      `,
+      rawText: 'https://tracker.example.com/out?id=1',
+    },
+    {
+      resolveUrl: async (url) => {
+        resolvedUrls.push(url);
+        return 'https://artist.bandcamp.com/album/record';
+      },
+    }
+  );
+
+  assert.deepEqual(resolvedUrls, ['https://tracker.example.com/out?id=1']);
+  assert.deepEqual(result, [
+    {
+      url: 'https://artist.bandcamp.com/album/record',
+      domain: 'artist.bandcamp.com',
+      title: 'Tracked link',
+      confidence: 1,
+    },
+  ]);
+});
+
 test('extractBandcampLinksFromNewsletter ignores non-Bandcamp links after resolution', async () => {
   const result = await extractBandcampLinksFromNewsletter(
     {

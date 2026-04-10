@@ -233,10 +233,17 @@ export async function extractBandcampLinksFromNewsletter(
     ...(input.rawText ? extractCandidateLinksFromText(input.rawText) : []),
     ...(input.cleanedText ? extractCandidateLinksFromText(input.cleanedText) : []),
   ];
+  const uniqueCandidates = new Map<string, CandidateLink>();
+
+  for (const candidate of candidates) {
+    if (!uniqueCandidates.has(candidate.url)) {
+      uniqueCandidates.set(candidate.url, candidate);
+    }
+  }
 
   const deduped = new Map<string, NewsletterLinkInput>();
 
-  for (const candidate of candidates) {
+  for (const candidate of uniqueCandidates.values()) {
     const finalUrl = await resolveBandcampUrl(candidate, resolveUrl);
     if (!finalUrl || deduped.has(finalUrl)) {
       continue;

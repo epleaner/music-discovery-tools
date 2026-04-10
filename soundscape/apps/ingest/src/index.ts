@@ -347,6 +347,19 @@ export async function runReprocessBandcampLinks(input: {
   const verbose = input.verbose ?? false;
   const logger = input.logger ?? console.log;
   const log = createVerboseProgressLogger(verbose, logger);
+  const resolveUrlCache = new Map<string, Promise<string | null>>();
+  const resolveUrl = input.resolveUrl
+    ? async (url: string) => {
+        const cached = resolveUrlCache.get(url);
+        if (cached) {
+          return cached;
+        }
+
+        const pending = input.resolveUrl!(url);
+        resolveUrlCache.set(url, pending);
+        return pending;
+      }
+    : undefined;
   const rows = input.db
     .prepare<
       [],
@@ -366,17 +379,35 @@ export async function runReprocessBandcampLinks(input: {
 
   let linkCount = 0;
 
-  for (const row of rows) {
+  log('reprocess_bandcamp.start', {
+    syncRunId: input.syncRunId,
+    messageCount: rows.length,
+  });
+
+  for (const [index, row] of rows.entries()) {
+    log('reprocess_bandcamp.message_start', {
+      index: index + 1,
+      totalMessages: rows.length,
+      gmailMessageId: row.gmail_message_id,
+    });
+
     const links = await extractAndPersistBandcampLinks({
       db: input.db,
       newsletterMessageId: row.id,
       rawHtml: row.raw_html,
       rawText: row.raw_text,
       cleanedText: row.cleaned_text,
-      resolveUrl: input.resolveUrl,
+      resolveUrl,
     });
 
     linkCount += links.length;
+
+    log('reprocess_bandcamp.message_saved', {
+      index: index + 1,
+      totalMessages: rows.length,
+      gmailMessageId: row.gmail_message_id,
+      linkCount: links.length,
+    });
   }
 
   finalizeSyncRun(input.db, {
@@ -888,6 +919,20 @@ function createVerboseProgressLogger(
         logger(`  status: ${fields.syncRunStatus}`);
         logger(`  messages: ${fields.messageCount}`);
         logger(`  extraction failures: ${fields.extractionFailureCount}`);
+        return;
+      case 'reprocess_bandcamp.start':
+        logger('Reprocessing Bandcamp links');
+        logger(`  sync run: ${fields.syncRunId}`);
+        logger(`  messages: ${fields.messageCount}`);
+        return;
+      case 'reprocess_bandcamp.message_start':
+        logger(
+          `[${fields.index}/${fields.totalMessages}] ${fields.gmailMessageId}`
+        );
+        logger('  Starting Bandcamp link extraction');
+        return;
+      case 'reprocess_bandcamp.message_saved':
+        logger(`  Saved ${fields.linkCount} Bandcamp link(s)`);
         return;
       case 'reprocess_bandcamp.completed':
         logger('Bandcamp reprocess complete');
