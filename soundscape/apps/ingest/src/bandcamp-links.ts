@@ -30,9 +30,38 @@ function stripHtmlTags(value: string): string {
   return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+const BANDCAMP_TRACKING_PARAM_PATTERNS = [
+  /^utm_/i,
+  /^mc_/i,
+  /^fbclid$/i,
+  /^gclid$/i,
+  /^from$/i,
+  /^ref$/i,
+  /^referrer$/i,
+  /^campaign_id$/i,
+];
+
+function isBandcampTrackingParam(name: string): boolean {
+  return BANDCAMP_TRACKING_PARAM_PATTERNS.some((pattern) => pattern.test(name));
+}
+
+function normalizeBandcampUrl(url: URL): string {
+  const normalized = new URL(url.toString());
+
+  for (const key of [...normalized.searchParams.keys()]) {
+    if (isBandcampTrackingParam(key)) {
+      normalized.searchParams.delete(key);
+    }
+  }
+
+  normalized.hash = '';
+  return normalized.toString();
+}
+
 function normalizeUrl(value: string): string | null {
   try {
-    return new URL(value).toString();
+    const url = new URL(value);
+    return isBandcampUrl(url.toString()) ? normalizeBandcampUrl(url) : url.toString();
   } catch {
     return null;
   }

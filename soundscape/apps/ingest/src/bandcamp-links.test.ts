@@ -131,6 +131,40 @@ test('extractBandcampLinksFromNewsletter keeps direct Bandcamp URLs and dedupes 
   ]);
 });
 
+test('extractBandcampLinksFromNewsletter strips known Bandcamp tracking params before deduping', async () => {
+  const result = await extractBandcampLinksFromNewsletter({
+    rawHtml: `
+      <a href="https://marineeyes.bandcamp.com/track/around-the-lake?from=fanactv-hushhushrecords">Tracked</a>
+      <a href="https://marineeyes.bandcamp.com/track/around-the-lake?utm_source=substack&utm_medium=email">Campaign</a>
+    `,
+    rawText: 'https://marineeyes.bandcamp.com/track/around-the-lake?ref=homepage',
+  });
+
+  assert.deepEqual(result, [
+    {
+      url: 'https://marineeyes.bandcamp.com/track/around-the-lake',
+      domain: 'marineeyes.bandcamp.com',
+      title: 'Tracked',
+      confidence: 1,
+    },
+  ]);
+});
+
+test('extractBandcampLinksFromNewsletter preserves non-tracking Bandcamp query params', async () => {
+  const result = await extractBandcampLinksFromNewsletter({
+    rawText: 'https://artist.bandcamp.com/album/record?t=1',
+  });
+
+  assert.deepEqual(result, [
+    {
+      url: 'https://artist.bandcamp.com/album/record?t=1',
+      domain: 'artist.bandcamp.com',
+      title: null,
+      confidence: 1,
+    },
+  ]);
+});
+
 test('extractBandcampLinksFromNewsletter resolves tracking links to final Bandcamp destinations', async () => {
   const resolvedUrls: string[] = [];
   const result = await extractBandcampLinksFromNewsletter(
