@@ -138,6 +138,7 @@ Expected output includes:
 3. In the right-hand panel, click `Newsletters`.
 4. Browse newsletter cards directly in that panel.
 5. Expand `Text`, `Artists`, `Albums`, `Tracks`, or `Links` inline on any newsletter row.
+6. Artists, albums, and tracks are only linked when that newsletter already contains an extracted URL whose text exactly matches the entity.
 
 If the panel is empty, run the fixture ingest command or your local live sync command first so the SQLite DB has newsletter rows.
 

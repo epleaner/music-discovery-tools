@@ -203,6 +203,7 @@ soundscape/
 7. Optionally run `pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-newsletter.json` to load fixture data into the same DB without Gmail access.
 8. Start the app with `pnpm dev`, enter a username if you want Last.fm data, and switch the right-hand panel from `Similar` to `Newsletters`.
 9. Use the inline newsletter cards to expand text, artists, albums, tracks, and links directly inside the panel.
+10. Artists, albums, and tracks are only linked when the same newsletter already contains an extracted URL that exactly matches that entity.
 
 For ingest-specific setup and scheduler examples, see `apps/ingest/README.md`.
 

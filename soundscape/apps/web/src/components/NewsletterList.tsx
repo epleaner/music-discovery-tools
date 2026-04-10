@@ -1,5 +1,10 @@
 import { Component, For, Show, createMemo, createSignal } from 'solid-js';
 import { createNewsletterDetailResource } from '../lib/newsletter-resource.js';
+import {
+  buildNewsletterDetailEntityLinks,
+  buildNewsletterSummaryEntityLinks,
+  type MatchedNewsletterEntityLink,
+} from '../lib/newsletter-link-matcher.js';
 import type { NewsletterApi, NewsletterSummary } from '../lib/newsletters.js';
 import {
   formatNewsletterDate,
@@ -25,14 +30,19 @@ interface SectionToggleProps {
   count?: number;
 }
 
+interface EntityDisplayItem {
+  text: string;
+  url: string | null;
+}
+
 interface NewsletterModalProps {
   title: string;
   sourceLabel: string;
   summary: string | null;
   text: string | null;
-  artists: string[];
-  albums: string[];
-  tracks: string[];
+  artists: EntityDisplayItem[];
+  albums: EntityDisplayItem[];
+  tracks: EntityDisplayItem[];
   links: NewsletterLinkModel[];
   isLoading: boolean;
   error: Error | null;
@@ -53,6 +63,27 @@ const SectionToggle: Component<SectionToggleProps> = (props) => {
       {props.expanded ? '−' : '+'} {props.label}
       {suffix()}
     </button>
+  );
+};
+
+const EntityText: Component<{
+  item: EntityDisplayItem;
+  class?: string;
+}> = (props) => {
+  return (
+    <Show
+      when={props.item.url}
+      fallback={<span class={props.class}>{props.item.text}</span>}
+    >
+      <a
+        href={props.item.url ?? '#'}
+        target="_blank"
+        rel="noreferrer"
+        class={props.class ?? 'hover:text-fg'}
+      >
+        {props.item.text}
+      </a>
+    </Show>
   );
 };
 
@@ -116,7 +147,7 @@ const NewsletterModal: Component<NewsletterModalProps> = (props) => {
                 <For each={props.artists}>
                   {(artist) => (
                     <span class="px-1.5 py-0.5 text-xs border border-border">
-                      {artist}
+                      <EntityText item={artist} />
                     </span>
                   )}
                 </For>
@@ -132,7 +163,13 @@ const NewsletterModal: Component<NewsletterModalProps> = (props) => {
                 Albums
               </div>
               <div class="space-y-1 text-xs">
-                <For each={props.albums}>{(album) => <div>{album}</div>}</For>
+                <For each={props.albums}>
+                  {(album) => (
+                    <div>
+                      <EntityText item={album} class="text-fg-muted" />
+                    </div>
+                  )}
+                </For>
               </div>
             </section>
           </Show>
@@ -145,7 +182,13 @@ const NewsletterModal: Component<NewsletterModalProps> = (props) => {
                 Tracks
               </div>
               <div class="space-y-1 text-xs">
-                <For each={props.tracks}>{(track) => <div>{track}</div>}</For>
+                <For each={props.tracks}>
+                  {(track) => (
+                    <div>
+                      <EntityText item={track} class="text-fg-muted" />
+                    </div>
+                  )}
+                </For>
               </div>
             </section>
           </Show>
@@ -181,6 +224,16 @@ const NewsletterModal: Component<NewsletterModalProps> = (props) => {
 
 function formatSectionItems(items: string[]): string[] {
   return items.filter((item) => item.trim().length > 0);
+}
+
+function buildEntityDisplayItems(
+  labels: string[],
+  matches: MatchedNewsletterEntityLink[]
+): EntityDisplayItem[] {
+  return labels.map((text, index) => ({
+    text,
+    url: matches[index]?.url ?? null,
+  }));
 }
 
 function buildLinkItems(newsletter: NewsletterSummary): NewsletterLinkModel[] {
@@ -234,31 +287,49 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
       props.newsletter.source.senderEmail ??
       'Unknown source'
   );
-  const modalArtists = createMemo(
-    () =>
-      detailResource.newsletter()?.artists.map((artist) => artist.name) ??
-      artists()
+  const summaryEntityLinks = createMemo(() =>
+    buildNewsletterSummaryEntityLinks(props.newsletter)
   );
-  const modalAlbums = createMemo(
-    () =>
-      detailResource
-        .newsletter()
-        ?.albums.map((album) =>
-          album.primaryArtistName
-            ? `${album.name} — ${album.primaryArtistName}`
-            : album.name
-        ) ?? albums()
+  const detailEntityLinks = createMemo(() =>
+    buildNewsletterDetailEntityLinks(detailResource.newsletter())
   );
-  const modalTracks = createMemo(
-    () =>
-      detailResource
-        .newsletter()
-        ?.tracks.map((track) =>
-          track.primaryArtistName
-            ? `${track.name} — ${track.primaryArtistName}`
-            : track.name
-        ) ?? tracks()
+  const artistItems = createMemo(() =>
+    buildEntityDisplayItems(artists(), summaryEntityLinks().artists)
   );
+  const albumItems = createMemo(() =>
+    buildEntityDisplayItems(albums(), summaryEntityLinks().albums)
+  );
+  const trackItems = createMemo(() =>
+    buildEntityDisplayItems(tracks(), summaryEntityLinks().tracks)
+  );
+  const modalArtists = createMemo(() => {
+    const detail = detailResource.newsletter();
+    const labels = detail?.artists.map((artist) => artist.name) ?? artists();
+    const matches = detail ? detailEntityLinks().artists : summaryEntityLinks().artists;
+    return buildEntityDisplayItems(labels, matches);
+  });
+  const modalAlbums = createMemo(() => {
+    const detail = detailResource.newsletter();
+    const labels =
+      detail?.albums.map((album) =>
+        album.primaryArtistName
+          ? `${album.name} — ${album.primaryArtistName}`
+          : album.name
+      ) ?? albums();
+    const matches = detail ? detailEntityLinks().albums : summaryEntityLinks().albums;
+    return buildEntityDisplayItems(labels, matches);
+  });
+  const modalTracks = createMemo(() => {
+    const detail = detailResource.newsletter();
+    const labels =
+      detail?.tracks.map((track) =>
+        track.primaryArtistName
+          ? `${track.name} — ${track.primaryArtistName}`
+          : track.name
+      ) ?? tracks();
+    const matches = detail ? detailEntityLinks().tracks : summaryEntityLinks().tracks;
+    return buildEntityDisplayItems(labels, matches);
+  });
   const modalLinks = createMemo(
     () =>
       detailResource.newsletter()?.links.map((link) => ({
@@ -346,10 +417,10 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
             Artists
           </div>
           <div class="flex flex-wrap gap-1">
-            <For each={artists()}>
+            <For each={artistItems()}>
               {(artist) => (
                 <span class="px-1.5 py-0.5 text-xs border border-border">
-                  {artist}
+                  <EntityText item={artist} />
                 </span>
               )}
             </For>
@@ -363,7 +434,13 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
             Albums
           </div>
           <div class="space-y-1 text-xs">
-            <For each={albums()}>{(album) => <div>{album}</div>}</For>
+            <For each={albumItems()}>
+              {(album) => (
+                <div>
+                  <EntityText item={album} class="text-fg-muted" />
+                </div>
+              )}
+            </For>
           </div>
         </section>
       </Show>
@@ -374,7 +451,13 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
             Tracks
           </div>
           <div class="space-y-1 text-xs">
-            <For each={tracks()}>{(track) => <div>{track}</div>}</For>
+            <For each={trackItems()}>
+              {(track) => (
+                <div>
+                  <EntityText item={track} class="text-fg-muted" />
+                </div>
+              )}
+            </For>
           </div>
         </section>
       </Show>
