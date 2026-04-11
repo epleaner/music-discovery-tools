@@ -121,6 +121,15 @@ test('NewsletterList removes the Links toggle and inline collapsed state', () =>
   assert.doesNotMatch(source, /showLinks/);
 });
 
+test('NewsletterList inline Bandcamp links container has no horizontal padding', () => {
+  const source = readFileSync(
+    new URL('./NewsletterList.tsx', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(source, /<section class="mt-2 border-t border-border bg-bg-subtle py-2">/);
+});
+
 test('buildNewsletterPanelModel renders explicit empty state when no newsletters are available', () => {
   const model = buildNewsletterPanelModel({
     newsletters: [],
