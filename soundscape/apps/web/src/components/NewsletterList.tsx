@@ -178,7 +178,7 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
         </Show>
 
         <Show when={links().length > 0}>
-          <section class="mt-2 border-t border-border bg-bg-subtle py-2">
+          <section class="mt-2 border-t border-border bg-bg-subtle px-2.5 py-2">
             <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
               Bandcamp links
             </div>
