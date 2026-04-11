@@ -108,6 +108,31 @@ test('buildNewsletterPanelModel derives a readable label from Bandcamp URLs when
   ]);
 });
 
+test('buildNewsletterPanelModel ignores generic Bandcamp titles and prefers the URL slug', () => {
+  const model = buildNewsletterPanelModel({
+    newsletters: [
+      createNewsletterSummary({
+        links: [
+          {
+            url: 'https://hushhushrecords.bandcamp.com/album/no-such-thing-as-free-will',
+            domain: 'hushhushrecords.bandcamp.com',
+            title: 'Bandcamp',
+            confidence: 1,
+          },
+        ],
+      }),
+    ],
+    listStatus: 'ready',
+  });
+
+  assert.deepEqual(model.listItems[0]?.links, [
+    {
+      label: 'No Such Thing As Free Will',
+      url: 'https://hushhushrecords.bandcamp.com/album/no-such-thing-as-free-will',
+    },
+  ]);
+});
+
 test('NewsletterList removes the Links toggle and inline collapsed state', () => {
   const source = readFileSync(
     new URL('./NewsletterList.tsx', import.meta.url),

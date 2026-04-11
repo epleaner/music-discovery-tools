@@ -45,12 +45,31 @@ function deriveLinkLabelFromUrl(url: string): string | null {
   }
 }
 
+function normalizeLinkTitle(title: string | null): string | null {
+  const trimmed = title?.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.toLowerCase() === 'bandcamp') {
+    return null;
+  }
+
+  return trimmed;
+}
+
 export function formatNewsletterLinkLabel(link: {
   title: string | null;
   domain: string | null;
   url: string;
 }): string {
-  return link.title ?? deriveLinkLabelFromUrl(link.url) ?? link.domain ?? link.url;
+  return (
+    normalizeLinkTitle(link.title) ??
+    deriveLinkLabelFromUrl(link.url) ??
+    link.domain ??
+    link.url
+  );
 }
 
 export function formatNewsletterDate(sentAt: string | null): string {
