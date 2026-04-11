@@ -4,6 +4,7 @@ import {
   Switch,
   Match,
   For,
+  createEffect,
   createMemo,
   createSignal,
   onMount,
@@ -46,8 +47,14 @@ import {
   groupTracksByAlbum,
   groupTracksByArtist,
   normalizeCharacters,
+  parseHash,
 } from '@soundscape/utils';
 import { useHashState } from './lib/use-hash-state';
+import {
+  LASTFM_USERNAME_STORAGE_KEY,
+  persistLastfmUsername,
+  resolveInitialLastfmUsername,
+} from './lib/lastfm-username-storage';
 import { useTheme } from './lib/use-theme';
 
 type View = 'recent' | 'top' | 'similar';
@@ -72,8 +79,13 @@ const App: Component = () => {
     },
   ];
 
+  const initialUsername = resolveInitialLastfmUsername({
+    hashUsername: parseHash().username,
+    storedUsername: window.localStorage.getItem(LASTFM_USERNAME_STORAGE_KEY),
+  });
+
   const [state, updateState] = useHashState<AppState>({
-    username: '',
+    username: initialUsername,
     view: 'recent',
     subview: 'tracks',
     topSubview: 'artists',
@@ -125,6 +137,10 @@ const App: Component = () => {
     })
   );
   const appLayoutModel = createMemo(() => buildAppLayoutModel(username()));
+
+  createEffect(() => {
+    persistLastfmUsername(window.localStorage, username());
+  });
 
   const recentAlbums = createMemo(() =>
     groupTracksByAlbum(recentTracks.tracks())
