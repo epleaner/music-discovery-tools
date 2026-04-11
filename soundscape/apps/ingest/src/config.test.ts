@@ -2,13 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadIngestConfig, requireLiveSyncConfig } from './config.js';
 
-test('loadIngestConfig defaults newsletter Gmail settings without an LLM requirement', () => {
+test('loadIngestConfig defaults newsletter Gmail settings without newsletter LLM config', () => {
   const config = loadIngestConfig({
     NEWSLETTER_GMAIL_LABEL: 'music',
   });
 
   assert.equal(config.gmailLabel, 'music');
+  assert.equal(config.dbPath, undefined);
   assert.equal(config.gmail.clientId, undefined);
+  assert.deepEqual(Object.keys(config), ['gmailLabel', 'dbPath', 'gmail']);
 });
 
 test('requireLiveSyncConfig only requires Gmail credentials for live sync', () => {

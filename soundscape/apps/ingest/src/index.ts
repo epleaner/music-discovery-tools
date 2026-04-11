@@ -25,12 +25,6 @@ import {
   persistRawGmailMessage,
   type GmailApiClient,
 } from './gmail.js';
-import {
-  createPiNewsletterLlmClient,
-  extractAndPersistNewsletterMessage,
-  resolveSampleFixturePath,
-  type NewsletterLlmClient,
-} from './llm.js';
 import { extractBandcampLinksFromNewsletter } from './bandcamp-links.js';
 import { normalizeGmailMessagePayload } from './normalize-email.js';
 import {
@@ -42,7 +36,6 @@ import {
 interface IngestCliOptions {
   dryRun: boolean;
   syncNow: boolean;
-  retryFailed: boolean;
   reprocessBandcampLinks: boolean;
   verbose: boolean;
   fromScratch: boolean;
@@ -50,6 +43,9 @@ interface IngestCliOptions {
 }
 
 type StructuredLogger = (line: string) => void;
+
+const ingestRoot = fileURLToPath(new URL('..', import.meta.url));
+const repoRoot = resolve(ingestRoot, '../..');
 
 interface SampleMessageFixture {
   message: {
@@ -77,13 +73,6 @@ export interface LiveSyncResult {
   resolvedLabelId: string;
 }
 
-export interface RetryFailedResult {
-  syncRunId: number;
-  syncRunStatus: 'succeeded' | 'failed';
-  messageCount: number;
-  extractionFailureCount: number;
-}
-
 export interface ReprocessBandcampLinksResult {
   syncRunId: number;
   syncRunStatus: 'succeeded' | 'failed';
@@ -101,7 +90,6 @@ export function parseCliOptions(argv: string[]): IngestCliOptions {
 
   const syncNow = argv.includes('--sync-now');
   const dryRun = argv.includes('--dry-run');
-  const retryFailed = argv.includes('--retry-failed');
   const verbose = argv.includes('--verbose');
   const fromScratch = argv.includes('--from-scratch');
   const reprocessBandcampLinks = argv.includes('--reprocess-bandcamp-links');
@@ -114,30 +102,13 @@ export function parseCliOptions(argv: string[]): IngestCliOptions {
     throw new Error('Use either --sync-now or --sample, not both.');
   }
 
-  if (retryFailed && syncNow) {
-    throw new Error('--retry-failed cannot be combined with --sync-now.');
-  }
-
   if (reprocessBandcampLinks && syncNow) {
     throw new Error('--reprocess-bandcamp-links cannot be combined with --sync-now.');
-  }
-
-  if (retryFailed && dryRun) {
-    throw new Error('--retry-failed cannot be combined with --dry-run.');
-  }
-
-  if (retryFailed && samplePath) {
-    throw new Error('--retry-failed cannot be combined with --sample.');
-  }
-
-  if (retryFailed && fromScratch) {
-    throw new Error('--retry-failed cannot be combined with --from-scratch.');
   }
 
   return {
     dryRun,
     syncNow,
-    retryFailed,
     reprocessBandcampLinks,
     verbose,
     fromScratch,
@@ -433,131 +404,6 @@ export async function runReprocessBandcampLinks(input: {
   };
 }
 
-export async function runRetryFailedNewsletterExtractions(input: {
-  db: NewsletterDatabase;
-  config: IngestConfig;
-  llmClient: NewsletterLlmClient;
-  syncRunId: number;
-  verbose?: boolean;
-  logger?: StructuredLogger;
-}): Promise<RetryFailedResult> {
-  const verbose = input.verbose ?? false;
-  const logger = input.logger ?? console.log;
-  const log = createVerboseProgressLogger(verbose, logger);
-  const failedMessages = input.db
-    .prepare<
-      [],
-      {
-        id: number;
-        gmail_message_id: string;
-        subject: string | null;
-        cleaned_text: string | null;
-        sender_name: string | null;
-        sender_email: string | null;
-        canonical_name: string | null;
-      }
-    >(
-      `SELECT newsletter_messages.id,
-              newsletter_messages.gmail_message_id,
-              newsletter_messages.subject,
-              newsletter_messages.cleaned_text,
-              newsletter_messages.sender_name,
-              newsletter_messages.sender_email,
-              newsletter_sources.canonical_name
-       FROM newsletter_messages
-       LEFT JOIN newsletter_sources ON newsletter_sources.id = newsletter_messages.source_id
-       WHERE newsletter_messages.extraction_status = 'failed'
-       ORDER BY newsletter_messages.id ASC`
-    )
-    .all();
-
-  log('retry_failed.start', {
-    syncRunId: input.syncRunId,
-    messageCount: failedMessages.length,
-  });
-
-  let extractionFailureCount = 0;
-
-  for (const [index, message] of failedMessages.entries()) {
-    log('retry_failed.message_start', {
-      index: index + 1,
-      totalMessages: failedMessages.length,
-      gmailMessageId: message.gmail_message_id,
-      subject: message.subject ?? 'none',
-      source:
-        message.canonical_name ??
-        message.sender_name ??
-        message.sender_email ??
-        'unknown',
-    });
-
-    try {
-      await extractAndPersistNewsletterMessage({
-        db: input.db,
-        newsletterMessageId: message.id,
-        message: {
-          id: message.gmail_message_id,
-          sourceName:
-            message.canonical_name ??
-            message.sender_name ??
-            message.sender_email,
-          subject: message.subject,
-          cleanedText: message.cleaned_text,
-        },
-        llmClient: input.llmClient,
-        entityConfidenceThreshold: input.config.entityConfidenceThreshold,
-      });
-
-      log('retry_failed.message_extracted', {
-        index: index + 1,
-        totalMessages: failedMessages.length,
-        gmailMessageId: message.gmail_message_id,
-      });
-    } catch (error) {
-      extractionFailureCount += 1;
-      const formattedError = formatVerboseError(error);
-      log('retry_failed.message_failed', {
-        index: index + 1,
-        totalMessages: failedMessages.length,
-        gmailMessageId: message.gmail_message_id,
-        error: formattedError,
-      });
-      console.error(
-        `Failed to retry newsletter message ${message.gmail_message_id}: ${formattedError}`
-      );
-    }
-  }
-
-  const syncRunStatus = extractionFailureCount > 0 ? 'failed' : 'succeeded';
-  const syncErrorText =
-    extractionFailureCount > 0
-      ? `${extractionFailureCount} failed newsletter message(s) still need extraction retries.`
-      : null;
-
-  finalizeSyncRun(input.db, {
-    syncRunId: input.syncRunId,
-    status: syncRunStatus,
-    completedAt: new Date().toISOString(),
-    messageCount: failedMessages.length,
-    newestMessageTimestamp: null,
-    errorText: syncErrorText,
-  });
-
-  log('retry_failed.completed', {
-    syncRunId: input.syncRunId,
-    syncRunStatus,
-    messageCount: failedMessages.length,
-    extractionFailureCount,
-  });
-
-  return {
-    syncRunId: input.syncRunId,
-    syncRunStatus,
-    messageCount: failedMessages.length,
-    extractionFailureCount,
-  };
-}
-
 export async function runIngest(
   argv: string[] = process.argv.slice(2)
 ): Promise<void> {
@@ -614,30 +460,6 @@ export async function runIngest(
       });
 
       logLiveSyncSummary({
-        config,
-        dbPath,
-        lastSuccessfulSyncAt,
-        result,
-      });
-      return;
-    }
-
-    if (options.retryFailed) {
-      const result = await runRetryFailedNewsletterExtractions({
-        db,
-        config,
-        llmClient: createPiNewsletterLlmClient({
-          model: 'gpt-5.4-mini',
-          retries: 1,
-          verbose: options.verbose,
-          logger: console.log,
-        }),
-        syncRunId,
-        verbose: options.verbose,
-        logger: console.log,
-      });
-
-      logRetryFailedSummary({
         config,
         dbPath,
         lastSuccessfulSyncAt,
@@ -780,23 +602,6 @@ function logLiveSyncSummary(input: {
   );
 }
 
-function logRetryFailedSummary(input: {
-  config: IngestConfig;
-  dbPath: string;
-  lastSuccessfulSyncAt: string | null;
-  result: RetryFailedResult;
-}) {
-  console.log('Soundscape newsletter ingest failed-message retry');
-  console.log('mode=retry-failed');
-  console.log(formatConfigSummary(input.config).join(' '));
-  console.log(`lastSuccessfulSyncAt=${input.lastSuccessfulSyncAt ?? 'none'}`);
-  console.log(`syncRunId=${input.result.syncRunId}`);
-  console.log(`syncRunStatus=${input.result.syncRunStatus}`);
-  console.log(`dbPath=${input.dbPath}`);
-  console.log(`messageCount=${input.result.messageCount}`);
-  console.log(`extractionFailureCount=${input.result.extractionFailureCount}`);
-}
-
 export function formatVerboseError(error: unknown): string {
   if (error instanceof ZodError) {
     return error.issues
@@ -896,30 +701,6 @@ function createVerboseProgressLogger(
         logger(`  Bandcamp links saved: ${fields.linkCount}`);
         logger(`  newest message: ${fields.newestMessageTimestamp}`);
         return;
-      case 'retry_failed.start':
-        logger('Retrying failed newsletter extractions');
-        logger(`  sync run: ${fields.syncRunId}`);
-        logger(`  failed messages: ${fields.messageCount}`);
-        return;
-      case 'retry_failed.message_start':
-        logger(
-          `[${fields.index}/${fields.totalMessages}] ${fields.source} — ${fields.subject}`
-        );
-        logger(`  gmail id: ${fields.gmailMessageId}`);
-        logger('  Starting extraction');
-        return;
-      case 'retry_failed.message_extracted':
-        logger('  Extraction saved');
-        return;
-      case 'retry_failed.message_failed':
-        logger(`  Extraction failed: ${fields.error}`);
-        return;
-      case 'retry_failed.completed':
-        logger('Retry run complete');
-        logger(`  status: ${fields.syncRunStatus}`);
-        logger(`  messages: ${fields.messageCount}`);
-        logger(`  extraction failures: ${fields.extractionFailureCount}`);
-        return;
       case 'reprocess_bandcamp.start':
         logger('Reprocessing Bandcamp links');
         logger(`  sync run: ${fields.syncRunId}`);
@@ -948,6 +729,22 @@ function createVerboseProgressLogger(
 const isEntrypoint =
   process.argv[1] != null &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+function resolveSampleFixturePath(fixturePath: string): string {
+  const candidates = [
+    resolve(fixturePath),
+    resolve(repoRoot, fixturePath),
+    resolve(ingestRoot, fixturePath),
+  ];
+
+  const resolvedPath = candidates.find((candidate) => existsSync(candidate));
+
+  if (!resolvedPath) {
+    throw new Error(`Sample fixture not found: ${fixturePath}`);
+  }
+
+  return resolvedPath;
+}
 
 function readSampleMessageFixture(fixturePath: string): SampleMessageFixture {
   const rawFixture = JSON.parse(

@@ -19,9 +19,6 @@ function createNewsletterSummary(
     summary: null,
     sentAt: '2026-04-08T12:00:00.000Z',
     extractionStatus: 'processed',
-    artists: [],
-    albums: [],
-    tracks: [],
     links: [
       {
         url: 'https://artist.bandcamp.com/album/here-in-the-pitch',

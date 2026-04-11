@@ -6,19 +6,6 @@ import {
 import { router, publicProcedure } from './trpc.js';
 import { z } from 'zod';
 
-const newsletterRelatedArtistSchema = z.object({
-  name: z.string(),
-  confidence: z.number().nullable(),
-  evidence: z.string().nullable(),
-});
-
-const newsletterRelatedReleaseSchema = z.object({
-  name: z.string(),
-  primaryArtistName: z.string().nullable(),
-  confidence: z.number().nullable(),
-  evidence: z.string().nullable(),
-});
-
 const newsletterLinkSchema = z.object({
   url: z.string(),
   domain: z.string().nullable(),
@@ -40,9 +27,6 @@ const newsletterSummarySchema = z.object({
   summary: z.string().nullable(),
   sentAt: z.string().nullable(),
   extractionStatus: z.string(),
-  artists: z.array(newsletterRelatedArtistSchema),
-  albums: z.array(newsletterRelatedReleaseSchema),
-  tracks: z.array(newsletterRelatedReleaseSchema),
   links: z.array(newsletterLinkSchema),
 });
 

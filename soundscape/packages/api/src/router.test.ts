@@ -6,7 +6,6 @@ import test from 'node:test';
 import {
   insertNewsletterExtraction,
   openInitializedNewsletterDatabase,
-  replaceMessageArtists,
   replaceNewsletterLinks,
   upsertNewsletterMessage,
   upsertNewsletterSource,
@@ -64,14 +63,6 @@ function seedNewsletterData(db: NewsletterDatabase) {
     summary: 'Jessica Pratt leads this week\'s picks.',
   });
 
-  replaceMessageArtists(db, messageId, [
-    {
-      name: 'Jessica Pratt',
-      confidence: 0.94,
-      evidence: 'Lead artist mention.',
-    },
-  ]);
-
   replaceNewsletterLinks(db, {
     newsletterMessageId: messageId,
     links: [
@@ -102,7 +93,9 @@ test('newsletterList returns paginated newsletter summaries', async () => {
 
     assert.equal(result.newsletters.length, 1);
     assert.equal(result.newsletters[0]?.subject, 'Best New Music');
-    assert.equal(result.newsletters[0]?.artists[0]?.name, 'Jessica Pratt');
+    assert.equal(result.newsletters[0]?.summary, 'Jessica Pratt leads this week\'s picks.');
+    assert.equal(result.newsletters[0]?.links[0]?.title, 'Jessica Pratt: Here in the Pitch');
+    assert.equal('artists' in (result.newsletters[0] ?? {}), false);
   } finally {
     cleanup();
   }
