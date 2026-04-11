@@ -45,6 +45,18 @@ function deriveLinkLabelFromUrl(url: string): string | null {
   }
 }
 
+const GENERIC_LINK_TITLES = new Set([
+  'bandcamp',
+  'click here',
+  'listen',
+  'listen here',
+  'buy now',
+  'buy',
+  'read more',
+  'more',
+  'link',
+]);
+
 function normalizeLinkTitle(title: string | null): string | null {
   const trimmed = title?.trim();
 
@@ -52,7 +64,7 @@ function normalizeLinkTitle(title: string | null): string | null {
     return null;
   }
 
-  if (trimmed.toLowerCase() === 'bandcamp') {
+  if (GENERIC_LINK_TITLES.has(trimmed.toLowerCase())) {
     return null;
   }
 

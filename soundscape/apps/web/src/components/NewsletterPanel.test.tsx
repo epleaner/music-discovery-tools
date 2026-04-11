@@ -133,6 +133,51 @@ test('buildNewsletterPanelModel ignores generic Bandcamp titles and prefers the 
   ]);
 });
 
+test('buildNewsletterPanelModel ignores other generic call-to-action titles and prefers the URL slug', () => {
+  const model = buildNewsletterPanelModel({
+    newsletters: [
+      createNewsletterSummary({
+        links: [
+          {
+            url: 'https://label.bandcamp.com/album/first-release',
+            domain: 'label.bandcamp.com',
+            title: 'Click here',
+            confidence: 1,
+          },
+          {
+            url: 'https://label.bandcamp.com/track/second-song',
+            domain: 'label.bandcamp.com',
+            title: 'Listen',
+            confidence: 1,
+          },
+          {
+            url: 'https://label.bandcamp.com/album/third-release',
+            domain: 'label.bandcamp.com',
+            title: 'Buy now',
+            confidence: 1,
+          },
+        ],
+      }),
+    ],
+    listStatus: 'ready',
+  });
+
+  assert.deepEqual(model.listItems[0]?.links, [
+    {
+      label: 'First Release',
+      url: 'https://label.bandcamp.com/album/first-release',
+    },
+    {
+      label: 'Second Song',
+      url: 'https://label.bandcamp.com/track/second-song',
+    },
+    {
+      label: 'Third Release',
+      url: 'https://label.bandcamp.com/album/third-release',
+    },
+  ]);
+});
+
 test('NewsletterList removes the Links toggle and inline collapsed state', () => {
   const source = readFileSync(
     new URL('./NewsletterList.tsx', import.meta.url),
