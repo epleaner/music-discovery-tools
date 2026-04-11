@@ -19,13 +19,6 @@ interface ExpandableNewsletterRowProps {
   api?: NewsletterApi;
 }
 
-interface SectionToggleProps {
-  label: string;
-  expanded: boolean;
-  onToggle: () => void;
-  count?: number;
-}
-
 interface NewsletterModalProps {
   title: string;
   sourceLabel: string;
@@ -36,23 +29,6 @@ interface NewsletterModalProps {
   error: Error | null;
   onClose: () => void;
 }
-
-const SectionToggle: Component<SectionToggleProps> = (props) => {
-  const suffix = () => (props.count != null ? ` (${props.count})` : '');
-
-  return (
-    <button
-      type="button"
-      onClick={props.onToggle}
-      class={`px-1.5 py-0.5 text-[10px] border border-border transition-colors ${
-        props.expanded ? 'bg-bg-subtle text-fg' : 'text-fg-muted hover:text-fg'
-      }`}
-    >
-      {props.expanded ? '−' : '+'} {props.label}
-      {suffix()}
-    </button>
-  );
-};
 
 const NewsletterModal: Component<NewsletterModalProps> = (props) => {
   return (
@@ -140,7 +116,6 @@ function buildLinkItems(newsletter: NewsletterSummary): NewsletterLinkModel[] {
 const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
   props
 ) => {
-  const [showLinks, setShowLinks] = createSignal(false);
   const [showModal, setShowModal] = createSignal(false);
 
   const detailResource = createNewsletterDetailResource(
@@ -203,38 +178,27 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
         </Show>
 
         <Show when={links().length > 0}>
-          <div class="flex flex-wrap gap-1 mt-2">
-            <SectionToggle
-              label="Links"
-              count={links().length}
-              expanded={showLinks()}
-              onToggle={() => setShowLinks((value) => !value)}
-            />
-          </div>
+          <section class="mt-2 border-t border-border bg-bg-subtle px-2.5 py-2">
+            <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
+              Bandcamp links
+            </div>
+            <div class="space-y-1 text-xs">
+              <For each={links()}>
+                {(link) => (
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    class="block truncate text-fg-muted hover:text-fg"
+                  >
+                    {link.label}
+                  </a>
+                )}
+              </For>
+            </div>
+          </section>
         </Show>
       </div>
-
-      <Show when={showLinks()}>
-        <section class="px-2.5 py-2 border-t border-border bg-bg-subtle">
-          <div class="mb-1 text-[10px] uppercase tracking-[0.18em] text-fg-muted">
-            Bandcamp links
-          </div>
-          <div class="space-y-1 text-xs">
-            <For each={links()}>
-              {(link) => (
-                <a
-                  href={link.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  class="block truncate text-fg-muted hover:text-fg"
-                >
-                  {link.label}
-                </a>
-              )}
-            </For>
-          </div>
-        </section>
-      </Show>
 
       <Show when={showModal()}>
         <NewsletterModal

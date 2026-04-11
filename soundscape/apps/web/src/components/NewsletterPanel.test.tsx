@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { buildNewsletterPanelModel } from './newsletter-panel-model.js';
 import type { NewsletterSummary } from '../lib/newsletters.js';
@@ -108,6 +109,16 @@ test('buildNewsletterPanelModel derives a readable label from Bandcamp URLs when
       url: 'https://artist.bandcamp.com/album/a-grand-dont-come-for-free',
     },
   ]);
+});
+
+test('NewsletterList removes the Links toggle and inline collapsed state', () => {
+  const source = readFileSync(
+    new URL('./NewsletterList.tsx', import.meta.url),
+    'utf8'
+  );
+
+  assert.doesNotMatch(source, /SectionToggle/);
+  assert.doesNotMatch(source, /showLinks/);
 });
 
 test('buildNewsletterPanelModel renders explicit empty state when no newsletters are available', () => {
