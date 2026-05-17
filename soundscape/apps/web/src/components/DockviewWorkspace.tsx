@@ -1,5 +1,6 @@
 import {
   Component,
+  ErrorBoundary,
   JSX,
   Show,
   createSignal,
@@ -37,7 +38,7 @@ import {
 } from '../lib/dropdown-position';
 import {
   getDockviewEmptyStateOverlayClass,
-  shouldHandleDockviewEmptyStateClick,
+  shouldResetDockviewBeforeEmptyStatePanelAdd,
   shouldShowDockviewEmptyState,
 } from '../lib/dockview-empty-state';
 import { Button } from './ui/Button';
@@ -291,7 +292,19 @@ class SolidDockviewPanel implements IContentRenderer {
 
   init(parameters: GroupPanelPartInitParameters): void {
     this.disposeSolid = render(
-      () => this.renderPanel(this.panelType, parameters.params ?? {}),
+      () => (
+        <ErrorBoundary
+          fallback={(error) => (
+            <div class="p-3 text-xs text-fg-muted">
+              {error instanceof Error
+                ? error.message
+                : 'Failed to render panel'}
+            </div>
+          )}
+        >
+          {this.renderPanel(this.panelType, parameters.params ?? {})}
+        </ErrorBoundary>
+      ),
       this.element
     );
   }
@@ -312,7 +325,6 @@ class SolidDockviewPanel implements IContentRenderer {
 const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
   let containerRef: HTMLDivElement | undefined;
   let dockview: DockviewComponent | undefined;
-  let lastEmptyStatePointerSpawnAt: number | undefined;
   const [showEmptyState, setShowEmptyState] = createSignal(false);
   const instanceCounts = new Map<DockviewPanelType, number>();
 
@@ -368,10 +380,21 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
     group?: DockviewGroupPanel,
     site?: DockviewSiteDefinition
   ) => {
+    if (!dockview) return;
+
+    const shouldResetBeforeAdd = shouldResetDockviewBeforeEmptyStatePanelAdd(
+      dockview.totalPanels
+    );
+    if (shouldResetBeforeAdd) {
+      dockview.clear();
+    }
+
     const panel = createPanel(panelType, site);
-    dockview?.addPanel({
+    dockview.addPanel({
       ...panel,
-      ...(group ? { position: { referenceGroup: group } } : {}),
+      ...(group && !shouldResetBeforeAdd
+        ? { position: { referenceGroup: group } }
+        : {}),
     });
     saveLayout();
   };
@@ -380,21 +403,7 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
     addPanel('library');
   };
 
-  const handleEmptyStatePointerDown = (event: PointerEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    lastEmptyStatePointerSpawnAt = performance.now();
-    spawnEmptyStatePanel();
-  };
-
   const handleEmptyStateClick = () => {
-    const now = performance.now();
-    if (
-      !shouldHandleDockviewEmptyStateClick(lastEmptyStatePointerSpawnAt, now)
-    ) {
-      return;
-    }
-
     spawnEmptyStatePanel();
   };
 
@@ -459,14 +468,11 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
         class="soundscape-dockview dockview-theme-light flex-1 min-h-0"
       />
       <Show when={showEmptyState()}>
-        <div class={getDockviewEmptyStateOverlayClass()}>
-          <Button
-            type="button"
-            onPointerDown={handleEmptyStatePointerDown}
-            onClick={handleEmptyStateClick}
-          >
-            + New Panel
-          </Button>
+        <div
+          class={getDockviewEmptyStateOverlayClass()}
+          on:click={handleEmptyStateClick}
+        >
+          <Button type="button">+ New Panel</Button>
         </div>
       </Show>
     </div>

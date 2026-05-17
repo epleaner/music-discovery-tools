@@ -6,9 +6,8 @@ export function getDockviewEmptyStateOverlayClass(): string {
   return 'absolute inset-0 z-[2147483647] flex items-center justify-center bg-bg';
 }
 
-export function shouldHandleDockviewEmptyStateClick(
-  lastPointerSpawnAt: number | undefined,
-  now: number
+export function shouldResetDockviewBeforeEmptyStatePanelAdd(
+  totalPanels: number
 ): boolean {
-  return lastPointerSpawnAt === undefined || now - lastPointerSpawnAt >= 100;
+  return totalPanels === 0;
 }

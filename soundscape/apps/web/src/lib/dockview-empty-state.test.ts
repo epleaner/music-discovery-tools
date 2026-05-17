@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   getDockviewEmptyStateOverlayClass,
-  shouldHandleDockviewEmptyStateClick,
+  shouldResetDockviewBeforeEmptyStatePanelAdd,
   shouldShowDockviewEmptyState,
 } from './dockview-empty-state.js';
 
@@ -20,8 +20,7 @@ test('getDockviewEmptyStateOverlayClass keeps the empty state above Dockview int
   assert.ok(className.split(' ').includes('z-[2147483647]'));
 });
 
-test('shouldHandleDockviewEmptyStateClick ignores the synthetic click after pointer spawn', () => {
-  assert.equal(shouldHandleDockviewEmptyStateClick(1000, 1049), false);
-  assert.equal(shouldHandleDockviewEmptyStateClick(1000, 1100), true);
-  assert.equal(shouldHandleDockviewEmptyStateClick(undefined, 1049), true);
+test('shouldResetDockviewBeforeEmptyStatePanelAdd clears stale empty groups before adding a panel', () => {
+  assert.equal(shouldResetDockviewBeforeEmptyStatePanelAdd(0), true);
+  assert.equal(shouldResetDockviewBeforeEmptyStatePanelAdd(1), false);
 });
