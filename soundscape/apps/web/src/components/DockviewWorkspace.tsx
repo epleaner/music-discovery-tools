@@ -30,6 +30,7 @@ export interface DockviewWorkspaceHandle {
 }
 
 export interface DockviewWorkspaceProps {
+  onCreateSite: () => DockviewSiteDefinition;
   onReady?: (handle: DockviewWorkspaceHandle) => void;
   renderPanel: (
     panelType: DockviewPanelType,
@@ -86,9 +87,11 @@ class SoundscapeDockviewHeaderActions implements IHeaderActionsRenderer {
   constructor(
     private readonly addPanel: (
       panelType: DockviewPanelType,
-      group?: DockviewGroupPanel
+      group?: DockviewGroupPanel,
+      site?: DockviewSiteDefinition
     ) => void,
-    private readonly group: DockviewGroupPanel
+    private readonly group: DockviewGroupPanel,
+    private readonly sitesProvider: () => DockviewSiteDefinition[]
   ) {}
 
   init(): void {
@@ -108,15 +111,12 @@ class SoundscapeDockviewHeaderActions implements IHeaderActionsRenderer {
     this.menu.setAttribute('role', 'menu');
 
     for (const panelType of dockviewPanelTypes) {
-      const item = document.createElement('button');
-      item.type = 'button';
-      item.className =
-        'block w-full px-3 py-2 text-left text-xs text-fg-muted hover:text-fg hover:bg-bg-subtle whitespace-nowrap';
-      item.textContent = panelType.title;
-      item.setAttribute('role', 'menuitem');
-      item.addEventListener('click', (event) => {
-        event.stopPropagation();
-        this.hideMenu();
+      if (panelType.id === 'site') {
+        this.menu.append(this.buildSiteMenu());
+        continue;
+      }
+
+      const item = this.buildMenuItem(panelType.title, () => {
         this.addPanel(panelType.id, this.group);
       });
       this.menu.append(item);
@@ -134,12 +134,79 @@ class SoundscapeDockviewHeaderActions implements IHeaderActionsRenderer {
     this.element.replaceChildren();
   }
 
+  private buildMenuItem(
+    label: string,
+    onSelect: () => void
+  ): HTMLButtonElement {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className =
+      'block w-full px-3 py-2 text-left text-xs text-fg-muted hover:text-fg hover:bg-bg-subtle whitespace-nowrap';
+    item.textContent = label;
+    item.setAttribute('role', 'menuitem');
+    item.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.hideMenu();
+      onSelect();
+    });
+    return item;
+  }
+
+  private buildSiteMenu(): HTMLDivElement {
+    const siteMenu = document.createElement('div');
+    siteMenu.className = 'relative soundscape-dockview-site-menu';
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className =
+      'block w-full px-3 py-2 text-left text-xs text-fg-muted hover:text-fg hover:bg-bg-subtle whitespace-nowrap';
+    trigger.textContent = 'Site ›';
+    trigger.setAttribute('role', 'menuitem');
+    trigger.setAttribute('aria-haspopup', 'menu');
+
+    const nestedMenu = document.createElement('div');
+    nestedMenu.className =
+      'soundscape-dockview-site-submenu absolute left-full top-0 z-50 hidden min-w-44 border border-border bg-bg';
+    nestedMenu.setAttribute('role', 'menu');
+
+    for (const site of this.getSites()) {
+      nestedMenu.append(
+        this.buildMenuItem(site.name, () => {
+          this.addPanel('site', this.group, site);
+        })
+      );
+    }
+
+    nestedMenu.append(
+      this.buildMenuItem('New Site', () => {
+        this.addPanel('site', this.group);
+      })
+    );
+
+    trigger.addEventListener('click', (event) => {
+      event.stopPropagation();
+      nestedMenu.classList.toggle('hidden');
+    });
+
+    siteMenu.append(trigger, nestedMenu);
+    return siteMenu;
+  }
+
   private toggleMenu(): void {
     this.menu.classList.toggle('hidden');
   }
 
   private hideMenu(): void {
     this.menu.classList.add('hidden');
+    for (const submenu of this.menu.querySelectorAll(
+      '.soundscape-dockview-site-submenu'
+    )) {
+      submenu.classList.add('hidden');
+    }
+  }
+
+  private getSites(): DockviewSiteDefinition[] {
+    return this.sitesProvider();
   }
 }
 
@@ -188,12 +255,14 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
     return next;
   };
 
-  const firstSite = () => props.sites[0] ?? { id: 'site', name: 'Site' };
-
-  const createPanel = (panelType: DockviewPanelType) => {
+  const createPanel = (
+    panelType: DockviewPanelType,
+    site?: DockviewSiteDefinition
+  ) => {
     if (panelType === 'site') {
+      const selectedSite = site ?? props.onCreateSite();
       return createSiteDockviewPanelDescriptor(
-        firstSite(),
+        selectedSite,
         nextInstanceNumber(panelType)
       );
     }
@@ -224,9 +293,10 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
 
   const addPanel = (
     panelType: DockviewPanelType,
-    group?: DockviewGroupPanel
+    group?: DockviewGroupPanel,
+    site?: DockviewSiteDefinition
   ) => {
-    const panel = createPanel(panelType);
+    const panel = createPanel(panelType, site);
     dockview?.addPanel({
       ...panel,
       ...(group ? { position: { referenceGroup: group } } : {}),
@@ -244,7 +314,7 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
           props.renderPanel
         ),
       createRightHeaderActionComponent: (group) =>
-        new SoundscapeDockviewHeaderActions(addPanel, group),
+        new SoundscapeDockviewHeaderActions(addPanel, group, () => props.sites),
       createTabComponent: () => new SoundscapeDockviewTab(),
     });
 

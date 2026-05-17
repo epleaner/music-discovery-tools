@@ -25,6 +25,7 @@ import WebSocketExample from './components/WebSocketExample';
 import GenreSelect from './components/GenreSelect';
 import NewsletterPanel from './components/NewsletterPanel';
 import type { DockviewPanelType } from './lib/dockview-panel-catalog';
+import { createNewSite, upsertSite } from './lib/site-catalog';
 import { buildAppLayoutModel } from './lib/app-layout';
 import {
   createRecentTracksResource,
@@ -154,13 +155,13 @@ const App: Component = () => {
   };
 
   const handleSiteChange = (site: Site) => {
-    updateState({
-      sites: JSON.stringify(
-        musicSites().map((currentSite) =>
-          currentSite.id === site.id ? site : currentSite
-        )
-      ),
-    });
+    updateState({ sites: JSON.stringify(upsertSite(musicSites(), site)) });
+  };
+
+  const handleCreateSite = () => {
+    const site = createNewSite(musicSites());
+    updateState({ sites: JSON.stringify(upsertSite(musicSites(), site)) });
+    return site;
   };
 
   // RYM dropdown state
@@ -748,6 +749,7 @@ const App: Component = () => {
           onReady={(handle) => {
             dockviewWorkspace = handle;
           }}
+          onCreateSite={handleCreateSite}
           renderPanel={renderDockviewPanel}
           sites={musicSites()}
         />
