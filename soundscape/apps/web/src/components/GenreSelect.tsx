@@ -36,6 +36,10 @@ interface VirtualItem {
   index: number;
 }
 
+export const genreShuffleButtonLabel = 'Shuffle genres';
+export const genreShuffleIconPath =
+  'M3 7h3.5c1.2 0 2.2.6 2.8 1.5l1.4 2c.6.9 1.6 1.5 2.8 1.5H17m0 0-2-2m2 2-2 2M3 13h3.5c1.2 0 2.2-.6 2.8-1.5l1.4-2c.6-.9 1.6-1.5 2.8-1.5H17m0 0-2-2m2 2-2 2';
+
 const GenreSelect: Component<GenreSelectProps> = (props) => {
   // oxlint-disable-next-line no-unassigned-vars
   let contentRef!: HTMLDivElement;
@@ -243,10 +247,22 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
         <button
           type="button"
           onClick={handleShuffle}
-          class="text-xs text-fg-muted hover:text-fg px-1"
-          title="Shuffle genres"
+          class="px-1 text-fg-muted hover:text-fg"
+          title={genreShuffleButtonLabel}
+          aria-label={genreShuffleButtonLabel}
         >
-          ↻
+          <svg
+            aria-hidden="true"
+            class="h-3.5 w-3.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.7"
+            viewBox="0 0 20 20"
+          >
+            <path d={genreShuffleIconPath} />
+          </svg>
         </button>
       </div>
       <Combobox.Control class="relative flex items-center min-h-[32px]">
