@@ -1,4 +1,11 @@
-import { Component, JSX, onCleanup, onMount } from 'solid-js';
+import {
+  Component,
+  JSX,
+  Show,
+  createSignal,
+  onCleanup,
+  onMount,
+} from 'solid-js';
 import { render } from 'solid-js/web';
 import {
   DockviewComponent,
@@ -28,6 +35,7 @@ import {
   positionDropdownContent,
   positionDropdownSubContent,
 } from '../lib/dropdown-position';
+import { shouldShowDockviewEmptyState } from '../lib/dockview-empty-state';
 
 export interface DockviewWorkspaceHandle {
   spawnPanel: (panelType: DockviewPanelType) => void;
@@ -299,6 +307,7 @@ class SolidDockviewPanel implements IContentRenderer {
 const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
   let containerRef: HTMLDivElement | undefined;
   let dockview: DockviewComponent | undefined;
+  const [showEmptyState, setShowEmptyState] = createSignal(false);
   const instanceCounts = new Map<DockviewPanelType, number>();
 
   const nextInstanceNumber = (panelType: DockviewPanelType) => {
@@ -335,9 +344,14 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
     }
   };
 
+  const updateEmptyState = () => {
+    setShowEmptyState(shouldShowDockviewEmptyState(dockview?.totalPanels ?? 0));
+  };
+
   const saveLayout = () => {
     if (!dockview) return;
 
+    updateEmptyState();
     const layout = dockview.toJSON();
     replaceDockviewLayoutHash(layout);
     writeDockviewLayoutToLocalStorage(layout);
@@ -391,12 +405,17 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
       saveLayout();
     }
 
+    updateEmptyState();
     const layoutDisposable = dockview.onDidLayoutChange(saveLayout);
+    const addDisposable = dockview.onDidAddPanel(updateEmptyState);
+    const removeDisposable = dockview.onDidRemovePanel(updateEmptyState);
 
     props.onReady?.({ spawnPanel: addPanel });
 
     onCleanup(() => {
       layoutDisposable.dispose();
+      addDisposable.dispose();
+      removeDisposable.dispose();
     });
   });
 
@@ -406,11 +425,22 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
   });
 
   return (
-    <div class="flex flex-col flex-1 min-h-0 bg-bg">
+    <div class="relative flex flex-col flex-1 min-h-0 bg-bg">
       <div
         ref={containerRef}
         class="soundscape-dockview dockview-theme-light flex-1 min-h-0"
       />
+      <Show when={showEmptyState()}>
+        <div class="absolute inset-0 flex items-center justify-center bg-bg">
+          <button
+            type="button"
+            class="btn-secondary"
+            onClick={() => addPanel('library')}
+          >
+            + New Panel
+          </button>
+        </div>
+      </Show>
     </div>
   );
 };
