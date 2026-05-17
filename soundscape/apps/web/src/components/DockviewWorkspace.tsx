@@ -1,6 +1,7 @@
 import {
   Component,
   ErrorBoundary,
+  For,
   JSX,
   Show,
   createSignal,
@@ -326,6 +327,9 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
   let containerRef: HTMLDivElement | undefined;
   let dockview: DockviewComponent | undefined;
   const [showEmptyState, setShowEmptyState] = createSignal(false);
+  const [isEmptyStateMenuOpen, setIsEmptyStateMenuOpen] = createSignal(false);
+  const [isEmptyStateSiteMenuOpen, setIsEmptyStateSiteMenuOpen] =
+    createSignal(false);
   const instanceCounts = new Map<DockviewPanelType, number>();
 
   const nextInstanceNumber = (panelType: DockviewPanelType) => {
@@ -399,12 +403,28 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
     saveLayout();
   };
 
-  const spawnEmptyStatePanel = () => {
-    addPanel('library');
+  const closeEmptyStateMenu = () => {
+    setIsEmptyStateMenuOpen(false);
+    setIsEmptyStateSiteMenuOpen(false);
   };
 
-  const handleEmptyStateClick = () => {
-    spawnEmptyStatePanel();
+  const handleEmptyStateTriggerClick = (event: MouseEvent) => {
+    event.stopPropagation();
+    setIsEmptyStateMenuOpen((isOpen) => !isOpen);
+    setIsEmptyStateSiteMenuOpen(false);
+  };
+
+  const handleEmptyStatePanelSelect = (
+    panelType: DockviewPanelType,
+    site?: DockviewSiteDefinition
+  ) => {
+    closeEmptyStateMenu();
+    addPanel(panelType, undefined, site);
+  };
+
+  const handleEmptyStateSiteTriggerClick = (event: MouseEvent) => {
+    event.stopPropagation();
+    setIsEmptyStateSiteMenuOpen((isOpen) => !isOpen);
   };
 
   onMount(() => {
@@ -470,9 +490,76 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
       <Show when={showEmptyState()}>
         <div
           class={getDockviewEmptyStateOverlayClass()}
-          on:click={handleEmptyStateClick}
+          on:click={closeEmptyStateMenu}
         >
-          <Button type="button">+ New Panel</Button>
+          <div class="relative" on:click={handleEmptyStateTriggerClick}>
+            <Button type="button">+ New Panel</Button>
+            <Show when={isEmptyStateMenuOpen()}>
+              <div
+                class="absolute left-1/2 top-full z-50 mt-1 min-w-40 -translate-x-1/2 border border-border bg-bg p-1 text-fg"
+                on:click={(event) => event.stopPropagation()}
+              >
+                <For each={dockviewPanelTypes}>
+                  {(panelType) => (
+                    <Show
+                      when={panelType.id === 'site'}
+                      fallback={
+                        <button
+                          type="button"
+                          class="soundscape-dockview-menu-item flex w-full items-center px-2 py-1.5 text-left text-xs text-fg-muted hover:bg-bg-subtle hover:text-fg whitespace-nowrap"
+                          on:click={() =>
+                            handleEmptyStatePanelSelect(panelType.id)
+                          }
+                        >
+                          {panelType.title}
+                        </button>
+                      }
+                    >
+                      <div class="relative">
+                        <button
+                          type="button"
+                          class="soundscape-dockview-menu-item flex w-full items-center px-2 py-1.5 text-left text-xs text-fg-muted hover:bg-bg-subtle hover:text-fg whitespace-nowrap"
+                          aria-haspopup="menu"
+                          on:click={handleEmptyStateSiteTriggerClick}
+                        >
+                          {panelType.title}
+                        </button>
+                        <Show when={isEmptyStateSiteMenuOpen()}>
+                          <div
+                            class="absolute right-full top-0 z-50 mr-1 min-w-44 border border-border bg-bg p-1 text-fg"
+                            role="menu"
+                          >
+                            <For each={props.sites}>
+                              {(site) => (
+                                <button
+                                  type="button"
+                                  class="soundscape-dockview-menu-item flex w-full items-center px-2 py-1.5 text-left text-xs text-fg-muted hover:bg-bg-subtle hover:text-fg whitespace-nowrap"
+                                  on:click={() =>
+                                    handleEmptyStatePanelSelect('site', site)
+                                  }
+                                >
+                                  {site.name}
+                                </button>
+                              )}
+                            </For>
+                            <button
+                              type="button"
+                              class="soundscape-dockview-menu-item flex w-full items-center px-2 py-1.5 text-left text-xs text-fg-muted hover:bg-bg-subtle hover:text-fg whitespace-nowrap"
+                              on:click={() =>
+                                handleEmptyStatePanelSelect('site')
+                              }
+                            >
+                              + New Site
+                            </button>
+                          </div>
+                        </Show>
+                      </div>
+                    </Show>
+                  )}
+                </For>
+              </div>
+            </Show>
+          </div>
         </div>
       </Show>
     </div>

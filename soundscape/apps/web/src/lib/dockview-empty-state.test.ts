@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  getDockviewEmptyStateMenuItemLabels,
   getDockviewEmptyStateOverlayClass,
   shouldResetDockviewBeforeEmptyStatePanelAdd,
   shouldShowDockviewEmptyState,
@@ -23,4 +24,14 @@ test('getDockviewEmptyStateOverlayClass keeps the empty state above Dockview int
 test('shouldResetDockviewBeforeEmptyStatePanelAdd clears stale empty groups before adding a panel', () => {
   assert.equal(shouldResetDockviewBeforeEmptyStatePanelAdd(0), true);
   assert.equal(shouldResetDockviewBeforeEmptyStatePanelAdd(1), false);
+});
+
+test('getDockviewEmptyStateMenuItemLabels mirrors the header add-panel menu', () => {
+  assert.deepEqual(getDockviewEmptyStateMenuItemLabels(), [
+    'Library',
+    'Similar Artists',
+    'Newsletters',
+    'Site',
+    'WebSocket',
+  ]);
 });

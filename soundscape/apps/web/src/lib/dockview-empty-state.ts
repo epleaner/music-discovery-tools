@@ -1,3 +1,5 @@
+import { dockviewPanelTypes } from './dockview-panel-catalog';
+
 export function shouldShowDockviewEmptyState(totalPanels: number): boolean {
   return totalPanels === 0;
 }
@@ -10,4 +12,8 @@ export function shouldResetDockviewBeforeEmptyStatePanelAdd(
   totalPanels: number
 ): boolean {
   return totalPanels === 0;
+}
+
+export function getDockviewEmptyStateMenuItemLabels(): string[] {
+  return dockviewPanelTypes.map((panelType) => panelType.title);
 }
