@@ -24,6 +24,10 @@ import {
   replaceDockviewLayoutHash,
   writeDockviewLayoutToLocalStorage,
 } from '../lib/dockview-layout-persistence';
+import {
+  positionDropdownContent,
+  positionDropdownSubContent,
+} from '../lib/dropdown-position';
 
 export interface DockviewWorkspaceHandle {
   spawnPanel: (panelType: DockviewPanelType) => void;
@@ -83,6 +87,7 @@ class SoundscapeDockviewHeaderActions implements IHeaderActionsRenderer {
   readonly element = document.createElement('div');
   private readonly button = document.createElement('button');
   private readonly menu = document.createElement('div');
+  private readonly siteSubmenu = document.createElement('div');
 
   constructor(
     private readonly addPanel: (
@@ -95,8 +100,7 @@ class SoundscapeDockviewHeaderActions implements IHeaderActionsRenderer {
   ) {}
 
   init(): void {
-    this.element.className =
-      'soundscape-dockview-header-actions relative h-full';
+    this.element.className = 'soundscape-dockview-header-actions h-full';
 
     this.button.type = 'button';
     this.button.className =
@@ -107,32 +111,40 @@ class SoundscapeDockviewHeaderActions implements IHeaderActionsRenderer {
     this.button.setAttribute('aria-haspopup', 'menu');
 
     this.menu.className =
-      'soundscape-dockview-add-menu absolute right-0 top-full z-50 hidden min-w-36 border border-border bg-bg';
+      'soundscape-dockview-menu-content hidden fixed z-50 min-w-36 overflow-visible border border-border bg-bg p-1 text-fg';
     this.menu.setAttribute('role', 'menu');
 
-    for (const panelType of dockviewPanelTypes) {
-      if (panelType.id === 'site') {
-        this.menu.append(this.buildSiteMenu());
-        continue;
-      }
-
-      const item = this.buildMenuItem(panelType.title, () => {
-        this.addPanel(panelType.id, this.group);
-      });
-      this.menu.append(item);
-    }
+    this.siteSubmenu.className =
+      'soundscape-dockview-menu-content soundscape-dockview-site-submenu hidden fixed z-50 min-w-44 overflow-visible border border-border bg-bg p-1 text-fg';
+    this.siteSubmenu.setAttribute('role', 'menu');
 
     this.button.addEventListener('click', (event) => {
       event.stopPropagation();
       this.toggleMenu();
     });
 
-    this.element.append(this.button, this.menu);
+    document.addEventListener('click', this.handleDocumentClick);
+    document.body.append(this.menu, this.siteSubmenu);
+    this.element.append(this.button);
   }
 
   dispose(): void {
+    document.removeEventListener('click', this.handleDocumentClick);
+    this.menu.remove();
+    this.siteSubmenu.remove();
     this.element.replaceChildren();
   }
+
+  private readonly handleDocumentClick = (event: MouseEvent): void => {
+    const target = event.target as Node;
+    if (
+      !this.element.contains(target) &&
+      !this.menu.contains(target) &&
+      !this.siteSubmenu.contains(target)
+    ) {
+      this.hideMenu();
+    }
+  };
 
   private buildMenuItem(
     label: string,
@@ -141,7 +153,7 @@ class SoundscapeDockviewHeaderActions implements IHeaderActionsRenderer {
     const item = document.createElement('button');
     item.type = 'button';
     item.className =
-      'block w-full px-3 py-2 text-left text-xs text-fg-muted hover:text-fg hover:bg-bg-subtle whitespace-nowrap';
+      'soundscape-dockview-menu-item flex w-full items-center px-2 py-1.5 text-left text-xs text-fg-muted hover:bg-bg-subtle hover:text-fg whitespace-nowrap';
     item.textContent = label;
     item.setAttribute('role', 'menuitem');
     item.addEventListener('click', (event) => {
@@ -152,57 +164,97 @@ class SoundscapeDockviewHeaderActions implements IHeaderActionsRenderer {
     return item;
   }
 
-  private buildSiteMenu(): HTMLDivElement {
-    const siteMenu = document.createElement('div');
-    siteMenu.className = 'relative soundscape-dockview-site-menu';
-
+  private buildSiteMenuTrigger(): HTMLButtonElement {
     const trigger = document.createElement('button');
     trigger.type = 'button';
     trigger.className =
-      'block w-full px-3 py-2 text-left text-xs text-fg-muted hover:text-fg hover:bg-bg-subtle whitespace-nowrap';
-    trigger.textContent = 'Site ›';
+      'soundscape-dockview-menu-item flex w-full items-center px-2 py-1.5 text-left text-xs text-fg-muted hover:bg-bg-subtle hover:text-fg whitespace-nowrap';
+    trigger.textContent = 'Site ‹';
     trigger.setAttribute('role', 'menuitem');
     trigger.setAttribute('aria-haspopup', 'menu');
+    trigger.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.toggleSiteSubmenu(trigger);
+    });
+    return trigger;
+  }
 
-    const nestedMenu = document.createElement('div');
-    nestedMenu.className =
-      'soundscape-dockview-site-submenu absolute left-full top-0 z-50 hidden min-w-44 border border-border bg-bg';
-    nestedMenu.setAttribute('role', 'menu');
+  private renderMenu(): void {
+    this.menu.replaceChildren();
+
+    for (const panelType of dockviewPanelTypes) {
+      if (panelType.id === 'site') {
+        this.menu.append(this.buildSiteMenuTrigger());
+        continue;
+      }
+
+      this.menu.append(
+        this.buildMenuItem(panelType.title, () => {
+          this.addPanel(panelType.id, this.group);
+        })
+      );
+    }
+  }
+
+  private renderSiteSubmenu(): void {
+    this.siteSubmenu.replaceChildren();
 
     for (const site of this.getSites()) {
-      nestedMenu.append(
+      this.siteSubmenu.append(
         this.buildMenuItem(site.name, () => {
           this.addPanel('site', this.group, site);
         })
       );
     }
 
-    nestedMenu.append(
+    this.siteSubmenu.append(
       this.buildMenuItem('New Site', () => {
         this.addPanel('site', this.group);
       })
     );
-
-    trigger.addEventListener('click', (event) => {
-      event.stopPropagation();
-      nestedMenu.classList.toggle('hidden');
-    });
-
-    siteMenu.append(trigger, nestedMenu);
-    return siteMenu;
   }
 
   private toggleMenu(): void {
-    this.menu.classList.toggle('hidden');
+    if (this.menu.classList.contains('hidden')) {
+      this.showMenu();
+    } else {
+      this.hideMenu();
+    }
+  }
+
+  private showMenu(): void {
+    this.renderMenu();
+    this.menu.classList.remove('hidden');
+    const position = positionDropdownContent(
+      this.button.getBoundingClientRect(),
+      { width: this.menu.offsetWidth }
+    );
+    this.menu.style.left = `${position.left}px`;
+    this.menu.style.top = `${position.top}px`;
+  }
+
+  private toggleSiteSubmenu(trigger: HTMLElement): void {
+    if (this.siteSubmenu.classList.contains('hidden')) {
+      this.showSiteSubmenu(trigger);
+    } else {
+      this.siteSubmenu.classList.add('hidden');
+    }
+  }
+
+  private showSiteSubmenu(trigger: HTMLElement): void {
+    this.renderSiteSubmenu();
+    this.siteSubmenu.classList.remove('hidden');
+    const position = positionDropdownSubContent(
+      trigger.getBoundingClientRect(),
+      { width: this.siteSubmenu.offsetWidth }
+    );
+    this.siteSubmenu.style.left = `${position.left}px`;
+    this.siteSubmenu.style.top = `${position.top}px`;
   }
 
   private hideMenu(): void {
     this.menu.classList.add('hidden');
-    for (const submenu of this.menu.querySelectorAll(
-      '.soundscape-dockview-site-submenu'
-    )) {
-      submenu.classList.add('hidden');
-    }
+    this.siteSubmenu.classList.add('hidden');
   }
 
   private getSites(): DockviewSiteDefinition[] {

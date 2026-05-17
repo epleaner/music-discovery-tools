@@ -588,14 +588,20 @@
     font-family: inherit;
   }
 
-  .soundscape-dockview .dv-tabs-and-actions-container {
+  .soundscape-dockview .dv-tabs-and-actions-container,
+  .soundscape-dockview .dv-tabs-container,
+  .soundscape-dockview .dv-actions-container {
     height: 33px;
+    background: hsl(var(--bg)) !important;
     border-bottom: 1px solid hsl(var(--border));
     font-size: 12px;
   }
 
-  .soundscape-dockview .dv-tab {
+  .soundscape-dockview .dv-tab,
+  .soundscape-dockview .dv-tab.dv-active-tab,
+  .soundscape-dockview .dv-tab.dv-inactive-tab {
     padding: 0 8px;
+    background: hsl(var(--bg)) !important;
     border-right: 1px solid hsl(var(--border));
     font-size: 12px;
   }
