@@ -521,16 +521,8 @@ const App: Component = () => {
               WS +
             </button>
 
-            <button
-              on:click={() => spawnDockviewPanel('rym-charts')}
-              class="btn-secondary"
-              title="Open RateYourMusic Charts Panel"
-            >
-              RYM Charts
-            </button>
-
             <div
-              class="flex items-center gap-2.5 border border-border btn cursor-pointer py-2.5"
+              class="flex items-center gap-2 border border-border btn-secondary cursor-pointer"
               ref={colorThemeContainerRef}
               onClick={() =>
                 setShowColorThemeDropdown(!showColorThemeDropdown())
