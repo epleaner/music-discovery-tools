@@ -2,12 +2,17 @@ export type DockviewPanelType =
   | 'library'
   | 'similar-artists'
   | 'newsletters'
-  | 'sites'
+  | 'site'
   | 'websocket';
 
 export interface DockviewPanelDefinition {
   id: DockviewPanelType;
   title: string;
+}
+
+export interface DockviewSiteDefinition {
+  id: string;
+  name: string;
 }
 
 export const soundscapeDockviewTabComponent = 'soundscape-tab';
@@ -17,6 +22,7 @@ export interface DockviewPanelDescriptor {
   component: DockviewPanelType;
   tabComponent: typeof soundscapeDockviewTabComponent;
   title: string;
+  params?: Record<string, string>;
   position?: {
     referencePanel: string;
     direction: 'left' | 'right' | 'above' | 'below' | 'within';
@@ -29,7 +35,7 @@ export const dockviewPanelTypes: DockviewPanelDefinition[] = [
   { id: 'library', title: 'Library' },
   { id: 'similar-artists', title: 'Similar Artists' },
   { id: 'newsletters', title: 'Newsletters' },
-  { id: 'sites', title: 'Sites' },
+  { id: 'site', title: 'Site' },
   { id: 'websocket', title: 'WebSocket' },
 ];
 
@@ -49,8 +55,23 @@ export function createDockviewPanelDescriptor(
   };
 }
 
-export function buildInitialDockviewPanels(): DockviewPanelDescriptor[] {
-  return [
+export function createSiteDockviewPanelDescriptor(
+  site: DockviewSiteDefinition,
+  instanceNumber: number
+): DockviewPanelDescriptor {
+  return {
+    id: `site-${instanceNumber}`,
+    component: 'site',
+    tabComponent: soundscapeDockviewTabComponent,
+    title: site.name,
+    params: { siteId: site.id },
+  };
+}
+
+export function buildInitialDockviewPanels(
+  sites: DockviewSiteDefinition[] = []
+): DockviewPanelDescriptor[] {
+  const initialPanels: DockviewPanelDescriptor[] = [
     {
       ...createDockviewPanelDescriptor('library', 1),
       initialWidth: 700,
@@ -60,10 +81,15 @@ export function buildInitialDockviewPanels(): DockviewPanelDescriptor[] {
       position: { referencePanel: 'library-1', direction: 'right' },
       initialWidth: 300,
     },
-    {
-      ...createDockviewPanelDescriptor('sites', 1),
+  ];
+
+  sites.forEach((site, index) => {
+    initialPanels.push({
+      ...createSiteDockviewPanelDescriptor(site, index + 1),
       position: { referencePanel: 'library-1', direction: 'below' },
       initialHeight: 300,
-    },
-  ];
+    });
+  });
+
+  return initialPanels;
 }

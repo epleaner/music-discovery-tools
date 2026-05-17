@@ -16,7 +16,7 @@ import AlbumList from './components/AlbumList';
 import RecentArtistList from './components/RecentArtistList';
 import TopTrackList from './components/TopTrackList';
 import TopAlbumList from './components/TopAlbumList';
-import SiteViewer from './components/SiteViewer';
+import SiteViewer, { type Site } from './components/SiteViewer';
 import DockviewWorkspace, {
   type DockviewWorkspaceHandle,
 } from './components/DockviewWorkspace';
@@ -93,7 +93,7 @@ const App: Component = () => {
   const sitesString = () => state().sites;
 
   // Parse sites only when the sites string actually changes
-  const musicSites = createMemo((prev) => {
+  const musicSites = createMemo<Site[]>((prev) => {
     const currentSitesString = sitesString();
     try {
       const parsed = JSON.parse(
@@ -153,10 +153,14 @@ const App: Component = () => {
     return '0deg';
   };
 
-  const handleSitesChange = (
-    sites: Array<{ id: string; name: string; url: string }>
-  ) => {
-    updateState({ sites: JSON.stringify(sites) });
+  const handleSiteChange = (site: Site) => {
+    updateState({
+      sites: JSON.stringify(
+        musicSites().map((currentSite) =>
+          currentSite.id === site.id ? site : currentSite
+        )
+      ),
+    });
   };
 
   // RYM dropdown state
@@ -506,7 +510,10 @@ const App: Component = () => {
     </div>
   );
 
-  const renderDockviewPanel = (panelType: DockviewPanelType) => {
+  const renderDockviewPanel = (
+    panelType: DockviewPanelType,
+    params: Record<string, unknown>
+  ) => {
     switch (panelType) {
       case 'library':
         return renderLibraryPanel();
@@ -514,10 +521,18 @@ const App: Component = () => {
         return renderSimilarArtistsPanel();
       case 'newsletters':
         return <NewsletterPanel />;
-      case 'sites':
-        return (
-          <SiteViewer sites={musicSites()} onSitesChange={handleSitesChange} />
-        );
+      case 'site': {
+        const siteId = typeof params.siteId === 'string' ? params.siteId : '';
+        const site = musicSites().find(
+          (currentSite) => currentSite.id === siteId
+        ) ??
+          musicSites()[0] ?? {
+            id: 'site',
+            name: 'Site',
+            url: '',
+          };
+        return <SiteViewer site={site} onSiteChange={handleSiteChange} />;
+      }
       case 'websocket':
         return <WebSocketExample />;
     }
@@ -734,6 +749,7 @@ const App: Component = () => {
             dockviewWorkspace = handle;
           }}
           renderPanel={renderDockviewPanel}
+          sites={musicSites()}
         />
       </Show>
     </div>
