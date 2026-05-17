@@ -169,7 +169,7 @@ class SoundscapeDockviewHeaderActions implements IHeaderActionsRenderer {
     trigger.type = 'button';
     trigger.className =
       'soundscape-dockview-menu-item flex w-full items-center px-2 py-1.5 text-left text-xs text-fg-muted hover:bg-bg-subtle hover:text-fg whitespace-nowrap';
-    trigger.textContent = 'Site ‹';
+    trigger.textContent = 'Site';
     trigger.setAttribute('role', 'menuitem');
     trigger.setAttribute('aria-haspopup', 'menu');
     trigger.addEventListener('click', (event) => {
@@ -208,7 +208,7 @@ class SoundscapeDockviewHeaderActions implements IHeaderActionsRenderer {
     }
 
     this.siteSubmenu.append(
-      this.buildMenuItem('New Site', () => {
+      this.buildMenuItem('+ New Site', () => {
         this.addPanel('site', this.group);
       })
     );
