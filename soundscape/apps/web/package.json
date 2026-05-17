@@ -19,6 +19,7 @@
     "@soundscape/utils": "workspace:*",
     "@tanstack/solid-virtual": "^3.13.12",
     "@trpc/client": "^10.45.0",
+    "dockview-core": "^6.3.0",
     "express": "^4.18.2",
     "solid-js": "^1.9.3",
     "tsx": "^4.7.0"

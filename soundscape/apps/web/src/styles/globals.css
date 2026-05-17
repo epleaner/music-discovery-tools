@@ -1,3 +1,5 @@
+@import 'dockview-core/dist/styles/dockview.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -560,5 +562,57 @@
     border: 1.5px solid currentColor;
     border-radius: 50%;
     clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+  }
+}
+
+@layer components {
+  .soundscape-dockview {
+    --dv-group-view-background-color: hsl(var(--bg));
+    --dv-tabs-and-actions-container-background-color: hsl(var(--bg));
+    --dv-activegroup-visiblepanel-tab-background-color: hsl(var(--bg));
+    --dv-activegroup-hiddenpanel-tab-background-color: hsl(var(--bg));
+    --dv-inactivegroup-visiblepanel-tab-background-color: hsl(var(--bg));
+    --dv-inactivegroup-hiddenpanel-tab-background-color: hsl(var(--bg));
+    --dv-activegroup-visiblepanel-tab-color: hsl(var(--fg));
+    --dv-activegroup-hiddenpanel-tab-color: hsl(var(--fg-muted));
+    --dv-inactivegroup-visiblepanel-tab-color: hsl(var(--fg));
+    --dv-inactivegroup-hiddenpanel-tab-color: hsl(var(--fg-muted));
+    --dv-separator-border: hsl(var(--border));
+    --dv-paneview-header-border-color: hsl(var(--border));
+    --dv-tabs-container-scrollbar-color: hsl(var(--border));
+    --dv-sash-color: hsl(var(--border));
+    --dv-active-sash-color: hsl(var(--border-hover));
+    --dv-drag-over-background-color: hsl(var(--bg-muted) / 0.8);
+    --dv-drag-over-border-color: hsl(var(--accent));
+    color: hsl(var(--fg));
+    font-family: inherit;
+  }
+
+  .soundscape-dockview .dv-tabs-and-actions-container {
+    height: 33px;
+    border-bottom: 1px solid hsl(var(--border));
+    font-size: 12px;
+  }
+
+  .soundscape-dockview .dv-tab {
+    padding: 0 8px;
+    border-right: 1px solid hsl(var(--border));
+    font-size: 12px;
+  }
+
+  .soundscape-dockview .dv-tab.dv-active-tab {
+    border-bottom: 2px solid hsl(var(--accent));
+  }
+
+  .soundscape-dockview .dv-content-container,
+  .soundscape-dockview .dv-groupview,
+  .soundscape-dockview .dv-view-container {
+    background: hsl(var(--bg));
+  }
+}
+
+@layer components {
+  .soundscape-dockview .soundscape-dockview-tab-close {
+    line-height: 1;
   }
 }
