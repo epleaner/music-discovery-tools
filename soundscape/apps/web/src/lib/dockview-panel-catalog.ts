@@ -3,6 +3,7 @@ export type DockviewPanelType =
   | 'similar-artists'
   | 'newsletters'
   | 'site'
+  | 'genre-stats'
   | 'rym-charts'
   | 'websocket';
 
@@ -37,6 +38,7 @@ export const dockviewPanelTypes: DockviewPanelDefinition[] = [
   { id: 'similar-artists', title: 'Similar Artists' },
   { id: 'newsletters', title: 'Newsletters' },
   { id: 'site', title: 'Site' },
+  { id: 'genre-stats', title: 'Genre Stats' },
   { id: 'rym-charts', title: 'RYM Charts' },
   { id: 'websocket', title: 'WebSocket' },
 ];

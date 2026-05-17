@@ -16,6 +16,7 @@ test('dockview panel catalog exposes site panels instead of a combined sites pan
       'similar-artists',
       'newsletters',
       'site',
+      'genre-stats',
       'rym-charts',
       'websocket',
     ] satisfies DockviewPanelType[]

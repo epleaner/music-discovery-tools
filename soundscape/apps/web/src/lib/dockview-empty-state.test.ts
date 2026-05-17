@@ -32,6 +32,7 @@ test('getDockviewEmptyStateMenuItemLabels mirrors the header add-panel menu', ()
     'Similar Artists',
     'Newsletters',
     'Site',
+    'Genre Stats',
     'RYM Charts',
     'WebSocket',
   ]);

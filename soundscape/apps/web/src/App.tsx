@@ -24,6 +24,7 @@ import EveryNoiseViewer from './components/EveryNoiseViewer';
 import WebSocketExample from './components/WebSocketExample';
 import NewsletterPanel from './components/NewsletterPanel';
 import RateYourMusicChartsPanel from './components/RateYourMusicChartsPanel';
+import GenreStatsPanel from './components/GenreStatsPanel';
 import type { DockviewPanelType } from './lib/dockview-panel-catalog';
 import { createNewSite, upsertSite } from './lib/site-catalog';
 import { buildAppLayoutModel } from './lib/app-layout';
@@ -482,6 +483,8 @@ const App: Component = () => {
         return renderSimilarArtistsPanel();
       case 'newsletters':
         return <NewsletterPanel />;
+      case 'genre-stats':
+        return <GenreStatsPanel username={username} />;
       case 'rym-charts':
         return <RateYourMusicChartsPanel />;
       case 'site': {

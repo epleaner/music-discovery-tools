@@ -23,7 +23,9 @@ import {
   fetchTopAlbums,
   fetchSimilarArtists,
   fetchEveryNoiseGenre,
+  fetchArtistInfo,
 } from '@soundscape/utils';
+import { aggregateArtistGenreStats, type GenreStat } from './genre-stats';
 
 const POLLING_INTERVAL = 3 * 60 * 1000; // 3 minutes
 
@@ -97,8 +99,39 @@ export function createRecentTracksResource(username: () => string) {
 }
 
 /**
- * Create a resource for fetching top artists
+ * Create a resource for deriving genre stats from top artists.
  */
+export function createGenreStatsResource(
+  username: () => string,
+  period: () => TimePeriod = () => '7day'
+) {
+  const [data, { mutate, refetch }] = createResource<
+    GenreStat[] | null,
+    { username: string; period: TimePeriod }
+  >(
+    () => {
+      const user = username();
+      const timePeriod = period();
+      return user?.trim() ? { username: user, period: timePeriod } : null;
+    },
+    async ({ username, period }) => {
+      const response = await fetchTopArtists(username, period, 50);
+      return await aggregateArtistGenreStats(
+        response.topartists.artist,
+        fetchArtistInfo
+      );
+    }
+  );
+
+  return {
+    genres: (): GenreStat[] => data() || [],
+    isLoading: () => data.loading,
+    error: () => data.error,
+    refetch,
+    mutate,
+  };
+}
+
 export function createTopArtistsResource(
   username: () => string,
   period: () => TimePeriod = () => '7day'
