@@ -35,7 +35,11 @@ import {
   positionDropdownContent,
   positionDropdownSubContent,
 } from '../lib/dropdown-position';
-import { shouldShowDockviewEmptyState } from '../lib/dockview-empty-state';
+import {
+  getDockviewEmptyStateOverlayClass,
+  shouldShowDockviewEmptyState,
+} from '../lib/dockview-empty-state';
+import { Button } from './ui/Button';
 
 export interface DockviewWorkspaceHandle {
   spawnPanel: (panelType: DockviewPanelType) => void;
@@ -431,14 +435,10 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
         class="soundscape-dockview dockview-theme-light flex-1 min-h-0"
       />
       <Show when={showEmptyState()}>
-        <div class="absolute inset-0 flex items-center justify-center bg-bg">
-          <button
-            type="button"
-            class="btn-secondary"
-            onClick={() => addPanel('library')}
-          >
+        <div class={getDockviewEmptyStateOverlayClass()}>
+          <Button type="button" onClick={() => addPanel('library')}>
             + New Panel
-          </button>
+          </Button>
         </div>
       </Show>
     </div>
