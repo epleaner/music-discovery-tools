@@ -37,6 +37,7 @@ import {
 } from '../lib/dropdown-position';
 import {
   getDockviewEmptyStateOverlayClass,
+  shouldHandleDockviewEmptyStateClick,
   shouldShowDockviewEmptyState,
 } from '../lib/dockview-empty-state';
 import { Button } from './ui/Button';
@@ -311,6 +312,7 @@ class SolidDockviewPanel implements IContentRenderer {
 const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
   let containerRef: HTMLDivElement | undefined;
   let dockview: DockviewComponent | undefined;
+  let lastEmptyStatePointerSpawnAt: number | undefined;
   const [showEmptyState, setShowEmptyState] = createSignal(false);
   const instanceCounts = new Map<DockviewPanelType, number>();
 
@@ -372,6 +374,28 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
       ...(group ? { position: { referenceGroup: group } } : {}),
     });
     saveLayout();
+  };
+
+  const spawnEmptyStatePanel = () => {
+    addPanel('library');
+  };
+
+  const handleEmptyStatePointerDown = (event: PointerEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    lastEmptyStatePointerSpawnAt = performance.now();
+    spawnEmptyStatePanel();
+  };
+
+  const handleEmptyStateClick = () => {
+    const now = performance.now();
+    if (
+      !shouldHandleDockviewEmptyStateClick(lastEmptyStatePointerSpawnAt, now)
+    ) {
+      return;
+    }
+
+    spawnEmptyStatePanel();
   };
 
   onMount(() => {
@@ -436,7 +460,11 @@ const DockviewWorkspace: Component<DockviewWorkspaceProps> = (props) => {
       />
       <Show when={showEmptyState()}>
         <div class={getDockviewEmptyStateOverlayClass()}>
-          <Button type="button" onClick={() => addPanel('library')}>
+          <Button
+            type="button"
+            onPointerDown={handleEmptyStatePointerDown}
+            onClick={handleEmptyStateClick}
+          >
             + New Panel
           </Button>
         </div>

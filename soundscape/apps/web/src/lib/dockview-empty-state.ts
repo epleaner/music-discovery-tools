@@ -3,5 +3,12 @@ export function shouldShowDockviewEmptyState(totalPanels: number): boolean {
 }
 
 export function getDockviewEmptyStateOverlayClass(): string {
-  return 'absolute inset-0 z-10 flex items-center justify-center bg-bg';
+  return 'absolute inset-0 z-[2147483647] flex items-center justify-center bg-bg';
+}
+
+export function shouldHandleDockviewEmptyStateClick(
+  lastPointerSpawnAt: number | undefined,
+  now: number
+): boolean {
+  return lastPointerSpawnAt === undefined || now - lastPointerSpawnAt >= 100;
 }
