@@ -284,7 +284,7 @@ export function buildTasteGenreCandidates(
         taste,
         'fringe',
         24,
-        `Fringe reach from your ${taste.name} listening`
+        ''
       );
     }
   }

@@ -164,9 +164,11 @@ const RateYourMusicChartsPanel: Component<RateYourMusicChartsPanelProps> = (
                           {genre.distance}
                         </span>
                       </div>
-                      <div class="mt-1 text-[11px] text-fg-muted">
-                        {genre.reason}
-                      </div>
+                      <Show when={genre.reason}>
+                        <div class="mt-1 text-[11px] text-fg-muted">
+                          {genre.reason}
+                        </div>
+                      </Show>
                       <div class="mt-1 truncate text-[10px] text-fg-subtle">
                         {genre.path}
                       </div>
