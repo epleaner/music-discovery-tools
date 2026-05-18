@@ -486,7 +486,7 @@ const App: Component = () => {
       case 'genre-stats':
         return <GenreStatsPanel username={username} />;
       case 'rym-charts':
-        return <RateYourMusicChartsPanel />;
+        return <RateYourMusicChartsPanel username={username} />;
       case 'site': {
         const siteId = typeof params.siteId === 'string' ? params.siteId : '';
         const site = musicSites().find(
