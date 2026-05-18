@@ -33,6 +33,9 @@ const RateYourMusicChartsPanel: Component<RateYourMusicChartsPanelProps> = (
     createSignal<TasteShuffleMode>('balanced');
   const [tasteCombination, setTasteCombination] =
     createSignal<TasteGenreCombination>();
+  const [lockedGenreNames, setLockedGenreNames] = createSignal<Set<string>>(
+    new Set()
+  );
   const tasteStats = createGenreStatsResource(props.username, () => '12month');
 
   const currentYear = new Date().getFullYear();
@@ -54,12 +57,25 @@ const RateYourMusicChartsPanel: Component<RateYourMusicChartsPanelProps> = (
     setYear(years[randomIndex]);
   };
 
+  const toggleLockedGenre = (genreName: string) => {
+    setLockedGenreNames((previous) => {
+      const next = new Set(previous);
+      if (next.has(genreName)) {
+        next.delete(genreName);
+      } else {
+        next.add(genreName);
+      }
+      return next;
+    });
+  };
+
   const shuffleTasteGenres = () => {
     const combination = shuffleTasteGenreCombination(
       tasteStats.genres(),
       undefined,
       {
         mode: tasteShuffleMode(),
+        lockedGenreNames: [...lockedGenreNames()],
       }
     );
     setTasteCombination(combination);
@@ -159,10 +175,27 @@ const RateYourMusicChartsPanel: Component<RateYourMusicChartsPanelProps> = (
                   {(genre) => (
                     <div class="border border-border bg-bg p-2">
                       <div class="flex items-center justify-between gap-2 text-xs">
-                        <span class="font-medium text-fg">{genre.name}</span>
-                        <span class="text-[10px] uppercase tracking-wide text-fg-subtle">
-                          {genre.distance}
-                        </span>
+                        <a
+                          href={genre.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          class="font-medium text-fg underline-offset-2 hover:underline"
+                        >
+                          {genre.name}
+                        </a>
+                        <button
+                          type="button"
+                          on:click={() => toggleLockedGenre(genre.name)}
+                          class={`text-[10px] uppercase tracking-wide ${
+                            lockedGenreNames().has(genre.name)
+                              ? 'text-fg'
+                              : 'text-fg-subtle hover:text-fg'
+                          }`}
+                        >
+                          {lockedGenreNames().has(genre.name)
+                            ? 'Locked'
+                            : 'Lock'}
+                        </button>
                       </div>
                       <Show when={genre.reason}>
                         <div class="mt-1 text-[11px] text-fg-muted">

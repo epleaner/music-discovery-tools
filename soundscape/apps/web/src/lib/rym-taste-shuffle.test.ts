@@ -32,6 +32,12 @@ const rymGenres: FlattenedGenre[] = [
     url: 'https://rateyourmusic.com/genre/spiritual-jazz/',
     path: 'Jazz > Spiritual Jazz',
   },
+  {
+    name: 'Zamrock',
+    description: 'Zambian rock fusion.',
+    url: 'https://rateyourmusic.com/genre/zamrock/',
+    path: 'Rock > Zamrock',
+  },
 ];
 
 const tasteStats: TasteGenreStat[] = [
@@ -71,7 +77,7 @@ test('shuffleTasteGenreCombination returns a deterministic weighted combination 
   assert.equal(combination.genres.length, 2);
   assert.deepEqual(
     combination.genres.map((genre) => genre.name),
-    ['Dark Ambient', 'Lowercase']
+    ['Dark Ambient', 'Zamrock']
   );
   assert.match(combination.summary, /ambient/i);
   assert.ok(combination.chartGenres.length > 0);
@@ -89,4 +95,36 @@ test('shuffleTasteGenreCombination prefers actual fringe genres in fringe mode',
     ['Lowercase']
   );
   assert.equal(combination.genres[0]?.distance, 'fringe');
+});
+
+test('shuffleTasteGenreCombination mixes taste picks with a random discovery genre by default', () => {
+  const combination = shuffleTasteGenreCombination(tasteStats, rymGenres, {
+    count: 3,
+    mode: 'balanced',
+    rng: () => 0,
+  });
+
+  assert.equal(combination.genres.length, 3);
+  assert.equal(
+    combination.genres.filter((genre) => genre.distance === 'random').length,
+    1
+  );
+  assert.ok(combination.genres.some((genre) => genre.name === 'Zamrock'));
+});
+
+test('shuffleTasteGenreCombination keeps locked genres while filling the remaining slots', () => {
+  const combination = shuffleTasteGenreCombination(tasteStats, rymGenres, {
+    count: 3,
+    mode: 'balanced',
+    lockedGenreNames: ['Lowercase'],
+    rng: () => 0,
+  });
+
+  assert.equal(combination.genres.length, 3);
+  assert.equal(combination.genres[0]?.name, 'Lowercase');
+  assert.ok(combination.chartGenres.includes('Lowercase'));
+  assert.equal(
+    new Set(combination.chartGenres).size,
+    combination.chartGenres.length
+  );
 });

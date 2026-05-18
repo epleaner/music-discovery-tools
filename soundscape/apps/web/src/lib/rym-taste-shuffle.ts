@@ -1,7 +1,7 @@
 import { loadFlattenedGenres, type FlattenedGenre } from './flatten-genres';
 
 export type TasteShuffleMode = 'close' | 'balanced' | 'fringe';
-export type TasteGenreDistance = 'direct' | 'related' | 'fringe';
+export type TasteGenreDistance = 'direct' | 'related' | 'fringe' | 'random';
 
 export interface TasteGenreStat {
   name: string;
@@ -19,6 +19,7 @@ export interface TasteGenreCandidate extends FlattenedGenre {
 export interface TasteShuffleOptions {
   count?: number;
   mode?: TasteShuffleMode;
+  lockedGenreNames?: string[];
   rng?: () => number;
 }
 
@@ -332,28 +333,136 @@ function weightedPick(
   return candidates[candidates.length - 1];
 }
 
+function randomPick<T>(items: T[], rng: () => number): T | undefined {
+  if (items.length === 0) return undefined;
+  return items[Math.floor(rng() * items.length)];
+}
+
+function randomGenreCandidate(genre: FlattenedGenre): TasteGenreCandidate {
+  return {
+    ...genre,
+    distance: 'random',
+    sourceTaste: 'random',
+    score: 1,
+    reason: 'Random RYM discovery pick',
+  };
+}
+
+function pushUniqueCandidate(
+  selected: TasteGenreCandidate[],
+  candidate: TasteGenreCandidate | undefined,
+  count: number
+): boolean {
+  if (!candidate || selected.length >= count) return false;
+  const candidateKey = normalizeTasteGenre(candidate.name);
+  if (
+    selected.some((genre) => normalizeTasteGenre(genre.name) === candidateKey)
+  ) {
+    return false;
+  }
+  selected.push(candidate);
+  return true;
+}
+
 export function shuffleTasteGenreCombination(
   tasteStats: TasteGenreStat[],
   rymGenres: FlattenedGenre[] = loadFlattenedGenres(),
   options: TasteShuffleOptions = {}
 ): TasteGenreCombination {
   const rng = options.rng ?? Math.random;
-  const count = options.count ?? Math.floor(rng() * 2) + 2;
+  const count = options.count ?? 3;
   const mode = options.mode ?? 'balanced';
-  const candidates = buildTasteGenreCandidates(tasteStats, rymGenres);
+  const canonicalGenres = canonicalizeGenres(rymGenres);
+  const candidates = buildTasteGenreCandidates(tasteStats, canonicalGenres);
+  const candidateByName = new Map(
+    candidates.map((candidate) => [
+      normalizeTasteGenre(candidate.name),
+      candidate,
+    ])
+  );
+  const genreByName = new Map(
+    canonicalGenres.map((genre) => [normalizeTasteGenre(genre.name), genre])
+  );
   const selected: TasteGenreCandidate[] = [];
-  let pool = candidatePoolForMode(candidates, mode);
+
+  for (const lockedGenreName of options.lockedGenreNames ?? []) {
+    const key = normalizeTasteGenre(lockedGenreName);
+    const lockedGenre = genreByName.get(key);
+    pushUniqueCandidate(
+      selected,
+      candidateByName.get(key) ??
+        (lockedGenre ? randomGenreCandidate(lockedGenre) : undefined),
+      count
+    );
+  }
+
+  let pool = candidatePoolForMode(candidates, mode).filter(
+    (candidate) =>
+      !selected.some(
+        (genre) =>
+          normalizeTasteGenre(genre.name) ===
+          normalizeTasteGenre(candidate.name)
+      )
+  );
 
   if (pool.length === 0) pool = candidates;
 
-  while (selected.length < count && pool.length > 0) {
+  const remainingSlots = Math.max(0, count - selected.length);
+  const randomSlots = remainingSlots > 0 && count > 1 ? 1 : 0;
+
+  while (selected.length < count - randomSlots && pool.length > 0) {
     const picked = weightedPick(pool, rng);
-    if (!picked) break;
-    selected.push(picked);
-    pool = pool.filter((candidate) => candidate.name !== picked.name);
+    pushUniqueCandidate(selected, picked, count);
+    pool = pool.filter((candidate) => candidate.name !== picked?.name);
   }
 
-  const tasteSources = [...new Set(selected.map((genre) => genre.sourceTaste))];
+  const tasteCandidateNames = new Set(
+    candidates.map((candidate) => normalizeTasteGenre(candidate.name))
+  );
+  const randomPool = canonicalGenres.filter((genre) => {
+    const key = normalizeTasteGenre(genre.name);
+    return (
+      !tasteCandidateNames.has(key) &&
+      !selected.some(
+        (selectedGenre) => normalizeTasteGenre(selectedGenre.name) === key
+      )
+    );
+  });
+
+  while (selected.length < count && randomPool.length > 0) {
+    const picked = randomPick(randomPool, rng);
+    pushUniqueCandidate(
+      selected,
+      picked ? randomGenreCandidate(picked) : undefined,
+      count
+    );
+    if (!picked) break;
+    randomPool.splice(randomPool.indexOf(picked), 1);
+  }
+
+  let fallbackPool = candidates.filter(
+    (candidate) =>
+      !selected.some(
+        (selectedGenre) =>
+          normalizeTasteGenre(selectedGenre.name) ===
+          normalizeTasteGenre(candidate.name)
+      )
+  );
+  while (selected.length < count && fallbackPool.length > 0) {
+    const picked = weightedPick(fallbackPool, rng);
+    pushUniqueCandidate(selected, picked, count);
+    fallbackPool = fallbackPool.filter(
+      (candidate) => candidate.name !== picked?.name
+    );
+  }
+
+  const tasteSources = [
+    ...new Set(
+      selected
+        .filter((genre) => genre.sourceTaste !== 'random')
+        .map((genre) => genre.sourceTaste)
+    ),
+  ];
 
   return {
     genres: selected,
@@ -361,6 +470,8 @@ export function shuffleTasteGenreCombination(
     summary:
       selected.length === 0
         ? 'No taste-matched RYM genres available yet.'
-        : `Shuffled from your ${tasteSources.join(', ')} listening.`,
+        : tasteSources.length > 0
+          ? `Shuffled from your ${tasteSources.join(', ')} listening plus a random RYM pick.`
+          : 'Shuffled with random RYM picks.',
   };
 }
