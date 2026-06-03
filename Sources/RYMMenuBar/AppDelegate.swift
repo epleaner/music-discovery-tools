@@ -143,14 +143,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusLine = "Loading \(shortLabel(urlString))…"
         rebuildMenu()
 
+        fetcher.onChallengeShown = { [weak self] in
+            guard let self = self else { return }
+            self.statusLine = "Solve the Cloudflare check in the window…"
+            self.rebuildMenu()
+        }
+
         fetcher.fetch(urlString: urlString) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.isLoading = false
                 switch result {
-                case .success(let payload):
-                    self.entries = payload.entries
-                    self.statusLine = "\(payload.entries.count) entries · via \(payload.source.rawValue)"
+                case .success(let entries):
+                    self.entries = entries
+                    self.statusLine = "\(entries.count) entries"
                 case .failure(let err):
                     self.entries = []
                     self.statusLine = "Error: \(err.description)"
