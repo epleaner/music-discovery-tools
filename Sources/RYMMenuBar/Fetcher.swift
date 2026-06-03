@@ -63,64 +63,23 @@ final class Fetcher {
     // MARK: - CDP driver (runs on a background queue)
 
     private func runCDP(url: URL) -> Result<[Entry], FetchError> {
-        // 1. Discover the browser-level WebSocket endpoint.
-        guard let versionData = try? Data(contentsOf: URL(string: "http://127.0.0.1:\(Fetcher.port)/json/version")!),
-              let version = try? JSONSerialization.jsonObject(with: versionData) as? [String: Any],
-              let browserWS = version["webSocketDebuggerUrl"] as? String,
-              let browserWSURL = URL(string: browserWS) else {
-            rymLog.error("no DevTools endpoint on :\(Fetcher.port, privacy: .public)")
-            return .failure(.chromeNotReachable(Fetcher.port))
-        }
-        rymLog.info("connecting browser ws \(browserWS, privacy: .public)")
-
-        let client = CDPClient(url: browserWSURL)
-        defer { client.close() }
-
         do {
-            // 2. Open a new tab navigated to the target URL.
-            let create = try client.call("Target.createTarget", ["url": url.absoluteString])
-            guard let targetId = (create["targetId"] as? String) else {
-                return .failure(.cdp("createTarget returned no targetId"))
+            // Ready once the list rows render, the page reports a block, or a real
+            // (non-list) page has finished loading.
+            let json = try CDPSession.scrape(port: Fetcher.port, url: url, scraperJS: Fetcher.scraperJS) { raw in
+                let p = Fetcher.parse(raw)
+                return !p.entries.isEmpty || p.blocked || p.htmlLen > 4000
             }
-            rymLog.info("created target \(targetId, privacy: .public)")
-            defer { _ = try? client.call("Target.closeTarget", ["targetId": targetId]) }
-
-            // 3. Attach (flatten mode → sessionId on subsequent commands).
-            let attach = try client.call("Target.attachToTarget", ["targetId": targetId, "flatten": true])
-            guard let sessionId = (attach["sessionId"] as? String) else {
-                return .failure(.cdp("attachToTarget returned no sessionId"))
-            }
-
-            // 4. Poll the scraper until the page is loaded with entries (or it's
-            //    clearly a loaded non-list page, or we time out / hit a block).
-            let maxPolls = 25
-            for i in 0..<maxPolls {
-                Thread.sleep(forTimeInterval: 0.5)
-                let val = try evaluate(client: client, sessionId: sessionId)
-                let p = Fetcher.parse(val)
-                rymLog.info("poll \(i, privacy: .public): entries=\(p.entries.count, privacy: .public) blocked=\(p.blocked, privacy: .public) htmlLen=\(p.htmlLen, privacy: .public) title=\(p.title, privacy: .public)")
-
-                if !p.entries.isEmpty { return .success(p.entries) }
-                if p.blocked { return .failure(.blocked) }
-                // htmlLen > 2000 with no entries and not blocked = a loaded, real,
-                // non-list page. (Blank/loading pages stay small until ready.)
-                if p.htmlLen > 2000 && i >= 2 { return .failure(.noEntries) }
-            }
+            let p = Fetcher.parse(json)
+            rymLog.info("parsed: entries=\(p.entries.count, privacy: .public) blocked=\(p.blocked, privacy: .public) htmlLen=\(p.htmlLen, privacy: .public) title=\(p.title, privacy: .public)")
+            if !p.entries.isEmpty { return .success(p.entries) }
+            if p.blocked { return .failure(.blocked) }
             return .failure(.noEntries)
         } catch let e as FetchError {
             return .failure(e)
         } catch {
             return .failure(.cdp(error.localizedDescription))
         }
-    }
-
-    private func evaluate(client: CDPClient, sessionId: String) throws -> String? {
-        let res = try client.call("Runtime.evaluate",
-                                  ["expression": Fetcher.scraperJS, "returnByValue": true],
-                                  sessionId: sessionId)
-        // res = { result: { type, value }, ... }
-        let inner = res["result"] as? [String: Any]
-        return inner?["value"] as? String
     }
 
     // MARK: - Helpers

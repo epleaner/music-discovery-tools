@@ -61,7 +61,17 @@ accessory (no Dock icon, `LSUIElement`).
 
 1. Click the `≡★` menu bar icon → **Load URL…**
 2. Paste a RYM list URL, e.g. `https://rateyourmusic.com/list/cute_on_sale/particle/`
-3. Entries appear in the menu. Click one to open its release page.
+3. The list becomes a **playlist**. Hit **▶ Play Next** (⌘N) to open the next
+   entry on Bandcamp; click any entry to jump there. The cursor advances each time
+   (`✓` played · `▶` up next), and **↺ Restart** resets it.
+
+### How "Play Next" finds Bandcamp
+
+Lazily, one entry at a time (never in bulk): it searches `bandcamp.com` for the
+entry's artist + album (albums only) via CDP, **scores** the results against the
+entry (exact album-name + artist match), and opens the best album in your default
+browser. If nothing matches confidently, it opens the Bandcamp **search page** so
+you can pick — so a click always lands somewhere useful, and never repeats.
 
 ## Debugging
 

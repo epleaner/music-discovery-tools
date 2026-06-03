@@ -10,6 +10,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastURL = ""
     private var isLoading = false
 
+    // Playlist cursor: index of the NEXT entry to play. Resolving is lazy and
+    // one-at-a-time (we never look up Bandcamp links in bulk).
+    private var cursor = 0
+    private var isResolving = false
+
     private var inputWindow: NSWindow?
     private var inputField: NSTextField?
 
@@ -29,6 +34,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let i = args.firstIndex(of: "--fetch"), i + 1 < args.count {
             rymLog.info("--fetch arg set; auto-fetching")
             startFetch(args[i + 1])
+        } else if let i = args.firstIndex(of: "--resolve"), i + 2 < args.count {
+            // Debug: open "RYM MenuBar.app" --args --resolve "<artist>" "<album>"
+            rymLog.info("--resolve arg set")
+            BandcampResolver.resolve(artist: args[i + 1], album: args[i + 2]) { result in
+                switch result {
+                case .success(let m): rymLog.info("RESOLVE confident=\(m.confident, privacy: .public) url=\(m.url.absoluteString, privacy: .public)")
+                case .failure(let e): rymLog.error("RESOLVE failed: \(e.description, privacy: .public)")
+                }
+            }
         } else if let auto = ProcessInfo.processInfo.environment["RYM_URL"], !auto.isEmpty {
             rymLog.info("RYM_URL env set; auto-fetching")
             startFetch(auto)
@@ -81,12 +95,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             empty.isEnabled = false
             menu.addItem(empty)
         } else {
+            // Play Next (or end-of-playlist) control.
+            if cursor < entries.count {
+                let e = entries[cursor]
+                let label = "▶ Play Next: \(e.artist) — \(e.album)"
+                let next = NSMenuItem(title: label, action: #selector(playNext), keyEquivalent: "n")
+                next.target = self
+                next.isEnabled = !isResolving
+                menu.addItem(next)
+            } else {
+                let end = NSMenuItem(title: "✓ End of playlist", action: nil, keyEquivalent: "")
+                end.isEnabled = false
+                menu.addItem(end)
+            }
+            if cursor > 0 {
+                let restart = NSMenuItem(title: "↺ Restart playlist", action: #selector(restartPlaylist), keyEquivalent: "")
+                restart.target = self
+                restart.isEnabled = !isResolving
+                menu.addItem(restart)
+            }
+            menu.addItem(.separator())
+
+            // The entries. ✓ played · ▶ up next · click any to play it in Bandcamp.
             for (i, e) in entries.enumerated() {
-                let title = "\(e.artist) — \(e.album) \(e.date)".trimmingCharacters(in: .whitespaces)
-                let item = NSMenuItem(title: title, action: #selector(openEntry(_:)), keyEquivalent: "")
+                let marker = i < cursor ? "✓ " : (i == cursor ? "▶ " : "   ")
+                let title = "\(marker)\(e.artist) — \(e.album) \(e.date)".trimmingCharacters(in: .whitespaces)
+                let item = NSMenuItem(title: title, action: #selector(playEntry(_:)), keyEquivalent: "")
                 item.target = self
                 item.tag = i
-                if e.path.isEmpty { item.action = nil }
+                item.isEnabled = !isResolving
                 menu.addItem(item)
             }
         }
@@ -111,13 +148,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
     }
 
-    // MARK: - Actions
+    // MARK: - Playlist actions
 
-    @objc private func openEntry(_ sender: NSMenuItem) {
-        guard sender.tag >= 0, sender.tag < entries.count else { return }
-        let path = entries[sender.tag].path
-        let full = path.hasPrefix("http") ? path : "https://rateyourmusic.com" + path
-        if let url = URL(string: full) { NSWorkspace.shared.open(url) }
+    @objc private func playNext() {
+        guard cursor < entries.count else { return }
+        play(index: cursor)
+    }
+
+    @objc private func playEntry(_ sender: NSMenuItem) {
+        play(index: sender.tag)
+    }
+
+    @objc private func restartPlaylist() {
+        cursor = 0
+        statusLine = "\(entries.count) entries"
+        rebuildMenu()
+    }
+
+    /// Resolve one entry's Bandcamp link and open it, then advance the cursor.
+    private func play(index: Int) {
+        guard !isResolving, index >= 0, index < entries.count else { return }
+        let e = entries[index]
+        isResolving = true
+        statusLine = "Finding Bandcamp: \(e.artist) — \(e.album)…"
+        rebuildMenu()
+
+        BandcampResolver.resolve(artist: e.artist, album: e.album) { [weak self] result in
+            guard let self = self else { return }
+            self.isResolving = false
+            switch result {
+            case .success(let match):
+                NSWorkspace.shared.open(match.url)
+                self.cursor = index + 1
+                let pos = "\(min(self.cursor, self.entries.count))/\(self.entries.count)"
+                self.statusLine = match.confident
+                    ? "▶ \(pos): \(e.artist) — \(e.album)"
+                    : "🔎 \(pos): search opened (no confident match)"
+            case .failure(let err):
+                // Chrome/CDP failure — don't advance; let the user retry.
+                self.statusLine = "Error: \(err.description)"
+            }
+            self.rebuildMenu()
+        }
     }
 
     @objc private func reloadLast() {
@@ -156,7 +228,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 switch result {
                 case .success(let entries):
                     self.entries = entries
-                    self.statusLine = "\(entries.count) entries"
+                    self.cursor = 0
+                    self.statusLine = "\(entries.count) entries · ⌘N to play"
                 case .failure(let err):
                     self.entries = []
                     self.statusLine = "Error: \(err.description)"
