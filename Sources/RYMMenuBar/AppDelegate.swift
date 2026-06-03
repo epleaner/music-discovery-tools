@@ -14,12 +14,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var inputField: NSTextField?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        installEditMenu()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "list.star", accessibilityDescription: "RYM")
             button.image?.isTemplate = true
         }
         rebuildMenu()
+
+        // Debug harness: RYM_URL=<url> auto-fetches once on launch for headless tracing.
+        if let auto = ProcessInfo.processInfo.environment["RYM_URL"], !auto.isEmpty {
+            rymLog.info("RYM_URL env set; auto-fetching")
+            startFetch(auto)
+        }
+    }
+
+    // MARK: - Edit menu (enables ⌘C/⌘V/⌘X/⌘A in the input field)
+
+    /// An LSUIElement app has no main menu, so AppKit won't route the standard
+    /// editing key equivalents to the text field's field editor. Installing a
+    /// hidden main menu with the standard selectors restores Cut/Copy/Paste/
+    /// Select All; the menu bar stays hidden, but performKeyEquivalent still fires.
+    private func installEditMenu() {
+        let mainMenu = NSMenu()
+
+        let appItem = NSMenuItem()
+        mainMenu.addItem(appItem)
+        let appMenu = NSMenu()
+        appMenu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appItem.submenu = appMenu
+
+        let editItem = NSMenuItem()
+        mainMenu.addItem(editItem)
+        let editMenu = NSMenu(title: "Edit")
+        editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        let redo = editMenu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+        redo.keyEquivalentModifierMask = [.command, .shift]
+        editMenu.addItem(.separator())
+        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editItem.submenu = editMenu
+
+        NSApp.mainMenu = mainMenu
     }
 
     // MARK: - Menu
