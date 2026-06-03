@@ -11,14 +11,41 @@ with valid cookies, because it fingerprints the TLS stack. The only reliable pat
 
 ## How it fetches
 
-1. **Primary — embedded `WKWebView`.** A hidden WebKit view loads the URL itself (real
-   engine → usually passes Cloudflare) and runs a DOM scraper.
-2. **Fallback — your Google Chrome via AppleScript.** If WebKit is blocked, the app asks
-   Chrome (which has your warm session) to load the page and run the same scraper.
+It drives your already-running **Google Chrome** over the **DevTools Protocol (CDP)** on a
+local debugging port (default `9222`):
 
-**No retry on a block.** If Cloudflare blocks both engines, the app reports it and stops —
-it never hammers RYM (avoids IP bans). The single WebKit "grace re-read" issues no new
-request; it only re-reads the DOM Cloudflare's own JS may have advanced.
+1. Discover the browser endpoint at `http://127.0.0.1:9222/json/version`.
+2. `Target.createTarget` opens a tab navigated to your URL.
+3. `Runtime.evaluate` runs the DOM scraper, polling until the list rows are present.
+4. `Target.closeTarget` cleans the tab up.
+
+Chrome has an established Cloudflare session, so it loads RYM where a fresh engine
+(curl, `WebFetch`, a standalone `WKWebView`) gets a `403`/`503`. CDP runs JS directly, so
+it needs **no Automation/TCC permission** and is **unaffected** by Chrome's "Allow
+JavaScript from Apple Events" toggle.
+
+**No retry on a block.** It opens one tab and reads it; it never reloads on a Cloudflare
+block, to avoid IP bans.
+
+### Why not WKWebView / AppleScript?
+
+Both were tried and rejected with evidence (see git history):
+- A fresh **WKWebView** is an untrusted Cloudflare session — it gets the interactive
+  "Just a moment" Turnstile challenge and, under repeated hits, escalates to a blank hard
+  `403`. Unreliable and reputation-degrading.
+- **AppleScript** `execute javascript` needs both an Automation grant *and* Chrome's
+  per-instance "Allow JavaScript from Apple Events" toggle, and is ambiguous when more than
+  one Chrome instance is running. CDP has none of these problems.
+
+## Requirements
+
+Chrome must be running with remote debugging enabled:
+
+```bash
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222
+```
+
+If the port isn't open, the app says so instead of failing silently.
 
 ## Build
 
@@ -36,14 +63,19 @@ accessory (no Dock icon, `LSUIElement`).
 2. Paste a RYM list URL, e.g. `https://rateyourmusic.com/list/cute_on_sale/particle/`
 3. Entries appear in the menu. Click one to open its release page.
 
-## Chrome fallback setup
+## Debugging
 
-The fallback needs Chrome to allow JavaScript from Apple Events:
+Full trace via the unified log:
 
-- Chrome menu **View → Developer → Allow JavaScript from Apple Events** (enable once).
-- First use also triggers a macOS Automation permission prompt — approve it.
+```bash
+log stream --predicate 'subsystem == "com.elipleaner.rym-menubar"' --info --debug
+```
 
-If the fallback can't run, the app shows the Chrome error instead of failing silently.
+Headless one-shot fetch (skips the menu):
+
+```bash
+open "build/RYM MenuBar.app" --args --fetch "https://rateyourmusic.com/list/<user>/<list>/"
+```
 
 ## Scope
 

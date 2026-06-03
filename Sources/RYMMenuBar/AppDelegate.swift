@@ -22,8 +22,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         rebuildMenu()
 
-        // Debug harness: RYM_URL=<url> auto-fetches once on launch for headless tracing.
-        if let auto = ProcessInfo.processInfo.environment["RYM_URL"], !auto.isEmpty {
+        // Debug harness: auto-fetch once on launch for headless tracing.
+        //   raw binary:  RYM_URL=<url> ./RYMMenuBar
+        //   app bundle:  open "RYM MenuBar.app" --args --fetch <url>
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "--fetch"), i + 1 < args.count {
+            rymLog.info("--fetch arg set; auto-fetching")
+            startFetch(args[i + 1])
+        } else if let auto = ProcessInfo.processInfo.environment["RYM_URL"], !auto.isEmpty {
             rymLog.info("RYM_URL env set; auto-fetching")
             startFetch(auto)
         }
@@ -142,12 +148,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isLoading = true
         statusLine = "Loading \(shortLabel(urlString))…"
         rebuildMenu()
-
-        fetcher.onChallengeShown = { [weak self] in
-            guard let self = self else { return }
-            self.statusLine = "Solve the Cloudflare check in the window…"
-            self.rebuildMenu()
-        }
 
         fetcher.fetch(urlString: urlString) { [weak self] result in
             DispatchQueue.main.async {
