@@ -15,6 +15,10 @@ enum CDPSession {
                        maxPolls: Int = 25,
                        interval: TimeInterval = 0.5,
                        ready: (String) -> Bool) throws -> String {
+        // Launch a CDP-enabled Chrome if one isn't already listening.
+        guard ChromeLauncher.ensure(port: port) else {
+            throw FetchError.chromeNotReachable(port)
+        }
         guard let versionData = try? Data(contentsOf: URL(string: "http://127.0.0.1:\(port)/json/version")!),
               let version = try? JSONSerialization.jsonObject(with: versionData) as? [String: Any],
               let browserWS = version["webSocketDebuggerUrl"] as? String,
