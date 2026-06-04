@@ -350,11 +350,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         inputWindow = window
     }
 
-    /// A readable label for a list URL. `/list/<user>/<slug>/` → "slug · user";
-    /// otherwise the last path component (or host).
+    /// A readable label for a list/chart URL.
+    /// `/list/<user>/<slug>/` → "slug · user"; `/charts/…/<year>/g:<genre>/` →
+    /// "genre year · chart"; otherwise the last path component (or host).
     static func deriveLabel(_ urlString: String) -> String {
         guard let url = URL(string: urlString.hasPrefix("http") ? urlString : "https://" + urlString) else { return urlString }
         let parts = url.path.split(separator: "/").map(String.init)
+        if parts.contains("charts") {
+            let genre = parts.first { $0.hasPrefix("g:") }?.replacingOccurrences(of: "g:", with: "")
+            let year = parts.first { $0.count == 4 && Int($0) != nil }
+            let bits = [genre, year].compactMap { $0 }
+            return (bits.isEmpty ? "chart" : bits.joined(separator: " ")) + " · chart"
+        }
         if let li = parts.firstIndex(of: "list"), li + 2 < parts.count {
             return "\(parts[li + 2]) · \(parts[li + 1])"
         }

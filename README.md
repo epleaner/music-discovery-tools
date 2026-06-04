@@ -100,5 +100,8 @@ open "build/RYM MenuBar.app" --args --fetch "https://rateyourmusic.com/list/<use
 
 ## Scope
 
-Targets RYM **list** pages (`#user_list`). Other page types load fine but won't yield
-entries — the app shows "No list entries found" rather than guessing.
+Handles RYM **list** pages (`#user_list`) and **chart** pages
+(`.page_charts_section_charts_item`, e.g. `/charts/top/album/2003/g:ambient/`),
+auto-detecting which by what's on the page. Both become playlists. Other page types
+load fine but won't yield entries — the app shows "No list entries found" rather than
+guessing.
