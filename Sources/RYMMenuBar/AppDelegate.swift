@@ -16,7 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cursor = 0
     private var isResolving = false
 
-    private var inlineField: NSTextField?
+    private var inputWindow: NSWindow?
+    private var inputField: NSTextField?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         installEditMenu()
@@ -133,8 +134,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
-        // Inline URL input (no separate dialog). Click the field, paste, press ⏎.
-        menu.addItem(makeURLInputItem())
+        let load = NSMenuItem(title: "Load URL…", action: #selector(showInput), keyEquivalent: "l")
+        load.target = self
+        menu.addItem(load)
 
         if !lastURL.isEmpty {
             let refresh = NSMenuItem(title: "Refresh from RYM", action: #selector(refreshCurrent), keyEquivalent: "r")
@@ -254,10 +256,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
-    @objc private func inlineSubmit(_ sender: NSTextField) {
-        let value = sender.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        statusItem.menu?.cancelTracking()
-        guard !value.isEmpty else { return }
+    @objc private func showInput() {
+        if inputWindow == nil { buildInputWindow() }
+        inputField?.stringValue = lastURL
+        NSApp.activate(ignoringOtherApps: true)
+        inputWindow?.center()
+        inputWindow?.makeKeyAndOrderFront(nil)
+        inputWindow?.makeFirstResponder(inputField)
+    }
+
+    @objc private func submitInput() {
+        let value = inputField?.stringValue ?? ""
+        inputWindow?.orderOut(nil)
+        guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         loadList(value, forceRefresh: false)
     }
 
@@ -303,28 +314,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // MARK: - Inline URL input
+    // MARK: - Input window
 
-    /// A menu item hosting an editable text field, so a URL can be pasted right in
-    /// the menu (no separate dialog). Click the field, paste, press ⏎ to load.
-    private func makeURLInputItem() -> NSMenuItem {
-        let item = NSMenuItem()
-        let width: CGFloat = 280
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: width, height: 30))
+    private func buildInputWindow() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 96),
+            styleMask: [.titled, .closable],
+            backing: .buffered, defer: false)
+        window.title = "Load RateYourMusic List"
+        window.isReleasedWhenClosed = false
 
-        let field = NSTextField(frame: NSRect(x: 20, y: 4, width: width - 32, height: 22))
-        field.placeholderString = "Paste RYM list URL, press ⏎"
-        field.font = .systemFont(ofSize: 12)
-        field.bezelStyle = .roundedBezel
-        field.focusRingType = .none
-        field.lineBreakMode = .byTruncatingHead
+        let content = NSView(frame: window.contentView!.bounds)
+        content.autoresizingMask = [.width, .height]
+
+        let label = NSTextField(labelWithString: "RYM list URL:")
+        label.frame = NSRect(x: 16, y: 56, width: 428, height: 18)
+        content.addSubview(label)
+
+        let field = NSTextField(frame: NSRect(x: 16, y: 28, width: 330, height: 24))
+        field.placeholderString = "https://rateyourmusic.com/list/…"
         field.target = self
-        field.action = #selector(inlineSubmit(_:))   // Enter submits
-        container.addSubview(field)
+        field.action = #selector(submitInput)   // Enter submits
+        content.addSubview(field)
+        inputField = field
 
-        item.view = container
-        inlineField = field
-        return item
+        let button = NSButton(frame: NSRect(x: 352, y: 26, width: 92, height: 28))
+        button.title = "Load"
+        button.bezelStyle = .rounded
+        button.keyEquivalent = "\r"
+        button.target = self
+        button.action = #selector(submitInput)
+        content.addSubview(button)
+
+        window.contentView = content
+        inputWindow = window
     }
 
     /// A readable label for a list URL. `/list/<user>/<slug>/` → "slug · user";
