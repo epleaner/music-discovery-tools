@@ -4,6 +4,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem!
     private let fetcher = Fetcher()
+    private let store = Store()
 
     private var entries: [Entry] = []
     private var statusLine = "No list loaded"
@@ -33,7 +34,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let args = ProcessInfo.processInfo.arguments
         if let i = args.firstIndex(of: "--fetch"), i + 1 < args.count {
             rymLog.info("--fetch arg set; auto-fetching")
-            startFetch(args[i + 1])
+            loadList(args[i + 1], forceRefresh: true)
+        } else if let i = args.firstIndex(of: "--cached"), i + 1 < args.count {
+            rymLog.info("--cached arg set; cache-first load")
+            loadList(args[i + 1], forceRefresh: false)
         } else if let i = args.firstIndex(of: "--resolve"), i + 2 < args.count {
             // Debug: open "RYM MenuBar.app" --args --resolve "<artist>" "<album>"
             rymLog.info("--resolve arg set")
@@ -45,7 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         } else if let auto = ProcessInfo.processInfo.environment["RYM_URL"], !auto.isEmpty {
             rymLog.info("RYM_URL env set; auto-fetching")
-            startFetch(auto)
+            loadList(auto, forceRefresh: true)
         }
     }
 
@@ -135,11 +139,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(load)
 
         if !lastURL.isEmpty {
-            let reload = NSMenuItem(title: "Reload Last", action: #selector(reloadLast), keyEquivalent: "r")
-            reload.target = self
-            reload.isEnabled = !isLoading
-            menu.addItem(reload)
+            let refresh = NSMenuItem(title: "Refresh from RYM", action: #selector(refreshCurrent), keyEquivalent: "r")
+            refresh.target = self
+            refresh.isEnabled = !isLoading
+            menu.addItem(refresh)
         }
+
+        // History submenu of cached lists.
+        let history = store.lists
+        let historyItem = NSMenuItem(title: "History", action: nil, keyEquivalent: "")
+        let historyMenu = NSMenu()
+        if history.isEmpty {
+            let none = NSMenuItem(title: "No history yet", action: nil, keyEquivalent: "")
+            none.isEnabled = false
+            historyMenu.addItem(none)
+        } else {
+            for list in history {
+                let item = NSMenuItem(title: "\(list.label) (\(list.entries.count))",
+                                      action: #selector(openHistory(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = list.url
+                item.isEnabled = !isLoading
+                historyMenu.addItem(item)
+            }
+            historyMenu.addItem(.separator())
+            let clear = NSMenuItem(title: "Clear History", action: #selector(clearHistory), keyEquivalent: "")
+            clear.target = self
+            historyMenu.addItem(clear)
+        }
+        historyItem.submenu = historyMenu
+        menu.addItem(historyItem)
 
         menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -166,9 +195,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Resolve one entry's Bandcamp link and open it, then advance the cursor.
+    /// Uses the permanent cache; only searches Bandcamp on a cache miss.
     private func play(index: Int) {
         guard !isResolving, index >= 0, index < entries.count else { return }
         let e = entries[index]
+        let key = Self.bandcampKey(artist: e.artist, album: e.album)
+
+        if let hit = store.bandcampHit(key: key), let url = URL(string: hit.url) {
+            openMatch(url: url, confident: hit.confident, entry: e, index: index)
+            return
+        }
+
         isResolving = true
         statusLine = "Finding Bandcamp: \(e.artist) — \(e.album)…"
         rebuildMenu()
@@ -178,23 +215,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.isResolving = false
             switch result {
             case .success(let match):
-                NSWorkspace.shared.open(match.url)
-                self.cursor = index + 1
-                let pos = "\(min(self.cursor, self.entries.count))/\(self.entries.count)"
-                self.statusLine = match.confident
-                    ? "▶ \(pos): \(e.artist) — \(e.album)"
-                    : "🔎 \(pos): search opened (no confident match)"
+                self.store.putBandcamp(key: key, hit: BandcampHit(url: match.url.absoluteString, confident: match.confident))
+                self.openMatch(url: match.url, confident: match.confident, entry: e, index: index)
             case .failure(let err):
-                // Chrome/CDP failure — don't advance; let the user retry.
+                // Chrome/CDP failure — don't advance or cache; let the user retry.
                 self.statusLine = "Error: \(err.description)"
+                self.rebuildMenu()
             }
-            self.rebuildMenu()
         }
     }
 
-    @objc private func reloadLast() {
+    private func openMatch(url: URL, confident: Bool, entry e: Entry, index: Int) {
+        NSWorkspace.shared.open(url)
+        cursor = index + 1
+        let pos = "\(min(cursor, entries.count))/\(entries.count)"
+        statusLine = confident
+            ? "▶ \(pos): \(e.artist) — \(e.album)"
+            : "🔎 \(pos): search opened (no confident match)"
+        rebuildMenu()
+    }
+
+    static func bandcampKey(artist: String, album: String) -> String {
+        BandcampResolver.norm(artist) + "|" + BandcampResolver.norm(album)
+    }
+
+    // MARK: - History actions
+
+    @objc private func refreshCurrent() {
         guard !lastURL.isEmpty else { return }
-        startFetch(lastURL)
+        loadList(lastURL, forceRefresh: true)
+    }
+
+    @objc private func openHistory(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? String else { return }
+        loadList(url, forceRefresh: false)
+    }
+
+    @objc private func clearHistory() {
+        store.clearLists()
+        rebuildMenu()
     }
 
     @objc private func showInput() {
@@ -210,18 +269,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let value = inputField?.stringValue ?? ""
         inputWindow?.orderOut(nil)
         guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        startFetch(value)
+        loadList(value, forceRefresh: false)
     }
 
-    // MARK: - Fetch
+    // MARK: - Load (cache-first)
 
-    private func startFetch(_ urlString: String) {
-        lastURL = urlString
+    /// Load a list. Unless `forceRefresh`, a cached copy is served instantly with
+    /// no RYM request. On a network fetch, the result is cached and moved to the
+    /// front of history.
+    private func loadList(_ urlString: String, forceRefresh: Bool) {
+        let key = Fetcher.normalize(urlString)?.absoluteString ?? urlString
+        lastURL = key
+
+        if !forceRefresh, let cached = store.cachedList(for: key) {
+            entries = cached.entries
+            cursor = 0
+            statusLine = "\(cached.entries.count) entries · cached · ⌘N to play"
+            store.touchList(url: key)
+            rymLog.info("served from cache: \(key, privacy: .public)")
+            rebuildMenu()
+            return
+        }
+
         isLoading = true
-        statusLine = "Loading \(shortLabel(urlString))…"
+        statusLine = "\(forceRefresh ? "Refreshing" : "Loading") \(Self.deriveLabel(key))…"
         rebuildMenu()
 
-        fetcher.fetch(urlString: urlString) { [weak self] result in
+        fetcher.fetch(urlString: key) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.isLoading = false
@@ -229,6 +303,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 case .success(let entries):
                     self.entries = entries
                     self.cursor = 0
+                    self.store.upsertList(url: key, label: Self.deriveLabel(key), entries: entries)
                     self.statusLine = "\(entries.count) entries · ⌘N to play"
                 case .failure(let err):
                     self.entries = []
@@ -275,9 +350,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         inputWindow = window
     }
 
-    private func shortLabel(_ urlString: String) -> String {
+    /// A readable label for a list URL. `/list/<user>/<slug>/` → "slug · user";
+    /// otherwise the last path component (or host).
+    static func deriveLabel(_ urlString: String) -> String {
         guard let url = URL(string: urlString.hasPrefix("http") ? urlString : "https://" + urlString) else { return urlString }
         let parts = url.path.split(separator: "/").map(String.init)
+        if let li = parts.firstIndex(of: "list"), li + 2 < parts.count {
+            return "\(parts[li + 2]) · \(parts[li + 1])"
+        }
         return parts.last ?? (url.host ?? urlString)
     }
 }

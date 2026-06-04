@@ -65,6 +65,17 @@ accessory (no Dock icon, `LSUIElement`).
    entry on Bandcamp; click any entry to jump there. The cursor advances each time
    (`✓` played · `▶` up next), and **↺ Restart** resets it.
 
+### History & caching
+
+Everything is cached to `~/Library/Application Support/RYMMenuBar/store.json`:
+
+- **List history** — every loaded list is remembered under **History ▸** (newest first,
+  shown as `label (count)`). Opening one loads its entries **instantly from cache with no
+  RYM request** — which also sidesteps intermittent Cloudflare blocks. **Refresh from RYM**
+  (⌘R) forces a fresh fetch and updates the cache. **Clear History** empties the list cache.
+- **Bandcamp links** — once an entry resolves, its link is cached **permanently**, so future
+  plays open instantly with no search tab. (Even no-match results are remembered.)
+
 ### How "Play Next" finds Bandcamp
 
 Lazily, one entry at a time (never in bulk): it searches `bandcamp.com` for the

@@ -5,7 +5,7 @@ import os
 ///   log stream --predicate 'subsystem == "com.elipleaner.rym-menubar"' --info --debug
 let rymLog = Logger(subsystem: "com.elipleaner.rym-menubar", category: "fetch")
 
-struct Entry {
+struct Entry: Codable {
     let artist: String
     let album: String
     let date: String   // e.g. "(2025) [EP]"
