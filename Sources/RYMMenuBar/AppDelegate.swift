@@ -149,11 +149,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         scroll.drawsBackground = false
         scroll.autohidesScrollers = true
 
-        let table = NSTableView(frame: scroll.bounds)
+        let table = HoverTableView(frame: scroll.bounds)
         table.headerView = nil
         table.backgroundColor = .clear
         table.rowHeight = rowH
         table.intercellSpacing = NSSize(width: 0, height: 0)
+        table.selectionHighlightStyle = .regular   // accent highlight under the pointer
+        table.allowsEmptySelection = true
+        table.allowsMultipleSelection = false
         let col = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("entry"))
         col.width = width - 4
         table.addTableColumn(col)
@@ -183,21 +186,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         let id = NSUserInterfaceItemIdentifier("entryCell")
-        let cell = (tableView.makeView(withIdentifier: id, owner: self) as? NSTextField) ?? {
-            let tf = NSTextField()
-            tf.identifier = id
-            tf.isBezeled = false
-            tf.isEditable = false
-            tf.drawsBackground = false
+        let cellView = (tableView.makeView(withIdentifier: id, owner: self) as? NSTableCellView) ?? {
+            let v = NSTableCellView()
+            v.identifier = id
+            let tf = NSTextField(labelWithString: "")
             tf.lineBreakMode = .byTruncatingTail
             tf.font = .menuFont(ofSize: 13)
-            return tf
+            tf.translatesAutoresizingMaskIntoConstraints = false
+            v.addSubview(tf)
+            v.textField = tf
+            NSLayoutConstraint.activate([
+                tf.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 14),
+                tf.trailingAnchor.constraint(equalTo: v.trailingAnchor, constant: -8),
+                tf.centerYAnchor.constraint(equalTo: v.centerYAnchor),
+            ])
+            return v
         }()
         let e = entries[row]
         let marker = row == cursor ? "▶ " : "    "   // pad so text stays aligned
-        cell.stringValue = "\(marker)\(e.artist) — \(e.album) \(e.date)"
-        cell.textColor = .labelColor
-        return cell
+        cellView.textField?.stringValue = "\(marker)\(e.artist) — \(e.album) \(e.date)"
+        return cellView
     }
 
     // MARK: - Menu
