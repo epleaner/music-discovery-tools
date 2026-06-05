@@ -13,9 +13,20 @@ enum ChromeLauncher {
     /// Ports to check, in priority order.
     static let reusePorts = [9222, 9333]
 
-    static func isReachable(port: Int) -> Bool {
-        guard let data = try? Data(contentsOf: URL(string: "http://127.0.0.1:\(port)/json/version")!) else { return false }
-        return !data.isEmpty
+    /// Fast liveness check — a short timeout so a bound-but-unresponsive port can't
+    /// stall the caller (important when this runs while opening the menu).
+    static func isReachable(port: Int, timeout: TimeInterval = 0.8) -> Bool {
+        var req = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/json/version")!)
+        req.timeoutInterval = timeout
+        let sem = DispatchSemaphore(value: 0)
+        var ok = false
+        let task = URLSession.shared.dataTask(with: req) { data, _, _ in
+            if let data = data, !data.isEmpty { ok = true }
+            sem.signal()
+        }
+        task.resume()
+        if sem.wait(timeout: .now() + timeout + 0.3) == .timedOut { task.cancel() }
+        return ok
     }
 
     /// The first port with a live DevTools endpoint, or nil if none is up.

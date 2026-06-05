@@ -1,10 +1,13 @@
 import AppKit
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private var statusItem: NSStatusItem!
     private let fetcher = Fetcher()
     private let store = Store()
+
+    private weak var cdpStatusItem: NSMenuItem?
+    private var lastDetectedPort: Int?
 
     private var entries: [Entry] = []
     private var statusLine = "No list loaded"
@@ -84,10 +87,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.mainMenu = mainMenu
     }
 
+    // MARK: - Debug-Chrome indicator
+
+    private func cdpStatusTitle(for port: Int?) -> String {
+        if let p = port { return "● Debug Chrome on :\(p)" }
+        return "○ No debug Chrome (start one to load)"
+    }
+
+    /// NSMenuDelegate — refresh the indicator each time the menu opens. The check
+    /// runs off the main thread so the menu opens instantly; the item updates live.
+    func menuWillOpen(_ menu: NSMenu) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let port = ChromeLauncher.resolveUsablePort()
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.lastDetectedPort = port
+                self.cdpStatusItem?.title = self.cdpStatusTitle(for: port)
+            }
+        }
+    }
+
     // MARK: - Menu
 
     private func rebuildMenu() {
         let menu = NSMenu()
+        menu.delegate = self
+
+        // Debug-Chrome indicator (refreshed in menuWillOpen).
+        let cdp = NSMenuItem(title: cdpStatusTitle(for: lastDetectedPort), action: nil, keyEquivalent: "")
+        cdp.isEnabled = false
+        menu.addItem(cdp)
+        cdpStatusItem = cdp
+        menu.addItem(.separator())
 
         let status = NSMenuItem(title: statusLine, action: nil, keyEquivalent: "")
         status.isEnabled = false
