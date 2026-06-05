@@ -263,6 +263,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         inputWindow?.center()
         inputWindow?.makeKeyAndOrderFront(nil)
         inputWindow?.makeFirstResponder(inputField)
+        // Put the caret at the end so the tail of a long URL (year/genre) is visible.
+        if let editor = inputField?.currentEditor() {
+            editor.selectedRange = NSRange(location: (inputField?.stringValue.count ?? 0), length: 0)
+        }
     }
 
     @objc private func submitInput() {
@@ -317,31 +321,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Input window
 
     private func buildInputWindow() {
+        let w: CGFloat = 680
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 460, height: 96),
-            styleMask: [.titled, .closable],
+            contentRect: NSRect(x: 0, y: 0, width: w, height: 96),
+            styleMask: [.titled, .closable, .resizable],
             backing: .buffered, defer: false)
-        window.title = "Load RateYourMusic List"
+        window.title = "Load RateYourMusic List or Chart"
         window.isReleasedWhenClosed = false
+        window.minSize = NSSize(width: 360, height: 96)
 
         let content = NSView(frame: window.contentView!.bounds)
         content.autoresizingMask = [.width, .height]
 
-        let label = NSTextField(labelWithString: "RYM list URL:")
-        label.frame = NSRect(x: 16, y: 56, width: 428, height: 18)
+        let label = NSTextField(labelWithString: "RYM list or chart URL:")
+        label.frame = NSRect(x: 16, y: 56, width: w - 32, height: 18)
+        label.autoresizingMask = [.width]
         content.addSubview(label)
 
-        let field = NSTextField(frame: NSRect(x: 16, y: 28, width: 330, height: 24))
-        field.placeholderString = "https://rateyourmusic.com/list/…"
+        let field = NSTextField(frame: NSRect(x: 16, y: 28, width: w - 132, height: 24))
+        field.placeholderString = "https://rateyourmusic.com/list/… or /charts/…"
+        field.usesSingleLineMode = true
+        field.cell?.wraps = false
+        field.cell?.isScrollable = true
+        field.autoresizingMask = [.width]
         field.target = self
         field.action = #selector(submitInput)   // Enter submits
         content.addSubview(field)
         inputField = field
 
-        let button = NSButton(frame: NSRect(x: 352, y: 26, width: 92, height: 28))
+        let button = NSButton(frame: NSRect(x: w - 108, y: 26, width: 92, height: 28))
         button.title = "Load"
         button.bezelStyle = .rounded
         button.keyEquivalent = "\r"
+        button.autoresizingMask = [.minXMargin]
         button.target = self
         button.action = #selector(submitInput)
         content.addSubview(button)
