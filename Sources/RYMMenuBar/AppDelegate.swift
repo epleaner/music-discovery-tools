@@ -1,6 +1,6 @@
 import AppKit
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTableViewDataSource, NSTableViewDelegate {
 
     private var statusItem: NSStatusItem!
     private let fetcher = Fetcher()
@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private weak var cdpStatusItem: NSMenuItem?
     private var lastDetectedPort: Int?
+    private weak var entriesTable: NSTableView?
 
     private var entries: [Entry] = []
     private var statusLine = "No list loaded"
@@ -89,9 +90,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // MARK: - Debug-Chrome indicator
 
-    private func cdpStatusTitle(for port: Int?) -> String {
-        if let p = port { return "● Debug Chrome on :\(p)" }
-        return "○ No debug Chrome (start one to load)"
+    /// Set the indicator item's title + clickability based on detection. When no
+    /// debug Chrome is found, it becomes a button that launches one.
+    private func configureCdpItem(_ item: NSMenuItem, port: Int?) {
+        if let p = port {
+            item.title = "● Debug Chrome on :\(p)"
+            item.action = nil
+            item.target = nil
+            item.isEnabled = false
+        } else {
+            item.title = "○ No debug Chrome — click to start"
+            item.action = #selector(launchDebugChrome)
+            item.target = self
+            item.isEnabled = true
+        }
+    }
+
+    @objc private func launchDebugChrome() {
+        ChromeLauncher.launchDebugChrome()
+        statusLine = "Launched debug Chrome — log into RYM in that window"
+        rebuildMenu()
     }
 
     /// NSMenuDelegate — refresh the indicator each time the menu opens. The check
@@ -102,9 +120,76 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.lastDetectedPort = port
-                self.cdpStatusItem?.title = self.cdpStatusTitle(for: port)
+                if let item = self.cdpStatusItem { self.configureCdpItem(item, port: port) }
             }
         }
+    }
+
+    // MARK: - Entries scroll list
+
+    /// A single menu item hosting a height-capped scrollable table of entries, so a
+    /// long list/chart doesn't push the menu past the screen.
+    private func makeEntriesScrollItem() -> NSMenuItem {
+        let width: CGFloat = 360
+        let rowH: CGFloat = 22
+        let screenH = NSScreen.main?.visibleFrame.height ?? 800
+        let maxH = max(rowH * 6, screenH * 0.55)   // leave room for the controls
+        let height = min(CGFloat(entries.count) * rowH + 4, maxH)
+
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: width, height: height))
+        scroll.hasVerticalScroller = true
+        scroll.drawsBackground = false
+        scroll.autohidesScrollers = true
+
+        let table = NSTableView(frame: scroll.bounds)
+        table.headerView = nil
+        table.backgroundColor = .clear
+        table.rowHeight = rowH
+        table.intercellSpacing = NSSize(width: 0, height: 0)
+        let col = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("entry"))
+        col.width = width - 4
+        table.addTableColumn(col)
+        table.dataSource = self
+        table.delegate = self
+        table.target = self
+        table.action = #selector(entryRowClicked)
+        table.isEnabled = !isResolving
+        entriesTable = table
+
+        // Scroll the upcoming entry into view.
+        if cursor < entries.count { table.scrollRowToVisible(cursor) }
+
+        scroll.documentView = table
+        let item = NSMenuItem()
+        item.view = scroll
+        return item
+    }
+
+    @objc private func entryRowClicked() {
+        guard let row = entriesTable?.clickedRow, row >= 0, row < entries.count else { return }
+        statusItem.menu?.cancelTracking()
+        play(index: row)
+    }
+
+    func numberOfRows(in tableView: NSTableView) -> Int { entries.count }
+
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        let id = NSUserInterfaceItemIdentifier("entryCell")
+        let cell = (tableView.makeView(withIdentifier: id, owner: self) as? NSTextField) ?? {
+            let tf = NSTextField()
+            tf.identifier = id
+            tf.isBezeled = false
+            tf.isEditable = false
+            tf.drawsBackground = false
+            tf.lineBreakMode = .byTruncatingTail
+            tf.font = .menuFont(ofSize: 13)
+            return tf
+        }()
+        let e = entries[row]
+        let marker = row < cursor ? "✓ " : (row == cursor ? "▶ " : "")
+        cell.stringValue = "\(marker)\(e.artist) — \(e.album) \(e.date)".trimmingCharacters(in: .whitespaces)
+        cell.textColor = row < cursor ? .secondaryLabelColor : .labelColor
+        return cell
     }
 
     // MARK: - Menu
@@ -113,11 +198,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let menu = NSMenu()
         menu.delegate = self
 
-        // Debug-Chrome indicator (refreshed in menuWillOpen).
-        let cdp = NSMenuItem(title: cdpStatusTitle(for: lastDetectedPort), action: nil, keyEquivalent: "")
-        cdp.isEnabled = false
+        // Debug-Chrome indicator — clickable to launch a debug Chrome when none.
+        let cdp = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         menu.addItem(cdp)
         cdpStatusItem = cdp
+        configureCdpItem(cdp, port: lastDetectedPort)
         menu.addItem(.separator())
 
         let status = NSMenuItem(title: statusLine, action: nil, keyEquivalent: "")
@@ -151,16 +236,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             menu.addItem(.separator())
 
-            // The entries. ✓ played · ▶ up next · click any to play it in Bandcamp.
-            for (i, e) in entries.enumerated() {
-                let marker = i < cursor ? "✓ " : (i == cursor ? "▶ " : "   ")
-                let title = "\(marker)\(e.artist) — \(e.album) \(e.date)".trimmingCharacters(in: .whitespaces)
-                let item = NSMenuItem(title: title, action: #selector(playEntry(_:)), keyEquivalent: "")
-                item.target = self
-                item.tag = i
-                item.isEnabled = !isResolving
-                menu.addItem(item)
-            }
+            // The entries in a bounded scrollable list so the whole menu fits on
+            // screen. ✓ played · ▶ up next · click any to play it in Bandcamp.
+            menu.addItem(makeEntriesScrollItem())
         }
 
         menu.addItem(.separator())
