@@ -130,10 +130,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
     /// A single menu item hosting a height-capped scrollable table of entries, so a
     /// long list/chart doesn't push the menu past the screen.
     private func makeEntriesScrollItem() -> NSMenuItem {
-        let width: CGFloat = 360
         let rowH: CGFloat = 22
-        let screenH = NSScreen.main?.visibleFrame.height ?? 800
-        let maxH = max(rowH * 6, screenH * 0.55)   // leave room for the controls
+        let font = NSFont.menuFont(ofSize: 13)
+
+        // Width sized to the longest entry (capped), so nothing truncates needlessly.
+        var contentW: CGFloat = 320
+        for e in entries {
+            let s = "▶ \(e.artist) — \(e.album) \(e.date)"
+            contentW = max(contentW, (s as NSString).size(withAttributes: [.font: font]).width)
+        }
+        let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1200, height: 800)
+        let width = min(contentW + 48, screen.width * 0.6)
+        let maxH = max(rowH * 6, screen.height * 0.55)   // leave room for the controls
         let height = min(CGFloat(entries.count) * rowH + 4, maxH)
 
         let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: width, height: height))
@@ -186,9 +194,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
             return tf
         }()
         let e = entries[row]
-        let marker = row < cursor ? "✓ " : (row == cursor ? "▶ " : "")
-        cell.stringValue = "\(marker)\(e.artist) — \(e.album) \(e.date)".trimmingCharacters(in: .whitespaces)
-        cell.textColor = row < cursor ? .secondaryLabelColor : .labelColor
+        let marker = row == cursor ? "▶ " : "    "   // pad so text stays aligned
+        cell.stringValue = "\(marker)\(e.artist) — \(e.album) \(e.date)"
+        cell.textColor = .labelColor
         return cell
     }
 
