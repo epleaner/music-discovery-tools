@@ -9,15 +9,14 @@ import Foundation
 /// queue — it blocks.
 enum CDPSession {
 
-    static func scrape(port: Int,
-                       url: URL,
+    static func scrape(url: URL,
                        scraperJS: String,
                        maxPolls: Int = 25,
                        interval: TimeInterval = 0.5,
                        ready: (String) -> Bool) throws -> String {
-        // Launch a CDP-enabled Chrome if one isn't already listening.
-        guard ChromeLauncher.ensure(port: port) else {
-            throw FetchError.chromeNotReachable(port)
+        // Reuse a working CDP Chrome, else seed-and-launch our own. Returns the port.
+        guard let port = ChromeLauncher.resolveUsablePort() else {
+            throw FetchError.chromeNotReachable(ChromeLauncher.reusePorts[0])
         }
         guard let versionData = try? Data(contentsOf: URL(string: "http://127.0.0.1:\(port)/json/version")!),
               let version = try? JSONSerialization.jsonObject(with: versionData) as? [String: Any],

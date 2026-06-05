@@ -23,7 +23,7 @@ enum FetchError: Error, CustomStringConvertible {
         switch self {
         case .badURL: return "That doesn't look like a valid URL."
         case .chromeNotReachable(let p):
-            return "Chrome isn't listening on :\(p). Launch Chrome with --remote-debugging-port=\(p)."
+            return "No debug Chrome found on :\(p). Start Chrome with --remote-debugging-port=\(p) and a non-default --user-data-dir."
         case .blocked: return "Cloudflare challenged Chrome — open the page in Chrome once, then retry."
         case .noEntries: return "No list entries found on that page."
         case .cdp(let m): return "Chrome DevTools error: \(m)"
@@ -39,8 +39,6 @@ enum FetchError: Error, CustomStringConvertible {
 /// JavaScript from Apple Events" toggle and requiring no Automation/TCC grant.
 /// We open ONE tab, read it, and close it; we never reload on a block.
 final class Fetcher {
-
-    static let port = 9222
 
     // DOM scraper. Handles both /list/ pages (#user_list) and /charts/ pages
     // (.page_charts_section_charts_item), auto-detecting by which is present.
@@ -68,7 +66,7 @@ final class Fetcher {
         do {
             // Ready once the list rows render, the page reports a block, or a real
             // (non-list) page has finished loading.
-            let json = try CDPSession.scrape(port: Fetcher.port, url: url, scraperJS: Fetcher.scraperJS) { raw in
+            let json = try CDPSession.scrape(url: url, scraperJS: Fetcher.scraperJS) { raw in
                 let p = Fetcher.parse(raw)
                 return !p.entries.isEmpty || p.blocked || p.htmlLen > 4000
             }
@@ -78,8 +76,10 @@ final class Fetcher {
             if p.blocked { return .failure(.blocked) }
             return .failure(.noEntries)
         } catch let e as FetchError {
+            rymLog.error("fetch failed: \(e.description, privacy: .public)")
             return .failure(e)
         } catch {
+            rymLog.error("fetch failed: \(error.localizedDescription, privacy: .public)")
             return .failure(.cdp(error.localizedDescription))
         }
     }

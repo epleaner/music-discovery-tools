@@ -39,13 +39,25 @@ Both were tried and rejected with evidence (see git history):
 
 ## Requirements
 
-Chrome must be running with remote debugging enabled:
+The app **reuses** an existing Chrome that's exposing a DevTools endpoint — it never
+launches its own. It scans ports `9222` then `9333` for a live `/json/version`.
+
+Because Chrome 136+ refuses remote debugging on the *default* profile, that endpoint
+must come from a Chrome started with a **non-default** profile, e.g.:
 
 ```bash
-/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir="$HOME/Library/Application Support/Google/Chrome-debug"
 ```
 
-If the port isn't open, the app says so instead of failing silently.
+(A tool like `chrome-devtools-mcp` already provides such a Chrome.) That profile needs a
+logged-in RYM session / Cloudflare clearance — log into RYM there once. If no debug Chrome
+is found, the app says so instead of opening a doomed window.
+
+> Earlier builds tried to auto-launch a seeded Chrome, but `cf_clearance` is bound to the
+> exact Chrome UA version and expires, so a copied session breaks on every Chrome update.
+> Reusing your already-trusted debug Chrome is the reliable path.
 
 ## Build
 

@@ -16,8 +16,6 @@ struct BandcampMatch {
 /// invoked on demand (one entry at a time), never in bulk.
 enum BandcampResolver {
 
-    static let port = Fetcher.port
-
     // Scrape album search results: type, name, "by …" subhead, and the bandcamp URL.
     static let resultsJS = "(function(){var items=[].slice.call(document.querySelectorAll('li.searchresult'));var out=items.map(function(li){var type=(li.querySelector('.itemtype')||{}).textContent||'';var head=li.querySelector('.heading a');var sub=(li.querySelector('.subhead')||{}).textContent||'';var url=(li.querySelector('.itemurl a')||{}).textContent||'';return {type:type.trim(),name:head?head.textContent.trim():'',sub:sub.trim().replace(/\\s+/g,' '),url:url.trim()};});return JSON.stringify({n:items.length,rs:document.readyState,results:out});})()"
 
@@ -37,7 +35,7 @@ enum BandcampResolver {
 
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                let json = try CDPSession.scrape(port: port, url: search, scraperJS: resultsJS) { raw in
+                let json = try CDPSession.scrape(url: search, scraperJS: resultsJS) { raw in
                     // Stop as soon as we have results, or the (server-rendered)
                     // search page has finished loading — so a 0-result query
                     // doesn't burn the full poll budget.
