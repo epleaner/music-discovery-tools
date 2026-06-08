@@ -10,11 +10,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
     private var lastDetectedPort: Int?
     private weak var entriesTable: NSTableView?
 
-    private lazy var chartBrowser: ChartBrowser = {
-        let b = ChartBrowser()
-        b.onLoad = { [weak self] url in self?.loadList(url, forceRefresh: false) }
-        return b
-    }()
+    // Chart-builder selection state.
+    private var selectedSlugs: Set<String> = []
+    private var selectedOrder: [String] = []
+    private var chartPeriod: ChartPeriod = .year(Calendar.current.component(.year, from: Date()))
+    private var pendingGenreMenus: [ObjectIdentifier: GenreNode] = [:]   // submenu → node to populate
 
     private var entries: [Entry] = []
     private var statusLine = "No list loaded"
@@ -37,7 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
             button.image?.isTemplate = true
         }
         rebuildMenu()
-        rymLog.info("genres loaded: \(GenreCatalog.all.count, privacy: .public)")
+        rymLog.info("genres loaded: \(GenreCatalog.tree.count, privacy: .public) top-level")
 
         // Debug harness: auto-fetch once on launch for headless tracing.
         //   raw binary:  RYM_URL=<url> ./RYMMenuBar
@@ -215,6 +215,131 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         return cellView
     }
 
+    // MARK: - Charts submenu (genre tree + period)
+
+    private func makeChartsMenu() -> NSMenuItem {
+        let item = NSMenuItem(title: "Browse Charts", action: nil, keyEquivalent: "b")
+        let m = NSMenu()
+        pendingGenreMenus.removeAll()
+
+        // Genres ▸ (top level eager, descendants lazy via menuNeedsUpdate).
+        let genresItem = NSMenuItem(title: "Genres", action: nil, keyEquivalent: "")
+        let genresMenu = NSMenu()
+        for node in GenreCatalog.tree { genresMenu.addItem(genreItem(node)) }
+        genresItem.submenu = genresMenu
+        m.addItem(genresItem)
+
+        let deselect = NSMenuItem(title: "Deselect All Genres", action: #selector(deselectAllGenres), keyEquivalent: "")
+        deselect.target = self
+        deselect.isEnabled = !selectedSlugs.isEmpty
+        m.addItem(deselect)
+
+        m.addItem(.separator())
+        m.addItem(periodMenuItem())
+
+        m.addItem(.separator())
+        let n = selectedSlugs.count
+        let load = NSMenuItem(title: "Load Chart (\(n) genre\(n == 1 ? "" : "s") · \(GenreCatalog.periodLabel(chartPeriod)))",
+                              action: #selector(loadChart), keyEquivalent: "")
+        load.target = self
+        load.isEnabled = n > 0
+        m.addItem(load)
+
+        item.submenu = m
+        return item
+    }
+
+    /// A genre node: leaf → checkbox row; has children → submenu (lazy).
+    private func genreItem(_ node: GenreNode) -> NSMenuItem {
+        if node.children.isEmpty {
+            return genreCheckboxItem(node)
+        }
+        let item = NSMenuItem(title: node.name, action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        sub.delegate = self
+        pendingGenreMenus[ObjectIdentifier(sub)] = node
+        item.submenu = sub
+        return item
+    }
+
+    private func genreCheckboxItem(_ node: GenreNode, prefix: String = "") -> NSMenuItem {
+        let item = NSMenuItem()
+        let row = GenreCheckRow(name: node.name, on: selectedSlugs.contains(node.slug), prefix: prefix)
+        row.onToggle = { [weak self] on in self?.setGenre(node.slug, selected: on) }
+        item.view = row
+        return item
+    }
+
+    private func setGenre(_ slug: String, selected: Bool) {
+        if selected {
+            if !selectedSlugs.contains(slug) { selectedSlugs.insert(slug); selectedOrder.append(slug) }
+        } else {
+            selectedSlugs.remove(slug)
+            selectedOrder.removeAll { $0 == slug }
+        }
+    }
+
+    // Period ▸ — single-select All-time / Decade ▸ / Year ▸.
+    private func periodMenuItem() -> NSMenuItem {
+        let nowYear = Calendar.current.component(.year, from: Date())
+        let item = NSMenuItem(title: "Period: \(GenreCatalog.periodLabel(chartPeriod))", action: nil, keyEquivalent: "")
+        let m = NSMenu()
+
+        let allTime = NSMenuItem(title: "All-time", action: #selector(setAllTime), keyEquivalent: "")
+        allTime.target = self
+        allTime.state = (chartPeriod == .allTime) ? .on : .off
+        m.addItem(allTime)
+
+        let decItem = NSMenuItem(title: "Decade", action: nil, keyEquivalent: "")
+        let decM = NSMenu()
+        for d in stride(from: nowYear / 10 * 10, through: 1950, by: -10) {
+            let it = NSMenuItem(title: "\(d)s", action: #selector(setDecade(_:)), keyEquivalent: "")
+            it.target = self; it.tag = d
+            if case .decade(let y) = chartPeriod, y / 10 * 10 == d { it.state = .on }
+            decM.addItem(it)
+        }
+        decItem.submenu = decM
+        m.addItem(decItem)
+
+        let yrItem = NSMenuItem(title: "Year", action: nil, keyEquivalent: "")
+        let yrM = NSMenu()
+        for y in stride(from: nowYear, through: 1950, by: -1) {
+            let it = NSMenuItem(title: "\(y)", action: #selector(setYear(_:)), keyEquivalent: "")
+            it.target = self; it.tag = y
+            if case .year(let sy) = chartPeriod, sy == y { it.state = .on }
+            yrM.addItem(it)
+        }
+        yrItem.submenu = yrM
+        m.addItem(yrItem)
+
+        item.submenu = m
+        return item
+    }
+
+    @objc private func deselectAllGenres() {
+        selectedSlugs.removeAll(); selectedOrder.removeAll()
+        rebuildMenu()
+    }
+    @objc private func setAllTime() { chartPeriod = .allTime; rebuildMenu() }
+    @objc private func setDecade(_ s: NSMenuItem) { chartPeriod = .decade(s.tag); rebuildMenu() }
+    @objc private func setYear(_ s: NSMenuItem) { chartPeriod = .year(s.tag); rebuildMenu() }
+
+    @objc private func loadChart() {
+        guard !selectedOrder.isEmpty else { return }
+        let url = GenreCatalog.chartURL(slugs: selectedOrder, period: chartPeriod)
+        loadList(url, forceRefresh: false)
+    }
+
+    /// NSMenuDelegate — lazily populate a genre submenu the first time it opens
+    /// (and refresh checkbox states each open). The node's own checkbox comes first.
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard let node = pendingGenreMenus[ObjectIdentifier(menu)] else { return }
+        menu.removeAllItems()
+        menu.addItem(genreCheckboxItem(node, prefix: "● "))   // select this genre itself
+        menu.addItem(.separator())
+        for child in node.children { menu.addItem(genreItem(child)) }
+    }
+
     // MARK: - Menu
 
     private func rebuildMenu() {
@@ -270,10 +395,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         load.target = self
         menu.addItem(load)
 
-        if !GenreCatalog.all.isEmpty {
-            let browse = NSMenuItem(title: "Browse Charts…", action: #selector(showChartBrowser), keyEquivalent: "b")
-            browse.target = self
-            menu.addItem(browse)
+        if GenreCatalog.isAvailable {
+            menu.addItem(makeChartsMenu())
         }
 
         if !lastURL.isEmpty {
@@ -392,10 +515,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
     @objc private func clearHistory() {
         store.clearLists()
         rebuildMenu()
-    }
-
-    @objc private func showChartBrowser() {
-        chartBrowser.show()
     }
 
     @objc private func showInput() {
