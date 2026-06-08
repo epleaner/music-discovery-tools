@@ -15,6 +15,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
     private var selectedOrder: [String] = []
     private var chartPeriod: ChartPeriod = .year(Calendar.current.component(.year, from: Date()))
     private var pendingGenreMenus: [ObjectIdentifier: GenreNode] = [:]   // submenu → node to populate
+    private weak var selectedSummaryItem: NSMenuItem?
+    private weak var loadChartItem: NSMenuItem?
+    private weak var deselectItem: NSMenuItem?
 
     private var entries: [Entry] = []
     private var statusLine = "No list loaded"
@@ -229,41 +232,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         genresItem.submenu = genresMenu
         m.addItem(genresItem)
 
-        // Current selection (click one to remove it).
-        if !selectedOrder.isEmpty {
-            m.addItem(.separator())
-            let header = NSMenuItem(title: "Selected:", action: nil, keyEquivalent: "")
-            header.isEnabled = false
-            m.addItem(header)
-            for slug in selectedOrder {
-                let name = GenreCatalog.nameBySlug[slug] ?? slug
-                let it = NSMenuItem(title: "  ✓ \(name)", action: #selector(removeSelectedGenre(_:)), keyEquivalent: "")
-                it.target = self
-                it.representedObject = slug
-                it.toolTip = "Remove"
-                m.addItem(it)
-            }
-        }
-
+        // Current selection summary (live-updated on toggle — see refreshChartItems).
         m.addItem(.separator())
+        let summary = NSMenuItem(title: selectedSummaryTitle(), action: nil, keyEquivalent: "")
+        summary.isEnabled = false
+        m.addItem(summary)
+        selectedSummaryItem = summary
+
         let deselect = NSMenuItem(title: "Deselect All Genres", action: #selector(deselectAllGenres), keyEquivalent: "")
         deselect.target = self
         deselect.isEnabled = !selectedSlugs.isEmpty
         m.addItem(deselect)
+        deselectItem = deselect
 
         m.addItem(.separator())
         m.addItem(periodMenuItem())
 
         m.addItem(.separator())
-        let n = selectedSlugs.count
-        let load = NSMenuItem(title: "Load Chart (\(n) genre\(n == 1 ? "" : "s") · \(GenreCatalog.periodLabel(chartPeriod)))",
-                              action: #selector(loadChart), keyEquivalent: "")
+        let load = NSMenuItem(title: loadChartTitle(), action: #selector(loadChart), keyEquivalent: "")
         load.target = self
-        load.isEnabled = n > 0
+        load.isEnabled = !selectedSlugs.isEmpty
         m.addItem(load)
+        loadChartItem = load
 
         item.submenu = m
         return item
+    }
+
+    private func selectedSummaryTitle() -> String {
+        if selectedOrder.isEmpty { return "Selected: none" }
+        return "Selected: " + selectedOrder.map { GenreCatalog.nameBySlug[$0] ?? $0 }.joined(separator: ", ")
+    }
+
+    private func loadChartTitle() -> String {
+        let n = selectedSlugs.count
+        return "Load Chart (\(n) genre\(n == 1 ? "" : "s") · \(GenreCatalog.periodLabel(chartPeriod)))"
+    }
+
+    /// Live-update the dynamic Browse-Charts items so toggling a genre is reflected
+    /// without rebuilding (which would close the menu).
+    private func refreshChartItems() {
+        selectedSummaryItem?.title = selectedSummaryTitle()
+        loadChartItem?.title = loadChartTitle()
+        loadChartItem?.isEnabled = !selectedSlugs.isEmpty
+        deselectItem?.isEnabled = !selectedSlugs.isEmpty
     }
 
     /// A genre node: leaf → checkbox row; has children → submenu (lazy).
@@ -294,6 +306,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
             selectedSlugs.remove(slug)
             selectedOrder.removeAll { $0 == slug }
         }
+        rymLog.info("genre \(slug, privacy: .public) selected=\(selected, privacy: .public); total=\(self.selectedSlugs.count, privacy: .public)")
+        refreshChartItems()
     }
 
     // Period ▸ — single-select All-time / Decade ▸ / Year ▸.
@@ -338,11 +352,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         rebuildMenu()
     }
 
-    @objc private func removeSelectedGenre(_ sender: NSMenuItem) {
-        guard let slug = sender.representedObject as? String else { return }
-        setGenre(slug, selected: false)
-        rebuildMenu()
-    }
     @objc private func setAllTime() { chartPeriod = .allTime; rebuildMenu() }
     @objc private func setDecade(_ s: NSMenuItem) { chartPeriod = .decade(s.tag); rebuildMenu() }
     @objc private func setYear(_ s: NSMenuItem) { chartPeriod = .year(s.tag); rebuildMenu() }
