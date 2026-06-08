@@ -229,6 +229,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         genresItem.submenu = genresMenu
         m.addItem(genresItem)
 
+        // Current selection (click one to remove it).
+        if !selectedOrder.isEmpty {
+            m.addItem(.separator())
+            let header = NSMenuItem(title: "Selected:", action: nil, keyEquivalent: "")
+            header.isEnabled = false
+            m.addItem(header)
+            for slug in selectedOrder {
+                let name = GenreCatalog.nameBySlug[slug] ?? slug
+                let it = NSMenuItem(title: "  ✓ \(name)", action: #selector(removeSelectedGenre(_:)), keyEquivalent: "")
+                it.target = self
+                it.representedObject = slug
+                it.toolTip = "Remove"
+                m.addItem(it)
+            }
+        }
+
+        m.addItem(.separator())
         let deselect = NSMenuItem(title: "Deselect All Genres", action: #selector(deselectAllGenres), keyEquivalent: "")
         deselect.target = self
         deselect.isEnabled = !selectedSlugs.isEmpty
@@ -318,6 +335,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
 
     @objc private func deselectAllGenres() {
         selectedSlugs.removeAll(); selectedOrder.removeAll()
+        rebuildMenu()
+    }
+
+    @objc private func removeSelectedGenre(_ sender: NSMenuItem) {
+        guard let slug = sender.representedObject as? String else { return }
+        setGenre(slug, selected: false)
         rebuildMenu()
     }
     @objc private func setAllTime() { chartPeriod = .allTime; rebuildMenu() }

@@ -28,6 +28,19 @@ enum GenreCatalog {
 
     static var isAvailable: Bool { !tree.isEmpty }
 
+    /// Flat slug → display name lookup (for showing the current selection).
+    static let nameBySlug: [String: String] = {
+        var map: [String: String] = [:]
+        func walk(_ nodes: [GenreNode]) {
+            for n in nodes {
+                if map[n.slug] == nil { map[n.slug] = n.name }
+                walk(n.children)
+            }
+        }
+        walk(tree)
+        return map
+    }()
+
     /// `https://rateyourmusic.com/charts/top/album/<period>/g:<slug1>,<slug2>/`
     /// `g:` includes subgenres; slugs are comma-joined in selection order.
     static func chartURL(slugs: [String], period: ChartPeriod) -> String {
