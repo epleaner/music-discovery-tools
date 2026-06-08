@@ -41,17 +41,19 @@ enum GenreCatalog {
         return map
     }()
 
-    /// `https://rateyourmusic.com/charts/top/album/<period>/g:<slug1>,<slug2>/`
-    /// `g:` includes subgenres; slugs are comma-joined in selection order.
+    /// Chart URL. `g:` includes subgenres.
+    /// - one genre  → `…/g:<slug>/`
+    /// - many genres → `…/g:all,<slug1>,<slug2>/` — RYM's `all` keyword means the
+    ///   intersection: releases tagged with ALL selected genres (not the union).
     static func chartURL(slugs: [String], period: ChartPeriod) -> String {
-        let joined = slugs.joined(separator: ",")
+        let genrePart = slugs.count <= 1 ? slugs.joined() : "all," + slugs.joined(separator: ",")
         let periodPath: String
         switch period {
         case .year(let y): periodPath = "\(y)"
         case .decade(let y): periodPath = "\(y / 10 * 10)s"
         case .allTime: periodPath = "all-time"
         }
-        return "https://rateyourmusic.com/charts/top/album/\(periodPath)/g:\(joined)/"
+        return "https://rateyourmusic.com/charts/top/album/\(periodPath)/g:\(genrePart)/"
     }
 
     static func periodLabel(_ p: ChartPeriod) -> String {
