@@ -71,11 +71,23 @@ accessory (no Dock icon, `LSUIElement`).
 
 ## Use
 
-1. Click the `≡★` menu bar icon → **Load URL…**
+1. Click the `≡★` menu bar icon → **Load URL…** (or **Browse Charts…**, see below)
 2. Paste a RYM list URL, e.g. `https://rateyourmusic.com/list/cute_on_sale/particle/`
 3. The list becomes a **playlist**. Hit **▶ Play Next** (⌘N) to open the next
    entry on Bandcamp; click any entry to jump there. The cursor advances each time
    (`✓` played · `▶` up next), and **↺ Restart** resets it.
+
+### Browse Charts
+
+**Browse Charts…** (⌘B) opens a window to build a chart from the bundled RYM genre
+list (`Resources/genres.json`, ~2,600 genres, slug taken from each genre's RYM URL):
+
+- Search + check one or more **genres** (multi-select).
+- Pick a period: **Year**, **Decade**, or **All-time**.
+- **Load Chart** builds `…/charts/top/album/<period>/g:<slug1>,<slug2>/` (`g:` includes
+  subgenres) and loads it as a playlist — so history/caching apply.
+
+The genre list is regenerated from `music-discovery-tools`' `rym-genres.json`.
 
 ### History & caching
 

@@ -10,6 +10,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
     private var lastDetectedPort: Int?
     private weak var entriesTable: NSTableView?
 
+    private lazy var chartBrowser: ChartBrowser = {
+        let b = ChartBrowser()
+        b.onLoad = { [weak self] url in self?.loadList(url, forceRefresh: false) }
+        return b
+    }()
+
     private var entries: [Entry] = []
     private var statusLine = "No list loaded"
     private var lastURL = ""
@@ -31,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
             button.image?.isTemplate = true
         }
         rebuildMenu()
+        rymLog.info("genres loaded: \(GenreCatalog.all.count, privacy: .public)")
 
         // Debug harness: auto-fetch once on launch for headless tracing.
         //   raw binary:  RYM_URL=<url> ./RYMMenuBar
@@ -263,6 +270,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         load.target = self
         menu.addItem(load)
 
+        if !GenreCatalog.all.isEmpty {
+            let browse = NSMenuItem(title: "Browse Charts…", action: #selector(showChartBrowser), keyEquivalent: "b")
+            browse.target = self
+            menu.addItem(browse)
+        }
+
         if !lastURL.isEmpty {
             let refresh = NSMenuItem(title: "Refresh from RYM", action: #selector(refreshCurrent), keyEquivalent: "r")
             refresh.target = self
@@ -379,6 +392,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
     @objc private func clearHistory() {
         store.clearLists()
         rebuildMenu()
+    }
+
+    @objc private func showChartBrowser() {
+        chartBrowser.show()
     }
 
     @objc private func showInput() {

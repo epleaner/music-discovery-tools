@@ -18,6 +18,7 @@ mkdir -p "${APP_DIR}/Contents/Resources"
 
 cp ".build/release/${BIN_NAME}" "${APP_DIR}/Contents/MacOS/${BIN_NAME}"
 cp "Resources/Info.plist" "${APP_DIR}/Contents/Info.plist"
+cp "Resources/genres.json" "${APP_DIR}/Contents/Resources/genres.json"
 
 # Ad-hoc sign so macOS lets it run locally without Gatekeeper friction.
 codesign --force --deep --sign - "${APP_DIR}" >/dev/null 2>&1 || true
