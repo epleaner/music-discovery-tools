@@ -29,6 +29,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
     private var cursor = 0
     private var isResolving = false
 
+    // New Releases playlist — fully independent from the main entries/cursor state.
+    private let newMusicURL = "https://rateyourmusic.com/new-music/"
+    private var newReleases: [Entry] = []
+    private var nrCursor = 0
+    private var nrResolving = false
+    private var isLoadingNewReleases = false
+    private var newReleasesStatus = ""
+
     private var inputWindow: NSWindow?
     private var inputField: NSTextField?
 
@@ -38,6 +46,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "list.star", accessibilityDescription: "RYM")
             button.image?.isTemplate = true
+        }
+        if let cached = store.cachedNewReleases() {
+            newReleases = cached.entries
+            let fmt = DateFormatter()
+            fmt.dateStyle = .short; fmt.timeStyle = .short
+            newReleasesStatus = "\(cached.entries.count) · cached \(fmt.string(from: cached.loadedAt))"
         }
         rebuildMenu()
         rymLog.info("genres loaded: \(GenreCatalog.tree.count, privacy: .public) top-level")
@@ -372,6 +386,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         for child in node.children { menu.addItem(genreItem(child)) }
     }
 
+    // MARK: - New Releases submenu
+
+    private func makeNewReleasesMenu() -> NSMenuItem {
+        let item = NSMenuItem(title: "Top New Releases", action: nil, keyEquivalent: "")
+        let m = NSMenu()
+
+        if newReleases.isEmpty {
+            let load = NSMenuItem(
+                title: isLoadingNewReleases ? "Loading…" : "Load Top New Releases",
+                action: isLoadingNewReleases ? nil : #selector(loadNewReleases),
+                keyEquivalent: "")
+            load.target = self
+            load.isEnabled = !isLoadingNewReleases
+            m.addItem(load)
+        } else {
+            let statusStr = newReleasesStatus.isEmpty
+                ? "\(newReleases.count) releases"
+                : newReleasesStatus
+            let statusItem = NSMenuItem(title: statusStr, action: nil, keyEquivalent: "")
+            statusItem.isEnabled = false
+            m.addItem(statusItem)
+
+            let refresh = NSMenuItem(title: "Refresh", action: #selector(refreshNewReleases), keyEquivalent: "")
+            refresh.target = self
+            refresh.isEnabled = !isLoadingNewReleases
+            m.addItem(refresh)
+
+            m.addItem(.separator())
+
+            for (i, e) in newReleases.enumerated() {
+                let marker: String
+                if i < nrCursor { marker = "✓ " }
+                else if i == nrCursor { marker = "▶ " }
+                else { marker = "    " }
+
+                var title = "\(marker)\(e.artist) — \(e.album)"
+                if let r = e.avgRating, !r.isEmpty { title += " · \(r)" }
+                if let g = e.genres, !g.isEmpty { title += " · \(g.joined(separator: ", "))" }
+
+                let row = NSMenuItem(title: title, action: #selector(playNewReleaseItem(_:)), keyEquivalent: "")
+                row.target = self
+                row.tag = i
+                row.isEnabled = !nrResolving
+                m.addItem(row)
+            }
+        }
+
+        item.submenu = m
+        return item
+    }
+
     // MARK: - Menu
 
     private func rebuildMenu() {
@@ -430,6 +495,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         if GenreCatalog.isAvailable {
             menu.addItem(makeChartsMenu())
         }
+        menu.addItem(makeNewReleasesMenu())
 
         if !lastURL.isEmpty {
             let refresh = NSMenuItem(title: "Refresh from RYM", action: #selector(refreshCurrent), keyEquivalent: "r")
@@ -609,6 +675,91 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
                 self.rebuildMenu()
             }
         }
+    }
+
+    // MARK: - New Releases actions
+
+    @objc private func loadNewReleases() {
+        fetchNewReleases(forceRefresh: false)
+    }
+
+    @objc private func refreshNewReleases() {
+        fetchNewReleases(forceRefresh: true)
+    }
+
+    @objc private func playNewReleaseItem(_ sender: NSMenuItem) {
+        playNewRelease(index: sender.tag)
+    }
+
+    private func fetchNewReleases(forceRefresh: Bool) {
+        if !forceRefresh, let cached = store.cachedNewReleases() {
+            newReleases = cached.entries
+            nrCursor = 0
+            let fmt = DateFormatter()
+            fmt.dateStyle = .short; fmt.timeStyle = .short
+            newReleasesStatus = "\(cached.entries.count) · cached \(fmt.string(from: cached.loadedAt))"
+            rebuildMenu()
+            return
+        }
+
+        isLoadingNewReleases = true
+        newReleasesStatus = "Loading…"
+        rebuildMenu()
+
+        fetcher.fetch(urlString: newMusicURL) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.isLoadingNewReleases = false
+                switch result {
+                case .success(let entries):
+                    self.newReleases = entries
+                    self.nrCursor = 0
+                    self.store.putNewReleases(entries: entries)
+                    self.newReleasesStatus = "\(entries.count) · just loaded"
+                case .failure(let err):
+                    self.newReleasesStatus = "Error: \(err.description)"
+                }
+                self.rebuildMenu()
+            }
+        }
+    }
+
+    private func playNewRelease(index: Int) {
+        guard !nrResolving, index >= 0, index < newReleases.count else { return }
+        let e = newReleases[index]
+        let key = Self.bandcampKey(artist: e.artist, album: e.album)
+
+        if let hit = store.bandcampHit(key: key), let url = URL(string: hit.url) {
+            openNewReleaseMatch(url: url, confident: hit.confident, entry: e, index: index)
+            return
+        }
+
+        nrResolving = true
+        newReleasesStatus = "Finding Bandcamp: \(e.artist) — \(e.album)…"
+        rebuildMenu()
+
+        BandcampResolver.resolve(artist: e.artist, album: e.album) { [weak self] result in
+            guard let self = self else { return }
+            self.nrResolving = false
+            switch result {
+            case .success(let match):
+                self.store.putBandcamp(key: key, hit: BandcampHit(url: match.url.absoluteString, confident: match.confident))
+                self.openNewReleaseMatch(url: match.url, confident: match.confident, entry: e, index: index)
+            case .failure(let err):
+                self.newReleasesStatus = "Error: \(err.description)"
+                self.rebuildMenu()
+            }
+        }
+    }
+
+    private func openNewReleaseMatch(url: URL, confident: Bool, entry e: Entry, index: Int) {
+        NSWorkspace.shared.open(url)
+        nrCursor = index + 1
+        let pos = "\(min(nrCursor, newReleases.count))/\(newReleases.count)"
+        newReleasesStatus = confident
+            ? "▶ \(pos): \(e.artist) — \(e.album)"
+            : "🔎 \(pos): search opened (no confident match)"
+        rebuildMenu()
     }
 
     // MARK: - Input window

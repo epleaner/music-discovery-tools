@@ -27,6 +27,7 @@ final class Store {
     private struct Model: Codable {
         var lists: [CachedList] = []          // most-recent-first
         var bandcamp: [String: BandcampHit] = [:]
+        var newReleases: CachedList? = nil
     }
 
     private var model = Model()
@@ -65,6 +66,20 @@ final class Store {
 
     func clearLists() {
         model.lists.removeAll()
+        save()
+    }
+
+    // MARK: - New Releases cache
+
+    func cachedNewReleases() -> CachedList? {
+        model.newReleases
+    }
+
+    func putNewReleases(entries: [Entry]) {
+        model.newReleases = CachedList(url: "https://rateyourmusic.com/new-music/",
+                                       label: "Top New Releases",
+                                       loadedAt: Date(),
+                                       entries: entries)
         save()
     }
 
