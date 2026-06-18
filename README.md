@@ -10,6 +10,24 @@ no account, no server, no API key. It reads RYM through a browser you already ha
 
 ---
 
+## Download
+
+Grab the latest build from the [**Releases**](../../releases) page — download
+`RYM-MenuBar.zip`, unzip it, and move **RYM MenuBar.app** to `/Applications`. It's a
+universal build (Apple Silicon + Intel).
+
+The app is ad-hoc signed but **not** notarized, so macOS Gatekeeper warns on first
+launch. Clear it once, either way:
+
+- **Right-click** the app → **Open** → **Open**, or
+- `xattr -dr com.apple.quarantine "/Applications/RYM MenuBar.app"`
+
+Every push to `main` refreshes the rolling **Latest** prerelease; tagged versions
+(`vX.Y.Z`) get their own permanent release. Prefer to build it yourself? See
+[Build from source](#build--requirements).
+
+---
+
 ## What it does
 
 Three ways to fill the queue, all of which behave the same once loaded — as a

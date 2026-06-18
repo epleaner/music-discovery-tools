@@ -8,15 +8,26 @@ APP_NAME="RYM MenuBar"
 BIN_NAME="RYMMenuBar"
 APP_DIR="build/${APP_NAME}.app"
 
-echo "==> Building release binary…"
-swift build -c release
+# UNIVERSAL=1 builds a universal2 (arm64 + x86_64) binary so the .app runs
+# natively on both Apple Silicon and Intel Macs. Default is a fast host-arch build.
+# NOTE: UNIVERSAL=1 needs full Xcode (the cross-arch build uses xcbuild); the
+# Command Line Tools alone can't do it. CI (GitHub's macOS runners) has Xcode.
+if [ "${UNIVERSAL:-0}" = "1" ]; then
+  echo "==> Building universal (arm64 + x86_64) release binary…"
+  swift build -c release --arch arm64 --arch x86_64
+  BIN_PATH=".build/apple/Products/Release/${BIN_NAME}"
+else
+  echo "==> Building release binary…"
+  swift build -c release
+  BIN_PATH=".build/release/${BIN_NAME}"
+fi
 
 echo "==> Assembling ${APP_DIR}…"
 rm -rf "${APP_DIR}"
 mkdir -p "${APP_DIR}/Contents/MacOS"
 mkdir -p "${APP_DIR}/Contents/Resources"
 
-cp ".build/release/${BIN_NAME}" "${APP_DIR}/Contents/MacOS/${BIN_NAME}"
+cp "${BIN_PATH}" "${APP_DIR}/Contents/MacOS/${BIN_NAME}"
 cp "Resources/Info.plist" "${APP_DIR}/Contents/Info.plist"
 cp "Resources/genres-tree.json" "${APP_DIR}/Contents/Resources/genres-tree.json"
 
