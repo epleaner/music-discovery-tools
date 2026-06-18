@@ -30,10 +30,26 @@ links, once found, are remembered forever.
 
 ---
 
+## What you need
+
+Everything is local — there's no account, server, API key, or paid service involved.
+
+| Requirement | Why | Notes |
+|---|---|---|
+| **macOS 11+** | It's a native AppKit menu bar app | Runs as an accessory, no Dock icon |
+| **Swift toolchain** | To build the app | Xcode **or** the Command Line Tools (`xcode-select --install`) |
+| **Google Chrome** | The app reads RYM *through* it | Must be launchable with `--remote-debugging-port` on a non-default profile (see [Why it needs your Chrome](#why-it-needs-your-chrome)) |
+| **A CDP debug endpoint** | How the app talks to Chrome | The **Chrome DevTools Protocol** — nothing to install, it's the `--remote-debugging-port` flag above. The app scans ports `9222` then `9333` for a live `/json/version` |
+| **A logged-in RYM session** | RYM is behind Cloudflare | Log into RateYourMusic once in that debug Chrome so it carries a Cloudflare clearance |
+
+You do **not** need: a Bandcamp account (matches open in your default browser), any RYM
+API access, or Python/Node — the genre tree is bundled into the app.
+
+---
+
 ## Quick start
 
-You need two things: a Swift toolchain (Xcode or the Command Line Tools) and a copy of
-Google Chrome you can run with remote debugging (details below).
+With the [prerequisites](#what-you-need) in place:
 
 ```bash
 # 1. Build the app bundle
