@@ -1,49 +1,171 @@
 # RYM MenuBar
 
-A tiny native macOS menu bar app that loads a [RateYourMusic](https://rateyourmusic.com)
-**list** URL and shows its entries (artist — album, year) right in the menu bar.
-Click an entry to open the release page.
+A tiny native macOS menu bar app for turning [RateYourMusic](https://rateyourmusic.com)
+into a listening queue. Pull up a list, a genre chart, or RYM's latest new releases —
+then play through it one record at a time, each one opening straight to its album on
+Bandcamp.
 
-It codifies the [`reading-rateyourmusic`](https://rateyourmusic.com) approach: RYM is
-behind Cloudflare, which blocks scripted HTTP fetches (curl/`WebFetch` → 403/503) even
-with valid cookies, because it fingerprints the TLS stack. The only reliable path is a
-**real browser engine reading the DOM**.
+It lives in your menu bar (`≡★`), has no Dock icon, and weighs almost nothing. There's
+no account, no server, no API key. It reads RYM through a browser you already have open.
 
-## How it fetches
+---
 
-It drives your already-running **Google Chrome** over the **DevTools Protocol (CDP)** on a
-local debugging port (default `9222`):
+## What it does
 
-1. Discover the browser endpoint at `http://127.0.0.1:9222/json/version`.
-2. `Target.createTarget` opens a tab navigated to your URL.
-3. `Runtime.evaluate` runs the DOM scraper, polling until the list rows are present.
+Three ways to fill the queue, all of which behave the same once loaded — as a
+**playlist** you click through:
+
+- **Load any RYM URL** — paste a list or chart link and it becomes a playlist.
+- **Browse Charts** — build a chart from RYM's full genre tree (multi-select genres ×
+  year / decade / all-time) without leaving the menu.
+- **Top New Releases** — scrape RYM's `/new-music/` page and queue the latest 25
+  releases, complete with ratings and genres.
+
+Click any entry and the app finds that album on **Bandcamp** and opens it. The queue
+remembers where you are (`▶` up next · `✓` played), so **Play Next** (⌘N) just keeps
+walking you down the list.
+
+Everything you load is cached locally, so reopening a list is instant — and Bandcamp
+links, once found, are remembered forever.
+
+---
+
+## Quick start
+
+You need two things: a Swift toolchain (Xcode or the Command Line Tools) and a copy of
+Google Chrome you can run with remote debugging (details below).
+
+```bash
+# 1. Build the app bundle
+./build-app.sh
+
+# 2. Launch it (it appears in the menu bar, not the Dock)
+open "build/RYM MenuBar.app"
+
+# 3. Start a debug Chrome the app can read through, and log into RYM there once
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir="$HOME/Library/Application Support/Google/Chrome-debug"
+```
+
+Now click the `≡★` icon → **Load URL…**, paste a RYM list, and hit **▶ Play Next**.
+
+The menu's top line tells you whether a debug Chrome was found. If none is, it says so
+(and offers to launch one with a dedicated profile) rather than opening a window that
+can't load anything.
+
+---
+
+## Features
+
+### Load a URL
+
+**Load URL…** (⌘L) takes any RateYourMusic **list** or **chart** URL, e.g.:
+
+```
+https://rateyourmusic.com/list/cute_on_sale/particle/
+https://rateyourmusic.com/charts/top/album/2003/g:ambient/
+```
+
+The app auto-detects which kind of page it is and pulls out the entries. Other page
+types load fine but won't yield a queue — it'll say "No list entries found" rather than
+guess.
+
+### Browse Charts
+
+**Browse Charts** (⌘B) is a chart builder driven entirely by nested menus — no popup
+windows. It's backed by RYM's bundled genre tree (49 top-level genres, ~5,800 total):
+
+- **Genres ▸** — drill through the tree and check one or more genres (multi-select).
+  Your current selection is shown live above **Deselect All Genres**.
+- **Period** — pick a **Year**, a **Decade**, or **All-time**.
+- **Load Chart** — builds the chart URL and loads it as a playlist (so history and
+  caching apply).
+
+Selecting several genres builds an **intersection**, not a union — RYM's `g:all,…`
+keyword means "releases tagged with *all* of these genres at once." One genre is a plain
+`g:<slug>/`; subgenres are always included.
+
+### Top New Releases
+
+**Top New Releases ▸** scrapes RYM's [`/new-music/`](https://rateyourmusic.com/new-music/)
+page and queues the latest 25 releases as their own independent playlist. Each row shows
+the rating and genres inline:
+
+```
+▶ Boards of Canada — Inferno · 3.89 · Downtempo, Hauntology
+```
+
+It's **cache-first**: the list loads instantly from your last scrape, and a **Refresh**
+item re-reads the live page on demand. This queue is kept separate from whatever you've
+loaded via Load URL — playing through new releases doesn't disturb your other list.
+
+### Playing through the queue
+
+However you filled it, the queue works the same:
+
+- **▶ Play Next** (⌘N) opens the next entry; the cursor advances automatically.
+- Click **any** entry to jump straight to it.
+- `✓` marks what you've played, `▶` marks what's up next.
+- **↺ Restart playlist** resets the cursor to the top.
+
+### How "Play Next" finds Bandcamp
+
+When you play an entry, the app searches `bandcamp.com` for that artist + album (albums
+only), **scores** each result against the entry (exact album-name match + artist match),
+and opens the best album in your default browser. If nothing matches confidently, it
+opens the Bandcamp **search page** instead — so a click always lands somewhere useful and
+never silently does nothing.
+
+This happens lazily, one entry at a time — never in bulk — so the app never hammers
+Bandcamp.
+
+### History & caching
+
+Everything persists to `~/Library/Application Support/RYMMenuBar/store.json`:
+
+- **List history** — every list you load is remembered under **History ▸** (newest
+  first, shown as `label (count)`). Reopening one loads **instantly from cache with no
+  RYM request**, which also sidesteps intermittent Cloudflare blocks. **Refresh from
+  RYM** (⌘R) forces a fresh fetch; **Clear History** empties the cache.
+- **Top New Releases** — kept in its own cache slot, out of the list history.
+- **Bandcamp links** — once an entry resolves, its link is cached **permanently**, so
+  future plays open instantly with no search tab (even "no confident match" is
+  remembered, so it won't re-search a dead end).
+
+---
+
+## Why it needs your Chrome
+
+RateYourMusic sits behind Cloudflare, which **blocks scripted HTTP fetches** — `curl`,
+`WebFetch`, a fresh `WKWebView` all get a `403`/`503`, even with valid cookies, because
+Cloudflare fingerprints the TLS stack. The only reliable way in is a **real browser
+engine reading the rendered DOM**.
+
+So the app drives your already-running **Google Chrome** over the **DevTools Protocol
+(CDP)** on a local debugging port:
+
+1. Discover the browser endpoint at `http://127.0.0.1:<port>/json/version`.
+2. `Target.createTarget` opens a tab navigated to the URL.
+3. `Runtime.evaluate` runs the DOM scraper, polling until the rows render.
 4. `Target.closeTarget` cleans the tab up.
 
-Chrome has an established Cloudflare session, so it loads RYM where a fresh engine
-(curl, `WebFetch`, a standalone `WKWebView`) gets a `403`/`503`. CDP runs JS directly, so
-it needs **no Automation/TCC permission** and is **unaffected** by Chrome's "Allow
-JavaScript from Apple Events" toggle.
+Your Chrome already has a trusted Cloudflare session, so it loads RYM where a fresh
+engine can't. CDP runs the scraper JavaScript directly, so it needs **no Automation/TCC
+permission** and is **unaffected** by Chrome's "Allow JavaScript from Apple Events"
+toggle.
 
-**No retry on a block.** It opens one tab and reads it; it never reloads on a Cloudflare
-block, to avoid IP bans.
+**It never retries on a block.** One tab, one read — it never reloads on a Cloudflare
+challenge, to avoid getting your IP throttled or banned.
 
-### Why not WKWebView / AppleScript?
+### Chrome setup, in detail
 
-Both were tried and rejected with evidence (see git history):
-- A fresh **WKWebView** is an untrusted Cloudflare session — it gets the interactive
-  "Just a moment" Turnstile challenge and, under repeated hits, escalates to a blank hard
-  `403`. Unreliable and reputation-degrading.
-- **AppleScript** `execute javascript` needs both an Automation grant *and* Chrome's
-  per-instance "Allow JavaScript from Apple Events" toggle, and is ambiguous when more than
-  one Chrome instance is running. CDP has none of these problems.
+The app **reuses** an existing Chrome that's exposing a DevTools endpoint — it scans
+ports `9222` then `9333` for a live `/json/version`. It does not hijack your normal
+browsing profile.
 
-## Requirements
-
-The app **reuses** an existing Chrome that's exposing a DevTools endpoint — it never
-launches its own. It scans ports `9222` then `9333` for a live `/json/version`.
-
-Because Chrome 136+ refuses remote debugging on the *default* profile, that endpoint
-must come from a Chrome started with a **non-default** profile, e.g.:
+Because Chrome 136+ refuses remote debugging on the *default* profile, that endpoint has
+to come from a Chrome started with a **non-default** `--user-data-dir`:
 
 ```bash
 /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
@@ -51,81 +173,100 @@ must come from a Chrome started with a **non-default** profile, e.g.:
   --user-data-dir="$HOME/Library/Application Support/Google/Chrome-debug"
 ```
 
-(A tool like `chrome-devtools-mcp` already provides such a Chrome.) That profile needs a
-logged-in RYM session / Cloudflare clearance — log into RYM there once. If no debug Chrome
-is found, the app says so instead of opening a doomed window.
+Log into RYM in that profile once, so it carries a Cloudflare clearance. (Tools like
+`chrome-devtools-mcp` already provide such a Chrome on `9222`.)
 
-> Earlier builds tried to auto-launch a seeded Chrome, but `cf_clearance` is bound to the
-> exact Chrome UA version and expires, so a copied session breaks on every Chrome update.
-> Reusing your already-trusted debug Chrome is the reliable path.
+If no debug Chrome is found, the menu's status item can **launch one for you** on port
+`9333`, using a dedicated persistent profile under
+`~/Library/Application Support/RYMMenuBar/chrome-profile` and opening RYM so you can clear
+Cloudflare once. That clearance is remembered across restarts.
 
-## Build
+> **Why not auto-seed a Chrome from your real profile?** Cloudflare's `cf_clearance`
+> cookie is bound to the exact Chrome UA version and expires, so a copied session breaks
+> on every Chrome update. Reusing a real, already-trusted debug Chrome is the only stable
+> path.
+
+### Why not WKWebView or AppleScript?
+
+Both were tried and rejected with evidence (see git history):
+
+- A fresh **WKWebView** is an untrusted Cloudflare session — it gets the interactive
+  "Just a moment" Turnstile challenge and, under repeated hits, escalates to a blank hard
+  `403`. Unreliable and reputation-degrading.
+- **AppleScript** `execute javascript` needs both an Automation grant *and* Chrome's
+  per-instance "Allow JavaScript from Apple Events" toggle, and is ambiguous when more
+  than one Chrome is running. CDP has none of these problems.
+
+---
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
+|---|---|
+| ⌘N | Play Next |
+| ⌘L | Load URL… |
+| ⌘B | Browse Charts |
+| ⌘R | Refresh current list from RYM |
+| ⌘Q | Quit |
+
+---
+
+## Build & requirements
 
 ```bash
-./build-app.sh
+./build-app.sh                 # compiles a release binary and assembles the .app
 open "build/RYM MenuBar.app"
 ```
 
-Requires a Swift toolchain (Xcode or Command Line Tools). The app runs as a menu bar
-accessory (no Dock icon, `LSUIElement`).
+- **macOS 11+**, a Swift toolchain (Xcode or Command Line Tools).
+- **Google Chrome** runnable with `--remote-debugging-port` (see above).
+- Runs as a menu-bar accessory (`LSUIElement` — no Dock icon).
 
-## Use
+`build-app.sh` builds with `swift build -c release`, assembles the bundle, copies in the
+bundled `genres-tree.json`, and ad-hoc code-signs it so macOS runs it locally without
+Gatekeeper friction.
 
-1. Click the `≡★` menu bar icon → **Load URL…** (or **Browse Charts…**, see below)
-2. Paste a RYM list URL, e.g. `https://rateyourmusic.com/list/cute_on_sale/particle/`
-3. The list becomes a **playlist**. Hit **▶ Play Next** (⌘N) to open the next
-   entry on Bandcamp; click any entry to jump there. The cursor advances each time
-   (`✓` played · `▶` up next), and **↺ Restart** resets it.
-
-### Browse Charts
-
-**Browse Charts…** (⌘B) opens a window to build a chart from the bundled RYM genre
-list (`Resources/genres.json`, ~2,600 genres, slug taken from each genre's RYM URL):
-
-- Search + check one or more **genres** (multi-select).
-- Pick a period: **Year**, **Decade**, or **All-time**.
-- **Load Chart** builds `…/charts/top/album/<period>/g:<slug1>,<slug2>/` (`g:` includes
-  subgenres) and loads it as a playlist — so history/caching apply.
-
-The genre list is regenerated from `music-discovery-tools`' `rym-genres.json`.
-
-### History & caching
-
-Everything is cached to `~/Library/Application Support/RYMMenuBar/store.json`:
-
-- **List history** — every loaded list is remembered under **History ▸** (newest first,
-  shown as `label (count)`). Opening one loads its entries **instantly from cache with no
-  RYM request** — which also sidesteps intermittent Cloudflare blocks. **Refresh from RYM**
-  (⌘R) forces a fresh fetch and updates the cache. **Clear History** empties the list cache.
-- **Bandcamp links** — once an entry resolves, its link is cached **permanently**, so future
-  plays open instantly with no search tab. (Even no-match results are remembered.)
-
-### How "Play Next" finds Bandcamp
-
-Lazily, one entry at a time (never in bulk): it searches `bandcamp.com` for the
-entry's artist + album (albums only) via CDP, **scores** the results against the
-entry (exact album-name + artist match), and opens the best album in your default
-browser. If nothing matches confidently, it opens the Bandcamp **search page** so
-you can pick — so a click always lands somewhere useful, and never repeats.
+---
 
 ## Debugging
 
-Full trace via the unified log:
+Stream the app's full trace from the unified log:
 
 ```bash
 log stream --predicate 'subsystem == "com.elipleaner.rym-menubar"' --info --debug
 ```
 
-Headless one-shot fetch (skips the menu):
+Headless one-shot helpers (skip the menu entirely):
 
 ```bash
-open "build/RYM MenuBar.app" --args --fetch "https://rateyourmusic.com/list/<user>/<list>/"
+# Fetch a URL on launch (forces a fresh scrape)
+open "build/RYM MenuBar.app" --args --fetch  "https://rateyourmusic.com/list/<user>/<list>/"
+
+# Load a URL cache-first
+open "build/RYM MenuBar.app" --args --cached "https://rateyourmusic.com/charts/top/album/2003/g:ambient/"
+
+# Test the Bandcamp resolver directly
+open "build/RYM MenuBar.app" --args --resolve "Boards of Canada" "Geogaddi"
 ```
 
-## Scope
+---
 
-Handles RYM **list** pages (`#user_list`) and **chart** pages
-(`.page_charts_section_charts_item`, e.g. `/charts/top/album/2003/g:ambient/`),
-auto-detecting which by what's on the page. Both become playlists. Other page types
-load fine but won't yield entries — the app shows "No list entries found" rather than
-guessing.
+## How it's built
+
+A small, single-target Swift package (`Sources/RYMMenuBar/`), AppKit only, no third-party
+dependencies:
+
+| File | Responsibility |
+|---|---|
+| `AppDelegate.swift` | Menu construction, playlist state, all the actions |
+| `Fetcher.swift` | The DOM scraper (`Entry` model + page-type-detecting `scraperJS`) |
+| `CDPSession.swift` / `CDPClient.swift` | Drive Chrome over the DevTools Protocol |
+| `ChromeLauncher.swift` | Find a usable debug Chrome, or launch one |
+| `BandcampResolver.swift` | Search + score Bandcamp results for an entry |
+| `Store.swift` | On-disk cache: list history, new releases, Bandcamp links |
+| `GenreCatalog.swift` | Bundled genre tree + chart-URL builder |
+
+The scraper auto-detects the page it's on — RYM **list** pages (`#user_list`), **chart**
+pages (`.page_charts_section_charts_item`), and **new-music** pages
+(`.newreleases_itembox`) — and normalizes each into the same `Entry` shape that the
+playlist consumes.
