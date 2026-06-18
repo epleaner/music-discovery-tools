@@ -38,12 +38,17 @@ Everything is local — there's no account, server, API key, or paid service inv
 |---|---|---|
 | **macOS 11+** | It's a native AppKit menu bar app | Runs as an accessory, no Dock icon |
 | **Swift toolchain** | To build the app | Xcode **or** the Command Line Tools (`xcode-select --install`) |
-| **Google Chrome** | The app reads RYM *through* it | Must be launchable with `--remote-debugging-port` on a non-default profile (see [Why it needs your Chrome](#why-it-needs-your-chrome)) |
-| **A CDP debug endpoint** | How the app talks to Chrome | The **Chrome DevTools Protocol** — nothing to install, it's the `--remote-debugging-port` flag above. The app scans ports `9222` then `9333` for a live `/json/version` |
-| **A logged-in RYM session** | RYM is behind Cloudflare | Log into RateYourMusic once in that debug Chrome so it carries a Cloudflare clearance |
+| **Google Chrome** (installed) | The app reads RYM *through* it | Just needs to be installed — **the app launches and manages its own debug Chrome for you** (one click in the menu). See [Why it needs your Chrome](#why-it-needs-your-chrome) |
+| **A logged-in RYM session** | RYM is behind Cloudflare | Log into RateYourMusic **once** in that debug Chrome window so it carries a Cloudflare clearance |
 
-You do **not** need: a Bandcamp account (matches open in your default browser), any RYM
-API access, or Python/Node — the genre tree is bundled into the app.
+**The CDP debug endpoint is handled for you.** The app talks to Chrome over the **Chrome
+DevTools Protocol** — nothing to install. If no debug Chrome is running, the menu's status
+item offers to start one; if you already run a debug Chrome (e.g. via
+`chrome-devtools-mcp`), the app reuses it (it scans ports `9222` then `9333`).
+
+You do **not** need: to start Chrome by hand, a Bandcamp account (matches open in your
+default browser), any RYM API access, or Python/Node — the genre tree is bundled into the
+app.
 
 ---
 
@@ -57,17 +62,17 @@ With the [prerequisites](#what-you-need) in place:
 
 # 2. Launch it (it appears in the menu bar, not the Dock)
 open "build/RYM MenuBar.app"
-
-# 3. Start a debug Chrome the app can read through, and log into RYM there once
-/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
-  --remote-debugging-port=9222 \
-  --user-data-dir="$HOME/Library/Application Support/Google/Chrome-debug"
 ```
 
-Now click the `≡★` icon → **Load URL…**, paste a RYM list, and hit **▶ Play Next**.
+3. Click the `≡★` menu bar icon. The top line shows the Chrome status:
+   - **`○ No debug Chrome — click to start`** → click it. The app launches its own debug
+     Chrome and opens RateYourMusic. **Log into RYM in that window once** (clearing the
+     Cloudflare check). The status flips to **`● Debug Chrome on :9333`**.
+   - **`● Debug Chrome on :<port>`** → you're ready.
+4. **Load URL…**, paste a RYM list, and hit **▶ Play Next**.
 
-The menu's top line tells you whether a debug Chrome was found. If none is, it says so
-(and offers to launch one with a dedicated profile) rather than opening a window that
+That's it — you never start Chrome from the terminal. The status item re-checks every time
+you open the menu, so if Chrome isn't up it'll tell you rather than opening a window that
 can't load anything.
 
 ---
@@ -176,26 +181,27 @@ challenge, to avoid getting your IP throttled or banned.
 
 ### Chrome setup, in detail
 
-The app **reuses** an existing Chrome that's exposing a DevTools endpoint — it scans
-ports `9222` then `9333` for a live `/json/version`. It does not hijack your normal
-browsing profile.
+**The normal path — let the app do it.** On every menu open, the app scans ports `9222`
+then `9333` for a live DevTools endpoint and shows the result in its top status line. If
+none is found, that line becomes **`○ No debug Chrome — click to start`**; clicking it
+launches Chrome on port `9333` with a dedicated persistent profile under
+`~/Library/Application Support/RYMMenuBar/chrome-profile`, and opens RYM so you can clear
+Cloudflare and log in once. That clearance is remembered across restarts, and the app
+never touches your normal browsing profile.
 
-Because Chrome 136+ refuses remote debugging on the *default* profile, that endpoint has
-to come from a Chrome started with a **non-default** `--user-data-dir`:
+(Why a separate profile at all? Chrome 136+ refuses remote debugging on the *default*
+profile — so a debug endpoint must come from a non-default `--user-data-dir`. The app's
+managed profile satisfies this automatically.)
+
+**Optional — bring your own debug Chrome.** If you'd rather run your own (or already have
+one from a tool like `chrome-devtools-mcp` on `9222`), the app will reuse it. Start it on
+a non-default profile and log into RYM there once:
 
 ```bash
 /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
   --remote-debugging-port=9222 \
   --user-data-dir="$HOME/Library/Application Support/Google/Chrome-debug"
 ```
-
-Log into RYM in that profile once, so it carries a Cloudflare clearance. (Tools like
-`chrome-devtools-mcp` already provide such a Chrome on `9222`.)
-
-If no debug Chrome is found, the menu's status item can **launch one for you** on port
-`9333`, using a dedicated persistent profile under
-`~/Library/Application Support/RYMMenuBar/chrome-profile` and opening RYM so you can clear
-Cloudflare once. That clearance is remembered across restarts.
 
 > **Why not auto-seed a Chrome from your real profile?** Cloudflare's `cf_clearance`
 > cookie is bound to the exact Chrome UA version and expires, so a copied session breaks
