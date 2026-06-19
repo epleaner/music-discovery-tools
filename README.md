@@ -1,5 +1,11 @@
 # RYM MenuBar
 
+<img width="738" height="1115" alt="Screenshot 2026-06-18 at 8 04 20 PM" src="https://github.com/user-attachments/assets/88134ac8-dd62-4eeb-a5b7-943c1b238ae1" />
+<img width="1313" height="1117" alt="Screenshot 2026-06-18 at 8 04 28 PM" src="https://github.com/user-attachments/assets/5689297f-0df6-4cde-a013-1e9fea7eff17" />
+
+
+
+
 A tiny native macOS menu bar app for turning [RateYourMusic](https://rateyourmusic.com)
 into a listening queue. Pull up a list, a genre chart, or RYM's latest new releases —
 then play through it one record at a time, each one opening straight to its album on
