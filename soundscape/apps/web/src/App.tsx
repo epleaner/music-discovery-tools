@@ -73,7 +73,7 @@ const App: Component = () => {
   ];
 
   const [state, updateState] = useHashState<AppState>({
-    username: '',
+    username: 'pleanut',
     view: 'recent',
     subview: 'tracks',
     topSubview: 'artists',
