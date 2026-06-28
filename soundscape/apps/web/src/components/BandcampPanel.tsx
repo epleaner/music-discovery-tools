@@ -1,13 +1,17 @@
 import { Component, Show, createSignal } from 'solid-js';
 import BandcampAlbumView from './BandcampAlbumView.js';
 import BandcampArtistView from './BandcampArtistView.js';
+import BandcampTagView from './BandcampTagView.js';
 import { guessBandcampUrl } from '../lib/bandcamp-slug.js';
 
 interface BandcampPanelProps {
   bandcampUrl: string;
+  bandcampTag: string;
   selectedArtist?: string;
   onAlbumClick: (url: string) => void;
   onUrlChange: (url: string) => void;
+  onTagClick: (tag: string) => void;
+  onTagClear: () => void;
 }
 
 const BandcampPanel: Component<BandcampPanelProps> = (props) => {
@@ -45,14 +49,23 @@ const BandcampPanel: Component<BandcampPanelProps> = (props) => {
 
   return (
     <div class="h-full overflow-hidden flex flex-col">
-      <Show when={isAlbum()}>
-        <BandcampAlbumView
-          albumUrl={props.bandcampUrl}
-          onTagClick={() => {}}
+      {/* Tag view takes highest precedence */}
+      <Show when={props.bandcampTag}>
+        <BandcampTagView
+          tag={props.bandcampTag}
+          onAlbumClick={props.onAlbumClick}
+          onBack={props.onTagClear}
         />
       </Show>
 
-      <Show when={!isAlbum() && artistViewUrl()}>
+      <Show when={!props.bandcampTag && isAlbum()}>
+        <BandcampAlbumView
+          albumUrl={props.bandcampUrl}
+          onTagClick={props.onTagClick}
+        />
+      </Show>
+
+      <Show when={!props.bandcampTag && !isAlbum() && artistViewUrl()}>
         <BandcampArtistView
           bandUrl={artistViewUrl()!}
           onAlbumClick={props.onAlbumClick}
@@ -60,7 +73,7 @@ const BandcampPanel: Component<BandcampPanelProps> = (props) => {
         />
       </Show>
 
-      <Show when={showManualInput()}>
+      <Show when={!props.bandcampTag && showManualInput()}>
         <div class="p-4 text-xs">
           <Show when={slugFailed()}>
             <p class="text-fg-muted mb-3">
