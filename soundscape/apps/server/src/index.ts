@@ -16,8 +16,12 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:5174',
-  process.env.WEB_APP_URL, // Production web app URL
-].filter(Boolean) as string[];
+  // Production web app origins. WEB_APP_URL may be a comma-separated list
+  // (e.g. the custom domain plus the railway.app URL).
+  ...(process.env.WEB_APP_URL?.split(',') ?? []),
+]
+  .map((origin) => origin?.trim())
+  .filter(Boolean) as string[];
 
 app.use(
   cors({
