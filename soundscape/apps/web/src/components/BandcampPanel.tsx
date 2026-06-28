@@ -67,6 +67,7 @@ const BandcampPanel: Component<BandcampPanelProps> = (props) => {
         <BandcampAlbumView
           albumUrl={props.bandcampUrl}
           onTagClick={props.onTagClick}
+          onAlbumClick={props.onAlbumClick}
         />
       </Show>
 
