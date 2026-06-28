@@ -1,7 +1,9 @@
-export type RightPanelMode = 'similar' | 'newsletters';
+export type RightPanelMode = 'similar' | 'newsletters' | 'bandcamp';
 
 export function resolveRightPanelMode(mode?: string): RightPanelMode {
-  return mode === 'newsletters' ? 'newsletters' : 'similar';
+  if (mode === 'newsletters') return 'newsletters';
+  if (mode === 'bandcamp') return 'bandcamp';
+  return 'similar';
 }
 
 export function buildRightPanelModel({
@@ -16,6 +18,7 @@ export function buildRightPanelModel({
   return {
     activeMode,
     showNewsletterPanel: activeMode === 'newsletters',
+    showBandcampPanel: activeMode === 'bandcamp',
     showSimilarArtists: activeMode === 'similar',
     similarArtistTitle: selectedArtist,
     emptyMessage: 'Click any artist to see similar artists',

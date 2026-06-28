@@ -5,6 +5,7 @@ import {
 } from '@soundscape/newsletters-db';
 import { router, publicProcedure } from './trpc.js';
 import { z } from 'zod';
+import { bandcampRouter } from './bandcamp-router.js';
 
 const newsletterLinkSchema = z.object({
   url: z.string(),
@@ -41,6 +42,7 @@ const newsletterListInputSchema = z.object({
 });
 
 export const appRouter = router({
+  bandcamp: bandcampRouter,
   // Health check
   health: publicProcedure
     .meta({
