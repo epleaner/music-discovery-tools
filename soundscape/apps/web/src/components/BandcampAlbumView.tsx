@@ -11,6 +11,19 @@ interface BandcampAlbumViewProps {
 
 const normalizeUrl = (url: string) => url.replace(/\/+$/, '');
 
+// Bandcamp returns dates like "13 Nov 2020 00:00:00 GMT" — show just the date.
+const formatReleaseDate = (raw: string) => {
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    return raw.replace(/\s\d{2}:\d{2}:\d{2}.*$/, '');
+  }
+  return parsed.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
 const BandcampAlbumView: Component<BandcampAlbumViewProps> = (props) => {
   const [album] = createResource(
     () => props.albumUrl,
@@ -73,7 +86,7 @@ const BandcampAlbumView: Component<BandcampAlbumViewProps> = (props) => {
                   <span>{data().name}</span>
                 </div>
                 <Show when={data().releaseDate}>
-                  <div class="text-fg-muted mt-0.5">{data().releaseDate}</div>
+                  <div class="text-fg-muted mt-0.5">{formatReleaseDate(data().releaseDate!)}</div>
                 </Show>
                 <Show when={data().label}>
                   <div class="text-fg-muted">{data().label!.name}</div>
