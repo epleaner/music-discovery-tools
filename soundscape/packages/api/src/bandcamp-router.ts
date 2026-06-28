@@ -56,6 +56,15 @@ if (!globalAny.__bandcampFetchWrapped) {
 // Configure built-in limiter: 1 req/sec, max 1 concurrent
 bandcamp.limiter.updateSettings({ minTime: 1000, maxConcurrent: 1 });
 
+// Optional Bandcamp cookie (set via the BANDCAMP_COOKIE env var, never committed).
+// Some endpoints (artist /music, /discover, discover_web) are gated behind
+// Bandcamp's Cloudflare layer when requested from datacenter IPs; supplying a
+// valid session/anonymous cookie can satisfy that check. Paired with the
+// browser headers above (cf_clearance is bound to the User-Agent).
+if (process.env.BANDCAMP_COOKIE) {
+  bandcamp.setCookie(process.env.BANDCAMP_COOKIE);
+}
+
 // Bandcamp's CDN (Cloudflare) can silently hang requests from certain server IPs
 // by accepting the TCP connection but never completing the response. Node's native
 // fetch has no built-in timeout, so without this wrapper the tRPC request hangs
