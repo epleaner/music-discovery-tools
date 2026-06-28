@@ -5,6 +5,24 @@ import { z } from 'zod';
 // Configure built-in limiter: 1 req/sec, max 1 concurrent
 bandcamp.limiter.updateSettings({ minTime: 1000, maxConcurrent: 1 });
 
+// Bandcamp's CDN (Cloudflare) can silently hang requests from certain server IPs
+// by accepting the TCP connection but never completing the response. Node's native
+// fetch has no built-in timeout, so without this wrapper the tRPC request hangs
+// forever and the try/catch never fires.
+const BANDCAMP_TIMEOUT_MS = 15_000;
+
+function withTimeout<T>(promise: Promise<T>): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`bandcamp-fetch timed out after ${BANDCAMP_TIMEOUT_MS}ms`)),
+        BANDCAMP_TIMEOUT_MS
+      )
+    ),
+  ]);
+}
+
 // In-process cache: key → { data, expiresAt }
 // TTLs: album 5 min, artist/discography 1 hour, tag releases 15 min
 const cache = new Map<string, { data: unknown; expiresAt: number }>();
@@ -56,7 +74,7 @@ export const bandcampRouter = router({
       if (cached) return cached;
 
       try {
-        const info = await bandcamp.limiter.band.getInfo({ bandUrl: input.bandUrl });
+        const info = await withTimeout(bandcamp.limiter.band.getInfo({ bandUrl: input.bandUrl }));
         const result = {
           name: info.name,
           location: info.location ?? null,
@@ -88,7 +106,7 @@ export const bandcampRouter = router({
       if (cached) return cached;
 
       try {
-        const items = await bandcamp.limiter.band.getDiscography({ bandUrl: input.bandUrl });
+        const items = await withTimeout(bandcamp.limiter.band.getDiscography({ bandUrl: input.bandUrl }));
         const result = items
           .filter((item) => item.url != null)
           .map((item) => ({
@@ -147,7 +165,7 @@ export const bandcampRouter = router({
       if (cached) return cached;
 
       try {
-        const album = await bandcamp.limiter.album.getInfo({ albumUrl: input.albumUrl });
+        const album = await withTimeout(bandcamp.limiter.album.getInfo({ albumUrl: input.albumUrl }));
         const result = {
           name: album.name,
           artist: album.artist?.name ?? null,
@@ -196,7 +214,7 @@ export const bandcampRouter = router({
       if (cached) return cached;
 
       try {
-        const result = await bandcamp.limiter.discovery.discover({ customTags: [input.tag] });
+        const result = await withTimeout(bandcamp.limiter.discovery.discover({ customTags: [input.tag] }));
         const items = result.items
           .filter((item) => item.url != null)
           .map((item) => {
