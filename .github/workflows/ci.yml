@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+defaults:
+  run:
+    working-directory: soundscape
+
+jobs:
+  build-test-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: soundscape/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: soundscape/.node-version
+          cache: pnpm
+          cache-dependency-path: soundscape/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and test api
+        run: |
+          pnpm --filter @soundscape/api build
+          pnpm --filter @soundscape/api test
+
+      - name: Build and test web
+        run: |
+          pnpm --filter @soundscape/web build
+          pnpm --filter @soundscape/web test
+
+      - name: Server startup smoke test
+        run: |
+          set -euo pipefail
+
+          SERVER_LOG=$(mktemp)
+          PORT=3399 pnpm --filter @soundscape/server start >"$SERVER_LOG" 2>&1 &
+          SERVER_PID=$!
+
+          echo "Server started (PID $SERVER_PID), polling http://localhost:3399/api/openapi.json ..."
+
+          MAX=30
+          for i in $(seq 1 $MAX); do
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3399/api/openapi.json || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "Smoke test PASSED (got 200 on attempt $i)"
+              kill "$SERVER_PID" 2>/dev/null || true
+              exit 0
+            fi
+            echo "  attempt $i/$MAX: got '$STATUS', retrying in 1s ..."
+            sleep 1
+          done
+
+          echo "Smoke test FAILED: server did not respond with 200 within ${MAX}s"
+          echo "--- server log ---"
+          cat "$SERVER_LOG"
+          echo "------------------"
+          kill "$SERVER_PID" 2>/dev/null || true
+          exit 1
