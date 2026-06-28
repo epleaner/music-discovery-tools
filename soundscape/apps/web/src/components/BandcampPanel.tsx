@@ -1,4 +1,4 @@
-import { Component, Show, createSignal } from 'solid-js';
+import { Component, Show, createEffect, createSignal } from 'solid-js';
 import BandcampAlbumView from './BandcampAlbumView.js';
 import BandcampArtistView from './BandcampArtistView.js';
 import BandcampTagView from './BandcampTagView.js';
@@ -27,6 +27,11 @@ const BandcampPanel: Component<BandcampPanelProps> = (props) => {
     if (!artist) return null;
     return guessBandcampUrl(artist);
   };
+
+  createEffect(() => {
+    props.selectedArtist; // track the source so the effect re-runs on change
+    setSlugFailed(false);
+  });
 
   const handleSlugGuessFailed = () => {
     setSlugFailed(true);

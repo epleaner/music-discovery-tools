@@ -27,9 +27,14 @@ const TTL_ALBUM = 5 * 60 * 1000;
 const TTL_ARTIST = 60 * 60 * 1000;
 const TTL_TAGS = 15 * 60 * 1000;
 
+const bandcampUrlSchema = z.string().url().refine(
+  (url) => /^https?:\/\/[^/]+\.bandcamp\.com(\/|$)/i.test(url),
+  { message: 'URL must be a bandcamp.com domain' }
+);
+
 export const bandcampRouter = router({
   getArtist: publicProcedure
-    .input(z.object({ bandUrl: z.string().url() }))
+    .input(z.object({ bandUrl: bandcampUrlSchema }))
     .output(
       z
         .object({
@@ -67,7 +72,7 @@ export const bandcampRouter = router({
     }),
 
   getDiscography: publicProcedure
-    .input(z.object({ bandUrl: z.string().url() }))
+    .input(z.object({ bandUrl: bandcampUrlSchema }))
     .output(
       z.array(
         z.object({
@@ -100,7 +105,7 @@ export const bandcampRouter = router({
     }),
 
   getAlbum: publicProcedure
-    .input(z.object({ albumUrl: z.string().url() }))
+    .input(z.object({ albumUrl: bandcampUrlSchema }))
     .output(
       z
         .object({
