@@ -6,6 +6,7 @@ import {
   For,
   createMemo,
   createSignal,
+  createEffect,
   onMount,
   onCleanup,
 } from 'solid-js';
@@ -113,6 +114,15 @@ const App: Component = () => {
       return parsed;
     } catch {
       return defaultSites;
+    }
+  });
+
+  // When the selected artist changes while the Bandcamp tab is active, reset
+  // bandcampUrl so the panel re-resolves for the new artist.
+  createEffect(() => {
+    const artist = selectedArtist();
+    if (rightPanelMode() === 'bandcamp' && artist) {
+      updateState({ bandcampUrl: '' });
     }
   });
 
@@ -777,7 +787,12 @@ const App: Component = () => {
                         <NewsletterPanel />
                       </Match>
                       <Match when={rightPanelModel().showBandcampPanel}>
-                        <BandcampPanel bandcampUrl={bandcampUrl()} />
+                        <BandcampPanel
+                          bandcampUrl={bandcampUrl()}
+                          selectedArtist={selectedArtist()}
+                          onAlbumClick={(url) => updateState({ bandcampUrl: url })}
+                          onUrlChange={(url) => updateState({ bandcampUrl: url })}
+                        />
                       </Match>
                       <Match when={selectedArtist()}>
                         <ArtistList

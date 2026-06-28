@@ -1,10 +1,7 @@
 import { Component, Show, For, createResource } from 'solid-js';
 import { trpc } from '../lib/trpc.js';
 import BandcampPlayer from './BandcampPlayer.js';
-
-function bcArtUrl(imageUrl: string, size: string): string {
-  return imageUrl.replace(/_\d+\.(jpg|png|gif)$/i, `${size}.$1`);
-}
+import { bcArtUrl } from '../lib/bandcamp-slug.js';
 
 interface BandcampAlbumViewProps {
   albumUrl: string;
