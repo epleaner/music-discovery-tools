@@ -6,7 +6,6 @@ import {
   For,
   createMemo,
   createSignal,
-  createEffect,
   onMount,
   onCleanup,
 } from 'solid-js';
@@ -64,7 +63,6 @@ interface AppState extends Record<string, string> {
   rightPanel: string;
   sites: string; // JSON-encoded array of sites
   bandcampUrl: string;
-  bandcampTag: string;
 }
 
 const App: Component = () => {
@@ -86,7 +84,6 @@ const App: Component = () => {
     rightPanel: 'similar',
     sites: JSON.stringify(defaultSites),
     bandcampUrl: '',
-    bandcampTag: '',
   });
 
   const { theme, toggleTheme, colorTheme, setColorTheme } = useTheme();
@@ -101,7 +98,6 @@ const App: Component = () => {
   const rightPanelMode = () => resolveRightPanelMode(state().rightPanel);
   const sitesString = () => state().sites;
   const bandcampUrl = () => state().bandcampUrl;
-  const bandcampTag = () => state().bandcampTag;
 
   // Parse sites only when the sites string actually changes
   const musicSites = createMemo((prev) => {
@@ -117,15 +113,6 @@ const App: Component = () => {
       return parsed;
     } catch {
       return defaultSites;
-    }
-  });
-
-  // When the selected artist changes while the Bandcamp tab is active, reset
-  // bandcampUrl so the panel re-resolves for the new artist.
-  createEffect(() => {
-    const artist = selectedArtist();
-    if (rightPanelMode() === 'bandcamp' && artist) {
-      updateState({ bandcampUrl: '' });
     }
   });
 
@@ -792,12 +779,7 @@ const App: Component = () => {
                       <Match when={rightPanelModel().showBandcampPanel}>
                         <BandcampPanel
                           bandcampUrl={bandcampUrl()}
-                          bandcampTag={bandcampTag()}
-                          selectedArtist={selectedArtist()}
-                          onAlbumClick={(url) => updateState({ bandcampUrl: url, bandcampTag: '' })}
                           onUrlChange={(url) => updateState({ bandcampUrl: url })}
-                          onTagClick={(tag) => updateState({ bandcampTag: tag })}
-                          onTagClear={() => updateState({ bandcampTag: '' })}
                         />
                       </Match>
                       <Match when={selectedArtist()}>
