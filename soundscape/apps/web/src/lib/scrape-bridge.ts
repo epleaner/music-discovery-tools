@@ -91,11 +91,13 @@ export function disconnectScrapeBridge() {
 
 export function requestScrape(params: { source: 'rym'; url: string }): string {
   const requestId = crypto.randomUUID();
-  if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(
-      JSON.stringify({ type: 'scrape', requestId, source: params.source, url: params.url })
-    );
+  if (ws?.readyState !== WebSocket.OPEN) {
+    setTimeout(() => scrapeErrorCbs.forEach((cb) => cb(requestId, 'connection lost')), 0);
+    return requestId;
   }
+  ws.send(
+    JSON.stringify({ type: 'scrape', requestId, source: params.source, url: params.url })
+  );
   return requestId;
 }
 

@@ -228,6 +228,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     rooms.unregister(sender);
+    if (connectionToken) scrapeTimestamps.delete(connectionToken);
     console.log(`Client disconnected (token: ${connectionToken ? connectionToken.slice(0, 4) + '…' : 'unregistered'})`);
   });
 
