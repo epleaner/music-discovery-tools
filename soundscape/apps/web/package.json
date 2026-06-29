@@ -8,7 +8,7 @@
     "dev": "vite",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
-    "test": "NODE_OPTIONS=--conditions=browser tsx --test src/*.test.ts src/*.test.tsx src/**/*.test.ts src/**/*.test.tsx",
+    "test": "bash -c 'shopt -s globstar nullglob; NODE_OPTIONS=--conditions=browser tsx --test src/**/*.test.ts src/**/*.test.tsx'",
     "start": "tsx server.ts"
   },
   "dependencies": {
