@@ -12,7 +12,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "type-check": "tsc --noEmit",
-    "test": "tsx --test src/**/*.test.ts"
+    "test": "bash -c 'shopt -s globstar nullglob; tsx --test src/**/*.test.ts'"
   },
   "dependencies": {
     "@soundscape/newsletters-db": "workspace:*",
