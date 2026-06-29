@@ -10,6 +10,9 @@ import { generateOpenApiDocument, createOpenApiHttpHandler } from 'trpc-openapi'
 import type { BridgeMessage } from '@soundscape/types';
 import { Rooms } from './ws-rooms.js';
 import { isUrlAllowed } from './scrape-allowlist.js';
+import { createScrapesDb, hashToken } from '@soundscape/scrapes-db';
+import type { ScrapeData, ScrapeSource } from '@soundscape/types';
+import { setScrapesDb } from './scrapes-state.js';
 
 // Filled in by the persistence task; default no-ops.
 export const scrapeHooks: {
@@ -17,6 +20,36 @@ export const scrapeHooks: {
   onResult?: (a: { requestId: string; data: unknown }) => void;
   onError?: (a: { requestId: string; error: string }) => void;
 } = {};
+
+async function initScrapesDb() {
+  if (!process.env.DATABASE_URL) {
+    console.warn('[scrapes] DATABASE_URL not set — scrape persistence disabled');
+    return;
+  }
+  try {
+    const db = createScrapesDb(process.env.DATABASE_URL);
+    await db.init();
+    setScrapesDb(db);
+    console.log('[scrapes] Postgres persistence enabled');
+
+    scrapeHooks.onAccepted = ({ token, requestId, source, url }) => {
+      db.createPending({ id: requestId, tokenHash: hashToken(token), source: source as ScrapeSource, url })
+        .catch((err) => console.error('[scrapes] createPending', err));
+    };
+    scrapeHooks.onResult = ({ requestId, data }) => {
+      db.markDone({ id: requestId, data: data as ScrapeData })
+        .catch((err) => console.error('[scrapes] markDone', err));
+    };
+    scrapeHooks.onError = ({ requestId, error }) => {
+      db.markError({ id: requestId, error })
+        .catch((err) => console.error('[scrapes] markError', err));
+    };
+  } catch (err) {
+    console.error('[scrapes] Failed to init scrapes DB — persistence disabled:', err);
+  }
+}
+
+void initScrapesDb();
 
 const app = express();
 const server = createServer(app);

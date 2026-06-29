@@ -121,6 +121,9 @@ importers:
       '@soundscape/newsletters-db':
         specifier: workspace:*
         version: link:../../packages/newsletters-db
+      '@soundscape/scrapes-db':
+        specifier: workspace:*
+        version: link:../../packages/scrapes-db
       '@soundscape/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -231,6 +234,9 @@ importers:
       '@soundscape/newsletters-db':
         specifier: workspace:*
         version: link:../newsletters-db
+      '@soundscape/scrapes-db':
+        specifier: workspace:*
+        version: link:../scrapes-db
       '@trpc/server':
         specifier: ^10.45.0
         version: 10.45.2
