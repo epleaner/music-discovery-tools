@@ -237,6 +237,9 @@ importers:
       '@soundscape/scrapes-db':
         specifier: workspace:*
         version: link:../scrapes-db
+      '@soundscape/types':
+        specifier: workspace:*
+        version: link:../types
       '@trpc/server':
         specifier: ^10.45.0
         version: 10.45.2
