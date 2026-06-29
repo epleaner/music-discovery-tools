@@ -1,4 +1,4 @@
-# RYM Menu Bar Bridge — Design
+# Local Scrape Bridge (Menu Bar) — Design
 
 Date: 2026-06-29
 Status: Approved
@@ -10,13 +10,29 @@ datacenter IPs for the interesting pages (discovery, lists, charts, artist
 pages). The Railway-hosted Soundscape frontend therefore can't scrape them
 directly. The user's local machine, however, has a residential IP and a
 logged-in, Cloudflare-cleared browser session, and already runs a native macOS
-menu bar app (`~/github/rym-menubar`) that scrapes RYM by driving local Chrome
-over the Chrome DevTools Protocol (CDP).
+menu bar app (`~/github/rym-menubar`) that scrapes by driving local Chrome over
+the Chrome DevTools Protocol (CDP).
 
-Goal: let an action in the cloud frontend trigger a scrape that runs on the
-user's own Mac (via the menu bar app), persist the result, and show it in the
-frontend — with strict per-user isolation so a user can only ever reach their
-own menu bar.
+Goal: build a **general-purpose local-scrape bridge** — let an action in the
+cloud frontend trigger a scrape that runs on the user's own Mac (via the menu
+bar app), persist the result, and show it in the frontend — with strict
+per-user isolation so a user can only ever reach their own menu bar.
+
+The bridge is **source-agnostic** by design. v1 implements one source,
+RateYourMusic, but the protocol, storage, routing, and menu bar dispatch all
+carry a `source` discriminator so additional sources are added without
+architectural change.
+
+## Sources
+
+- **`rym`** — RateYourMusic. **v1, fully implemented.** Reuses the menu bar's
+  existing `Fetcher.fetch` extractor for `/list/`, `/charts/`, `/new-music/`.
+- **`bandcamp`** — **Planned fast-follow** (not built in v1). Scraping Bandcamp
+  discovery/tag/artist pages through the local Chrome session sidesteps the same
+  Cloudflare block that forced the server-side Bandcamp discovery endpoints to be
+  removed. Adding it means a new source handler in the menu bar (the app already
+  has `BandcampResolver` driving CDP) plus a Bandcamp payload type — no changes
+  to the transport, DB, or routing.
 
 ## Existing pieces (reuse)
 
@@ -37,15 +53,17 @@ own menu bar.
 - The WXT browser extension (`apps/extension`) is an empty skeleton with no RYM
   logic; it is **not** the scraping vehicle. The native menu bar app is.
 - No user accounts / OAuth. Identity is a pairing token (below).
-- v1 scrapes only RYM list/chart/new-music URLs (the existing extractor). Artist
-  pages, Bandcamp discovery, and other page types are future work.
+- v1 implements only the `rym` source (list/chart/new-music via the existing
+  extractor). The `bandcamp` source and RYM artist pages are fast-follow work.
 
 ## v1 Feature
 
 User pastes (or selects) a `rateyourmusic.com` list/chart/new-music URL in the
-frontend and clicks Scrape. The command is routed to the user's own menu bar
-app, which scrapes the URL on local Chrome, returns the entries, which are
-persisted to Postgres and rendered in the frontend (with caching/history).
+frontend, with the source set to `rym`, and clicks Scrape. The command is routed
+to the user's own menu bar app, which scrapes the URL on local Chrome, returns
+the entries, which are persisted to Postgres and rendered in the frontend (with
+caching/history). The UI and plumbing are source-agnostic; v1 simply only wires
+the `rym` source.
 
 ## Topology & Data Flow
 
@@ -57,12 +75,12 @@ Postgres is the source of truth; WS carries only small control events.
 Frontend            Railway server                       Menu bar (Mac)
   │ register{token, web}     │                                  │ register{token, menubar}
   │─────────────────────────▶│◀─────────────────────────────────│
-  │ scrape_rym{reqId,url}    │   (routes only within token room) │
-  │─────────────────────────▶│──────────── scrape_rym ─────────▶│ Fetcher.fetch(url) via local CDP
-  │                          │◀──── rym_result{reqId,entries} ───│
+  │ scrape{reqId,source,url} │   (routes only within token room) │
+  │─────────────────────────▶│──────────── scrape ─────────────▶│ dispatch by source → scrape via CDP
+  │                          │◀──── scrape_result{reqId,data} ───│
   │                          │  write/upsert row → Postgres      │
   │◀──── result_ready{reqId}─│                                   │
-  │ tRPC rym.getResult(reqId)│─▶ read Postgres ─▶ render table   │
+  │ tRPC scrape.getResult()  │─▶ read Postgres ─▶ render         │
 ```
 
 ## WebSocket Protocol
@@ -74,12 +92,14 @@ Register (first message after connect):
 Server keeps `Map<token, { web: Set<WebSocket>, menubar: WebSocket | null }>` and
 routes strictly within a token room.
 
+`ScrapeSource = 'rym' | 'bandcamp'` (v1 implements `'rym'` only).
+
 Messages:
 ```ts
 // web → server → menubar
-{ type: 'scrape_rym', requestId: string, url: string }
+{ type: 'scrape', requestId: string, source: ScrapeSource, url: string }
 // menubar → server  (server persists, then pings web)
-{ type: 'rym_result', requestId: string, entries: RymEntry[] }
+{ type: 'scrape_result', requestId: string, source: ScrapeSource, data: ScrapeData }
 // server → web
 { type: 'result_ready', requestId: string }
 { type: 'scrape_error', requestId: string, message: string }
@@ -87,42 +107,49 @@ Messages:
 { type: 'menubar_presence', online: boolean }
 ```
 
-`RymEntry` (matches the menu bar's existing extractor output):
+`ScrapeData` is a per-source payload (discriminated by `source`). v1 defines the
+`rym` payload; the `bandcamp` payload is added with the fast-follow.
 ```ts
-{ artist: string; album: string; date?: string; path?: string;
-  genres?: string[]; avgRating?: number; ratings?: number; wants?: number }
+// source: 'rym' — matches the menu bar's existing extractor output
+type RymEntry = { artist: string; album: string; date?: string; path?: string;
+  genres?: string[]; avgRating?: number; ratings?: number; wants?: number };
+type RymScrapeData = { kind: 'rym'; entries: RymEntry[] };
+
+type ScrapeData = RymScrapeData; // extended with BandcampScrapeData later
 ```
 
-All message and entry types live in `packages/types`.
+All message and payload types live in `packages/types`.
 
 ## Persistence (Postgres)
 
 Wire a Postgres client into the server tRPC context (currently SQLite-only;
-Railway Postgres exists but is not wired in). One table:
+Railway Postgres exists but is not wired in). One source-agnostic table:
 
 ```sql
-rym_scrapes (
+scrapes (
   id          uuid primary key,
   token_hash  text not null,         -- sha256(pairing token); raw token never stored
+  source      text not null,         -- 'rym' | 'bandcamp'
   url         text not null,
   status      text not null,         -- 'pending' | 'done' | 'error'
-  entries     jsonb,                 -- RymEntry[]
+  data        jsonb,                 -- ScrapeData (per-source payload)
   error       text,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
-create index rym_scrapes_token_created_idx on rym_scrapes (token_hash, created_at desc);
+create index scrapes_token_source_created_idx on scrapes (token_hash, source, created_at desc);
 ```
 
-Lifecycle: row created `pending` when a `scrape_rym` is accepted; updated to
-`done` (with `entries`) or `error` when the menu bar replies or a timeout fires.
+Lifecycle: row created `pending` when a `scrape` is accepted; updated to `done`
+(with `data`) or `error` when the menu bar replies or a timeout fires.
 
 ## tRPC Read Path
 
-`rym` router (follows the existing `bandcamp` router pattern):
-- `rym.getResult({ requestId })` → the single row; the frontend calls this on
+`scrape` router (follows the existing `bandcamp` router pattern):
+- `scrape.getResult({ requestId })` → the single row; the frontend calls this on
   `result_ready`.
-- `rym.listScrapes({ token })` → recent scrapes for that token (history).
+- `scrape.listScrapes({ token, source? })` → recent scrapes for that token,
+  optionally filtered by source (history).
 
 The frontend passes its pairing token; the server hashes it (`sha256`) and
 scopes every query to `token_hash`, so a client only ever reads its own rows.
@@ -137,11 +164,14 @@ The pairing token is the entire trust boundary; treat it as a secret.
 - **Isolation:** server routes strictly within a token room; Postgres rows
   scoped by `token_hash`. Without the token, nobody can command the menu bar or
   read its results.
-- **Target allowlist (defense in depth):** both the server and the menu bar
-  reject any `url` whose host is not `rateyourmusic.com`. A leaked token can
-  therefore only ever cause RYM page loads — never arbitrary local URL opens.
-- **Menu bar acts only on its own room:** it processes `scrape_rym` solely from
-  the server over its registered token; it never accepts direct inbound
+- **Target allowlist keyed by source (defense in depth):** both the server and
+  the menu bar enforce a per-source host allowlist — `rym → rateyourmusic.com`,
+  `bandcamp → *.bandcamp.com`. A `scrape` is rejected unless its `url` host
+  matches the allowlist for its declared `source`. A leaked token can therefore
+  only ever cause page loads on a known, source-appropriate host — never
+  arbitrary local URL opens. New sources extend the allowlist explicitly.
+- **Menu bar acts only on its own room:** it processes `scrape` messages solely
+  from the server over its registered token; it never accepts direct inbound
   connections.
 - **Rate limiting:** per-token cap on the server (e.g. N scrapes/min).
 - **Transport:** WSS (in place). Token is sent in the register message over TLS,
@@ -163,17 +193,18 @@ existing `CDPSession` design); the server may queue per token.
 
 | Component | Repo / location | Work |
 |---|---|---|
-| WS server routing | `soundscape/apps/server` | token-room map, targeted routing, presence, requestId forwarding, URL allowlist, per-token rate limit |
-| Postgres client + schema | `soundscape/apps/server` (+ a db package) | pg client in tRPC context, `rym_scrapes` table/migration, scoped queries |
-| tRPC `rym` router | `soundscape/packages/api` | `getResult`, `listScrapes` |
-| Shared types | `soundscape/packages/types` | message + `RymEntry` types |
-| Swift bridge client | `rym-menubar` | `BridgeClient.swift`: outbound WSS client, register as `menubar`, dispatch `scrape_rym` → `Fetcher.fetch` → reply; token generation + display in the menu |
-| Web UI | `soundscape/apps/web` | pairing-token input (localStorage), URL input + Scrape button, results table, presence indicator |
+| WS server routing | `soundscape/apps/server` | token-room map, targeted routing, presence, requestId forwarding, per-source URL allowlist, per-token rate limit |
+| Postgres client + schema | `soundscape/apps/server` (+ a db package) | pg client in tRPC context, `scrapes` table/migration, scoped queries |
+| tRPC `scrape` router | `soundscape/packages/api` | `getResult`, `listScrapes` |
+| Shared types | `soundscape/packages/types` | message types, `ScrapeSource`, `ScrapeData`/`RymEntry` |
+| Swift bridge client | `rym-menubar` | `BridgeClient.swift`: outbound WSS client, register as `menubar`, dispatch `scrape` by `source` (v1: `rym` → `Fetcher.fetch`) → reply; token generation + display in the menu |
+| Web UI | `soundscape/apps/web` | pairing-token input (localStorage), URL input + Scrape button, source-agnostic results view, presence indicator |
 
 ## Testing / Verification Oracles
 
-- Server: unit tests for token-room routing (no cross-token delivery), URL
-  allowlist rejection, presence emission, rate limiting.
+- Server: unit tests for token-room routing (no cross-token delivery),
+  per-source URL allowlist rejection (e.g. a `rym` command to a non-RYM host is
+  rejected), presence emission, rate limiting.
 - tRPC: `getResult`/`listScrapes` scoping by `token_hash`.
 - Swift: build (`swift build`); a manual end-to-end check (frontend → menu bar →
   result) since CDP needs a real Chrome session.
@@ -189,3 +220,9 @@ existing `CDPSession` design); the server may queue per token.
   extractor).
 - Persistence: **Postgres** is the source of truth; WS carries only control
   pings; frontend reads via tRPC.
+- Generality: the bridge is **source-agnostic** (`source` discriminator across
+  protocol, storage, routing, allowlist, and menu bar dispatch). v1 implements
+  the `rym` source only; **`bandcamp` is the named fast-follow** that adds a menu
+  bar source handler + payload type with no architectural change. This also
+  recovers the Bandcamp discovery features removed from the server (PR #12),
+  scraping them locally instead.
