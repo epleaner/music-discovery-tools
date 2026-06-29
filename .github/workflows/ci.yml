@@ -30,15 +30,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build and test api
-        run: |
-          pnpm --filter @soundscape/api build
-          pnpm --filter @soundscape/api test
+      # turbo build respects the workspace dependency graph (dependsOn ^build),
+      # so shared packages (types/utils/ui) are built before web/api. Building
+      # web directly fails to resolve @soundscape/utils' dist otherwise.
+      - name: Build all packages
+        run: pnpm build
 
-      - name: Build and test web
-        run: |
-          pnpm --filter @soundscape/web build
-          pnpm --filter @soundscape/web test
+      - name: Test api
+        run: pnpm --filter @soundscape/api test
+
+      - name: Test web
+        run: pnpm --filter @soundscape/web test
 
       - name: Server startup smoke test
         run: |
