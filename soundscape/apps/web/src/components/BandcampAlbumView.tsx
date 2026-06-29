@@ -1,15 +1,11 @@
-import { Component, Show, For, createResource, createMemo } from 'solid-js';
+import { Component, Show, For, createResource } from 'solid-js';
 import { trpc } from '../lib/trpc.js';
 import BandcampPlayer from './BandcampPlayer.js';
 import { bcArtUrl } from '../lib/bandcamp-slug.js';
 
 interface BandcampAlbumViewProps {
   albumUrl: string;
-  onTagClick?: (tag: string) => void;
-  onAlbumClick?: (albumUrl: string) => void;
 }
-
-const normalizeUrl = (url: string) => url.replace(/\/+$/, '');
 
 // Bandcamp returns dates like "13 Nov 2020 00:00:00 GMT" — show just the date.
 const formatReleaseDate = (raw: string) => {
@@ -29,23 +25,6 @@ const BandcampAlbumView: Component<BandcampAlbumViewProps> = (props) => {
     () => props.albumUrl,
     (url) => trpc.bandcamp.getAlbum.query({ albumUrl: url })
   );
-
-  const primaryKeyword = createMemo(() => {
-    const kw = album()?.keywords;
-    return kw && kw.length > 0 ? kw[0] : null;
-  });
-
-  const [relatedReleases] = createResource(
-    () => primaryKeyword() ?? undefined,
-    (tag) => trpc.bandcamp.getTagReleases.query({ tag, page: 1 })
-  );
-
-  const filteredReleases = createMemo(() => {
-    const releases = relatedReleases();
-    if (!releases) return [];
-    const current = normalizeUrl(props.albumUrl);
-    return releases.filter((r) => normalizeUrl(r.url) !== current);
-  });
 
   return (
     <div class="p-4 text-xs overflow-y-auto h-full">
@@ -112,55 +91,15 @@ const BandcampAlbumView: Component<BandcampAlbumViewProps> = (props) => {
               <div class="flex flex-wrap gap-1 mb-3">
                 <For each={data().keywords}>
                   {(tag) => (
-                    <button
-                      class="px-1.5 py-0.5 rounded bg-bg-subtle text-fg-muted hover:text-fg hover:bg-border text-[10px]"
-                      onClick={() => props.onTagClick?.(tag)}
-                    >
+                    <span class="px-1.5 py-0.5 rounded bg-bg-subtle text-fg-muted text-[10px]">
                       {tag}
-                    </button>
+                    </span>
                   )}
                 </For>
               </div>
             </Show>
 
             <BandcampPlayer tracks={data().tracks} />
-
-            <Show when={primaryKeyword() && !relatedReleases.loading && filteredReleases().length > 0}>
-              <div class="mt-4">
-                <div class="text-[10px] font-medium text-fg-muted uppercase tracking-wide mb-2">
-                  Related in {primaryKeyword()}
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                  <For each={filteredReleases()}>
-                    {(release) => (
-                      <button
-                        class="text-left flex flex-col gap-1 p-1.5 rounded hover:bg-bg-subtle transition-colors"
-                        onClick={() => props.onAlbumClick?.(release.url)}
-                      >
-                        <Show
-                          when={release.imageUrl}
-                          fallback={<div class="w-full aspect-square bg-bg-subtle rounded" />}
-                        >
-                          <img
-                            src={bcArtUrl(release.imageUrl!, '_9')}
-                            alt={release.name}
-                            class="w-full aspect-square object-cover rounded"
-                          />
-                        </Show>
-                        <div class="text-[10px] leading-tight font-medium text-fg line-clamp-2">
-                          {release.name}
-                        </div>
-                        <Show when={release.artist}>
-                          <div class="text-[10px] leading-tight text-fg-muted line-clamp-1">
-                            {release.artist}
-                          </div>
-                        </Show>
-                      </button>
-                    )}
-                  </For>
-                </div>
-              </div>
-            </Show>
           </div>
         )}
       </Show>
