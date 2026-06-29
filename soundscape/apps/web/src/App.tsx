@@ -24,6 +24,7 @@ import WebSocketExample from './components/WebSocketExample';
 import GenreSelect from './components/GenreSelect';
 import NewsletterPanel from './components/NewsletterPanel';
 import BandcampPanel from './components/BandcampPanel';
+import ScrapePanel from './components/ScrapePanel';
 import {
   buildRightPanelModel,
   resolveRightPanelMode,
@@ -744,6 +745,16 @@ const App: Component = () => {
                     >
                       Bandcamp
                     </button>
+                    <button
+                      onClick={() => updateState({ rightPanel: 'scrape' })}
+                      class={`px-2 py-1 text-xs whitespace-nowrap ${
+                        rightPanelModel().activeMode === 'scrape'
+                          ? 'bg-accent text-bg'
+                          : 'text-fg-muted hover:text-fg'
+                      }`}
+                    >
+                      Scrape
+                    </button>
                   </div>
 
                   <Show
@@ -781,6 +792,9 @@ const App: Component = () => {
                           bandcampUrl={bandcampUrl()}
                           onUrlChange={(url) => updateState({ bandcampUrl: url })}
                         />
+                      </Match>
+                      <Match when={rightPanelModel().showScrapePanel}>
+                        <ScrapePanel />
                       </Match>
                       <Match when={selectedArtist()}>
                         <ArtistList
