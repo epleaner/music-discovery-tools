@@ -1,0 +1,25 @@
+{
+  "name": "@soundscape/scrapes-db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "test": "tsx --test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "@soundscape/types": "workspace:*",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6",
+    "typescript": "^5.3.3"
+  }
+}
