@@ -121,6 +121,9 @@ importers:
       '@soundscape/newsletters-db':
         specifier: workspace:*
         version: link:../../packages/newsletters-db
+      '@soundscape/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       '@trpc/server':
         specifier: ^10.45.0
         version: 10.45.2
