@@ -29,7 +29,13 @@ export interface ScrapesDb {
 }
 
 export function createScrapesDb(connectionString: string): ScrapesDb {
-  const sql = postgres(connectionString);
+  // Railway's public Postgres proxy requires TLS; connecting in plaintext gets
+  // an ECONNRESET. Enable SSL for remote hosts (the proxy cert isn't in the
+  // default trust chain, so don't verify it), but skip SSL for local dev DBs.
+  const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(connectionString);
+  const sql = postgres(connectionString, {
+    ssl: isLocal ? false : { rejectUnauthorized: false },
+  });
 
   return {
     async init() {
