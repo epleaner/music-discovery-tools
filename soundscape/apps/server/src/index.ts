@@ -134,7 +134,7 @@ wss.on('connection', (ws) => {
       } else {
         rooms.registerWeb(token, sender);
       }
-      console.log(`Client registered as ${clientType} for token ${token}`);
+      console.log(`Client registered as ${clientType} for token ${token.slice(0, 4)}…`);
       return;
     }
 
@@ -179,6 +179,8 @@ wss.on('connection', (ws) => {
       const token = connectionToken;
       if (!token) return;
 
+      if (rooms.menubarFor(token) !== sender) return;
+
       const timeout = pendingTimeouts.get(requestId);
       if (timeout) {
         clearTimeout(timeout);
@@ -193,7 +195,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     rooms.unregister(sender);
-    console.log(`Client disconnected (token: ${connectionToken ?? 'unregistered'})`);
+    console.log(`Client disconnected (token: ${connectionToken ? connectionToken.slice(0, 4) + '…' : 'unregistered'})`);
   });
 
   ws.on('error', (error) => {
