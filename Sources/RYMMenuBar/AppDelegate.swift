@@ -39,8 +39,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
 
     private var inputWindow: NSWindow?
     private var inputField: NSTextField?
+    private var bridgeClient: BridgeClient?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let bridge = BridgeClient()
+        bridgeClient = bridge
+        bridge.start()
         installEditMenu()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
@@ -530,6 +534,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         menu.addItem(historyItem)
 
         menu.addItem(.separator())
+        let copyToken = NSMenuItem(title: "Copy pairing token", action: #selector(copyPairingToken), keyEquivalent: "")
+        copyToken.target = self
+        menu.addItem(copyToken)
+
+        menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
 
@@ -760,6 +769,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
             ? "▶ \(pos): \(e.artist) — \(e.album)"
             : "🔎 \(pos): search opened (no confident match)"
         rebuildMenu()
+    }
+
+    @objc private func copyPairingToken() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(PairingToken.current, forType: .string)
     }
 
     // MARK: - Input window
