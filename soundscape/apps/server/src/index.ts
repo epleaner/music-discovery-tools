@@ -166,6 +166,7 @@ wss.on('connection', (ws) => {
         rooms.registerMenubar(token, sender);
       } else {
         rooms.registerWeb(token, sender);
+        sender.send(JSON.stringify({ type: 'menubar_presence', online: rooms.menubarFor(token) !== null }));
       }
       console.log(`Client registered as ${clientType} for token ${token.slice(0, 4)}…`);
       return;
@@ -204,6 +205,24 @@ wss.on('connection', (ws) => {
         rooms.sendToWebs(token, { type: 'scrape_error', requestId, message: 'timeout' });
       }, SCRAPE_TIMEOUT_MS);
       pendingTimeouts.set(requestId, timeout);
+      return;
+    }
+
+    if (data.type === 'scrape_error') {
+      const { requestId, message } = data;
+      const token = connectionToken;
+      if (!token) return;
+
+      if (rooms.menubarFor(token) !== sender) return;
+
+      const timeout = pendingTimeouts.get(requestId);
+      if (timeout) {
+        clearTimeout(timeout);
+        pendingTimeouts.delete(requestId);
+      }
+
+      scrapeHooks.onError?.({ requestId, error: message });
+      rooms.sendToWebs(token, { type: 'scrape_error', requestId, message });
       return;
     }
 
