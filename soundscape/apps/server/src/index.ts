@@ -7,6 +7,49 @@ import swaggerUi from 'swagger-ui-express';
 import { appRouter } from '@soundscape/api';
 import { createContext } from './context.js';
 import { generateOpenApiDocument, createOpenApiHttpHandler } from 'trpc-openapi';
+import type { BridgeMessage } from '@soundscape/types';
+import { Rooms } from './ws-rooms.js';
+import { isUrlAllowed } from './scrape-allowlist.js';
+import { createScrapesDb, hashToken } from '@soundscape/scrapes-db';
+import type { ScrapeData, ScrapeSource } from '@soundscape/types';
+import { setScrapesDb } from './scrapes-state.js';
+
+// Filled in by the persistence task; default no-ops.
+export const scrapeHooks: {
+  onAccepted?: (a: { token: string; requestId: string; source: string; url: string }) => void;
+  onResult?: (a: { requestId: string; data: unknown }) => void;
+  onError?: (a: { requestId: string; error: string }) => void;
+} = {};
+
+async function initScrapesDb() {
+  if (!process.env.DATABASE_URL) {
+    console.warn('[scrapes] DATABASE_URL not set — scrape persistence disabled');
+    return;
+  }
+  try {
+    const db = createScrapesDb(process.env.DATABASE_URL);
+    await db.init();
+    setScrapesDb(db);
+    console.log('[scrapes] Postgres persistence enabled');
+
+    scrapeHooks.onAccepted = ({ token, requestId, source, url }) => {
+      db.createPending({ id: requestId, tokenHash: hashToken(token), source: source as ScrapeSource, url })
+        .catch((err) => console.error('[scrapes] createPending', err));
+    };
+    scrapeHooks.onResult = ({ requestId, data }) => {
+      db.markDone({ id: requestId, data: data as ScrapeData })
+        .catch((err) => console.error('[scrapes] markDone', err));
+    };
+    scrapeHooks.onError = ({ requestId, error }) => {
+      db.markError({ id: requestId, error })
+        .catch((err) => console.error('[scrapes] markError', err));
+    };
+  } catch (err) {
+    console.error('[scrapes] Failed to init scrapes DB — persistence disabled:', err);
+  }
+}
+
+void initScrapesDb();
 
 const app = express();
 const server = createServer(app);
@@ -93,54 +136,104 @@ app.use(
 // WebSocket server for real-time communication
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-// Store connected clients with metadata
-const clients = new Map<string, { ws: any; type: 'web' | 'extension' }>();
+const rooms = new Rooms();
+// Per-token rate limiting: map of token -> list of accepted scrape timestamps
+const scrapeTimestamps = new Map<string, number[]>();
+// Pending timeout handles keyed by requestId
+const pendingTimeouts = new Map<string, NodeJS.Timeout>();
 
-wss.on('connection', (ws, _req) => {
-  const clientId = Math.random().toString(36).substring(7);
-  console.log(`Client connected: ${clientId}`);
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const SCRAPE_TIMEOUT_MS = 30_000;
+
+wss.on('connection', (ws) => {
+  let connectionToken: string | null = null;
+  const sender = { send: (json: string) => ws.send(json) };
 
   ws.on('message', (message) => {
+    let data: BridgeMessage;
     try {
-      const data = JSON.parse(message.toString());
+      data = JSON.parse(message.toString()) as BridgeMessage;
+    } catch {
+      return;
+    }
 
-      // Register client type
-      if (data.type === 'register') {
-        clients.set(clientId, {
-          ws,
-          type: data.clientType as 'web' | 'extension',
-        });
-        console.log(`Client ${clientId} registered as ${data.clientType}`);
+    if (data.type === 'register') {
+      const { token, clientType } = data;
+      if (!token || (clientType !== 'web' && clientType !== 'menubar')) return;
+      connectionToken = token;
+      if (clientType === 'menubar') {
+        rooms.registerMenubar(token, sender);
+      } else {
+        rooms.registerWeb(token, sender);
+      }
+      console.log(`Client registered as ${clientType} for token ${token.slice(0, 4)}…`);
+      return;
+    }
+
+    if (data.type === 'scrape') {
+      const { requestId, source, url } = data;
+      const token = connectionToken;
+      if (!token) return;
+
+      if (!isUrlAllowed(source, url)) {
+        sender.send(JSON.stringify({ type: 'scrape_error', requestId, message: 'url not allowed' }));
         return;
       }
 
-      // Broadcast message to all clients except sender
-      console.log(`Message from ${clientId}:`, data);
+      // Rate limiting
+      const now = Date.now();
+      const timestamps = (scrapeTimestamps.get(token) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+      if (timestamps.length >= RATE_LIMIT_MAX) {
+        sender.send(JSON.stringify({ type: 'scrape_error', requestId, message: 'rate limited' }));
+        return;
+      }
+      timestamps.push(now);
+      scrapeTimestamps.set(token, timestamps);
 
-      clients.forEach((client, id) => {
-        if (id !== clientId && client.ws.readyState === 1) {
-          // 1 = OPEN
-          client.ws.send(
-            JSON.stringify({
-              ...data,
-              from: clients.get(clientId)?.type || 'unknown',
-              timestamp: new Date().toISOString(),
-            })
-          );
-        }
-      });
-    } catch (error) {
-      console.error('Error processing message:', error);
+      if (!rooms.sendToMenubar(token, data)) {
+        sender.send(JSON.stringify({ type: 'scrape_error', requestId, message: 'menu bar offline' }));
+        return;
+      }
+
+      scrapeHooks.onAccepted?.({ token, requestId, source, url });
+
+      const timeout = setTimeout(() => {
+        pendingTimeouts.delete(requestId);
+        scrapeHooks.onError?.({ requestId, error: 'timeout' });
+        rooms.sendToWebs(token, { type: 'scrape_error', requestId, message: 'timeout' });
+      }, SCRAPE_TIMEOUT_MS);
+      pendingTimeouts.set(requestId, timeout);
+      return;
+    }
+
+    if (data.type === 'scrape_result') {
+      const { requestId } = data;
+      const token = connectionToken;
+      if (!token) return;
+
+      if (rooms.menubarFor(token) !== sender) return;
+
+      const timeout = pendingTimeouts.get(requestId);
+      if (timeout) {
+        clearTimeout(timeout);
+        pendingTimeouts.delete(requestId);
+      }
+
+      scrapeHooks.onResult?.({ requestId, data: data.data });
+      rooms.sendToWebs(token, { type: 'result_ready', requestId });
+      return;
     }
   });
 
   ws.on('close', () => {
-    clients.delete(clientId);
-    console.log(`Client disconnected: ${clientId}`);
+    rooms.unregister(sender);
+    if (connectionToken) scrapeTimestamps.delete(connectionToken);
+    console.log(`Client disconnected (token: ${connectionToken ? connectionToken.slice(0, 4) + '…' : 'unregistered'})`);
   });
 
   ws.on('error', (error) => {
-    console.error(`WebSocket error for ${clientId}:`, error);
+    console.error('WebSocket error:', error);
   });
 });
 
