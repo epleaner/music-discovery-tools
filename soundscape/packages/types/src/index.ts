@@ -2,3 +2,4 @@
 
 export * from './lastfm';
 export * from './everynoise';
+export * from './scrape';
