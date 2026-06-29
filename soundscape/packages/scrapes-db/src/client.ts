@@ -29,33 +29,58 @@ export interface ScrapesDb {
 }
 
 export function createScrapesDb(connectionString: string): ScrapesDb {
-  // Railway's public Postgres proxy requires TLS; connecting in plaintext gets
-  // an ECONNRESET. Enable SSL for remote hosts (the proxy cert isn't in the
-  // default trust chain, so don't verify it), but skip SSL for local dev DBs.
-  const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(connectionString);
+  // SSL: Railway's internal network (*.railway.internal) and local dev DBs speak
+  // plaintext; only a genuine public host needs TLS (and its cert isn't in the
+  // default trust chain). Connecting to the internal host with TLS, or to a
+  // TLS-only public host without it, resets the connection.
+  const host = (() => {
+    try {
+      return new URL(connectionString).hostname;
+    } catch {
+      return '';
+    }
+  })();
+  const isPlaintextHost =
+    host === 'localhost' || host === '127.0.0.1' || host.endsWith('.railway.internal');
   const sql = postgres(connectionString, {
-    ssl: isLocal ? false : { rejectUnauthorized: false },
+    ssl: isPlaintextHost ? false : { rejectUnauthorized: false },
   });
 
   return {
     async init() {
-      await sql`
-        CREATE TABLE IF NOT EXISTS scrapes (
-          id          uuid PRIMARY KEY,
-          token_hash  text NOT NULL,
-          source      text NOT NULL,
-          url         text NOT NULL,
-          status      text NOT NULL,
-          data        jsonb,
-          error       text,
-          created_at  timestamptz NOT NULL DEFAULT now(),
-          updated_at  timestamptz NOT NULL DEFAULT now()
-        )
-      `;
-      await sql`
-        CREATE INDEX IF NOT EXISTS scrapes_token_source_created_idx
-          ON scrapes (token_hash, source, created_at DESC)
-      `;
+      // Railway private networking DNS comes up a few seconds after the
+      // container starts, so the first connection can fail with ENOTFOUND/
+      // ECONNRESET/ECONNREFUSED. Retry with backoff before giving up.
+      const transient = new Set(['ENOTFOUND', 'ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT']);
+      const maxAttempts = 8;
+      for (let attempt = 1; ; attempt++) {
+        try {
+          await sql`
+            CREATE TABLE IF NOT EXISTS scrapes (
+              id          uuid PRIMARY KEY,
+              token_hash  text NOT NULL,
+              source      text NOT NULL,
+              url         text NOT NULL,
+              status      text NOT NULL,
+              data        jsonb,
+              error       text,
+              created_at  timestamptz NOT NULL DEFAULT now(),
+              updated_at  timestamptz NOT NULL DEFAULT now()
+            )
+          `;
+          await sql`
+            CREATE INDEX IF NOT EXISTS scrapes_token_source_created_idx
+              ON scrapes (token_hash, source, created_at DESC)
+          `;
+          return;
+        } catch (err) {
+          const code = (err as { code?: string })?.code;
+          if (attempt >= maxAttempts || !code || !transient.has(code)) throw err;
+          const delayMs = Math.min(1000 * 2 ** (attempt - 1), 8000);
+          console.warn(`[scrapes-db] init attempt ${attempt} failed (${code}); retrying in ${delayMs}ms`);
+          await new Promise((r) => setTimeout(r, delayMs));
+        }
+      }
     },
 
     async createPending({ id, tokenHash, source, url }) {
