@@ -2,73 +2,8 @@ import bandcamp from 'bandcamp-fetch';
 import { router, publicProcedure } from './trpc.js';
 import { z } from 'zod';
 
-// bandcamp-fetch issues requests via the global fetch with no User-Agent, so they
-// go out with Node's default UA. Bandcamp's Cloudflare layer flags that as a bot
-// and silently hangs the response for the discography (/music), /discover, and
-// discover_web endpoints (direct album pages pass through). Wrap the global fetch
-// to send browser-like headers, but ONLY for Bandcamp/bcbits hosts so nothing else
-// is affected. Idempotent so repeated imports don't double-wrap.
-// cf_clearance cookies are bound to the User-Agent that generated them, so allow
-// overriding the UA via env to match the browser the BANDCAMP_COOKIE came from.
-const BANDCAMP_USER_AGENT =
-  process.env.BANDCAMP_USER_AGENT ||
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-
-const BROWSER_HEADERS: Record<string, string> = {
-  'User-Agent': BANDCAMP_USER_AGENT,
-  Accept:
-    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-  'Accept-Language': 'en-US,en;q=0.9',
-  'Sec-Fetch-Dest': 'document',
-  'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-Site': 'none',
-  'Upgrade-Insecure-Requests': '1',
-};
-
-const globalAny = globalThis as typeof globalThis & { __bandcampFetchWrapped?: boolean };
-if (!globalAny.__bandcampFetchWrapped) {
-  const originalFetch = globalThis.fetch.bind(globalThis);
-  globalThis.fetch = async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
-    const url =
-      typeof input === 'string'
-        ? input
-        : input instanceof URL
-          ? input.href
-          : input.url;
-    let host = '';
-    try {
-      host = new URL(url).hostname;
-    } catch {
-      // non-URL input (shouldn't happen here) — fall through unmodified
-    }
-    if (host.endsWith('bandcamp.com') || host.endsWith('bcbits.com')) {
-      // Seed from the Request's own headers (the library sets Cookie/Content-Type
-      // on a Request object) and then from init, so we don't drop them.
-      const headers = new Headers(input instanceof Request ? input.headers : undefined);
-      if (init?.headers) {
-        new Headers(init.headers).forEach((value, key) => headers.set(key, value));
-      }
-      for (const [key, value] of Object.entries(BROWSER_HEADERS)) {
-        if (!headers.has(key)) headers.set(key, value);
-      }
-      return originalFetch(input, { ...init, headers });
-    }
-    return originalFetch(input, init);
-  };
-  globalAny.__bandcampFetchWrapped = true;
-}
-
 // Configure built-in limiter: 1 req/sec, max 1 concurrent
 bandcamp.limiter.updateSettings({ minTime: 1000, maxConcurrent: 1 });
-
-// Optional Bandcamp cookie (set via the BANDCAMP_COOKIE env var, never committed).
-// Some endpoints (artist /music, /discover, discover_web) are gated behind
-// Bandcamp's Cloudflare layer when requested from datacenter IPs; supplying a
-// valid session/anonymous cookie can satisfy that check. Paired with the
-// browser headers above (cf_clearance is bound to the User-Agent).
-if (process.env.BANDCAMP_COOKIE) {
-  bandcamp.setCookie(process.env.BANDCAMP_COOKIE);
-}
 
 // Bandcamp's CDN (Cloudflare) can silently hang requests from certain server IPs
 // by accepting the TCP connection but never completing the response. Node's native
