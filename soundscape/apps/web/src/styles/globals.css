@@ -535,7 +535,7 @@
   }
 
   .btn-primary {
-    @apply bg-accent text-xs;
+    @apply bg-accent text-bg text-xs;
     @apply hover:bg-accent-hover;
   }
 

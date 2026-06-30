@@ -111,4 +111,13 @@ export function onScrapeError(cb: ScrapeErrorCb): () => void {
   return () => scrapeErrorCbs.delete(cb);
 }
 
+export function pairingToken(): string {
+  return currentToken ?? '';
+}
+
+export function setPairingToken(token: string): void {
+  localStorage.setItem('scrape_pairing_token', token);
+  connect(token);
+}
+
 export { menubarOnline, connected };

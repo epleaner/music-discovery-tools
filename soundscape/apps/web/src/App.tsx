@@ -20,7 +20,7 @@ import SiteViewer from './components/SiteViewer';
 import ResizablePanels from './components/ResizablePanels';
 import ResizableBottom from './components/ResizableBottom';
 import EveryNoiseViewer from './components/EveryNoiseViewer';
-import WebSocketExample from './components/WebSocketExample';
+import PairWsDropdown from './components/PairWsDropdown';
 import GenreSelect from './components/GenreSelect';
 import NewsletterPanel from './components/NewsletterPanel';
 import BandcampPanel from './components/BandcampPanel';
@@ -187,9 +187,6 @@ const App: Component = () => {
   // oxlint-disable-next-line no-unassigned-vars
   let colorThemeContainerRef: HTMLDivElement | undefined;
 
-  // WebSocket debug panel state
-  const [showWebSocket, setShowWebSocket] = createSignal(false);
-
   const colorThemes: Array<{ value: string; label: string }> = [
     { value: 'default', label: 'Default' },
     { value: 'blue', label: 'Blue' },
@@ -288,14 +285,7 @@ const App: Component = () => {
           />
 
           <div class="flex flex-1 gap-2 justify-end items-center w-full">
-            {/* WebSocket Debug Button */}
-            <button
-              onClick={() => setShowWebSocket(!showWebSocket())}
-              class="text-xs btn-secondary"
-              title="WebSocket Debug Panel"
-            >
-              WS {showWebSocket() ? '−' : '+'}
-            </button>
+            <PairWsDropdown />
 
             {/* RYM Dropdown */}
             <div class="relative flex-shrink-0">
@@ -481,12 +471,6 @@ const App: Component = () => {
           </div>
         </div>
 
-        {/* WebSocket Debug Panel */}
-        <Show when={showWebSocket()}>
-          <div class="border-t border-border bg-bg-subtle">
-            <WebSocketExample />
-          </div>
-        </Show>
       </div>
 
       <Show when={appLayoutModel().showMainLayout}>
