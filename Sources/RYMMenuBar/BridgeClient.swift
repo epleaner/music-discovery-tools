@@ -139,10 +139,15 @@ final class BridgeClient {
         bridgeLog.info("bridge: scraping source=\(source, privacy: .public) mode=\(mode, privacy: .public) requestId=\(requestId, privacy: .public) url=\(url, privacy: .public)")
 
         if source == "bandcamp" {
-            let fetcher: (@escaping (Result<BandcampScrapeResult, FetchError>) -> Void) -> Void =
-                mode == "label"
-                    ? { BandcampFetcher.fetchLabelMode(urlString: url, completion: $0) }
-                    : { BandcampFetcher.fetch(urlString: url, completion: $0) }
+            let fetcher: (@escaping (Result<BandcampScrapeResult, FetchError>) -> Void) -> Void
+            switch mode {
+            case "label":
+                fetcher = { BandcampFetcher.fetchLabelMode(urlString: url, completion: $0) }
+            case "related":
+                fetcher = { BandcampFetcher.fetchRelatedMode(urlString: url, completion: $0) }
+            default:
+                fetcher = { BandcampFetcher.fetch(urlString: url, completion: $0) }
+            }
 
             fetcher { [weak self] result in
                 guard let self = self else { return }
