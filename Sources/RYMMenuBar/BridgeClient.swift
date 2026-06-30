@@ -17,7 +17,7 @@ final class BridgeClient {
     // Serial scrape queue: only one in-flight scrape at a time (single CDP tab).
     private let scrapeQueue = DispatchQueue(label: "com.elipleaner.rym-menubar.bridge.scrape")
     private var isScraping = false
-    private var pendingScrapes: [(requestId: String, url: String)] = []
+    private var pendingScrapes: [(requestId: String, url: String, source: String)] = []
 
     init() {
         let urlString = ProcessInfo.processInfo.environment["SCRAPE_BRIDGE_URL"]
@@ -93,57 +93,85 @@ final class BridgeClient {
         let source = obj["source"] as? String ?? ""
         let url = obj["url"] as? String ?? ""
 
-        guard source == "rym" else {
+        switch source {
+        case "rym":
+            guard isAllowedHost(url, domain: "rateyourmusic.com") else {
+                sendError(requestId: requestId, message: "url not allowed"); return
+            }
+            enqueueScrape(requestId: requestId, url: url, source: source)
+        case "bandcamp":
+            guard isAllowedBandcampHost(url) else {
+                sendError(requestId: requestId, message: "url not allowed"); return
+            }
+            enqueueScrape(requestId: requestId, url: url, source: source)
+        default:
             sendError(requestId: requestId, message: "source not supported")
-            return
         }
-
-        guard isAllowedRYMHost(url) else {
-            sendError(requestId: requestId, message: "url not allowed")
-            return
-        }
-
-        enqueueScrape(requestId: requestId, url: url)
     }
 
-    private func isAllowedRYMHost(_ urlString: String) -> Bool {
+    private func isAllowedHost(_ urlString: String, domain: String) -> Bool {
         guard let url = URL(string: urlString), let host = url.host else { return false }
-        return host == "rateyourmusic.com" || host.hasSuffix(".rateyourmusic.com")
+        return host == domain || host.hasSuffix("." + domain)
+    }
+
+    private func isAllowedBandcampHost(_ urlString: String) -> Bool {
+        guard let url = URL(string: urlString), let host = url.host else { return false }
+        return host == "bandcamp.com" || host.hasSuffix(".bandcamp.com")
     }
 
     // MARK: - Scrape serialization
 
-    private func enqueueScrape(requestId: String, url: String) {
+    private func enqueueScrape(requestId: String, url: String, source: String) {
         scrapeQueue.async { [weak self] in
             guard let self = self else { return }
             if self.isScraping {
-                self.pendingScrapes.append((requestId: requestId, url: url))
+                self.pendingScrapes.append((requestId: requestId, url: url, source: source))
             } else {
-                self.runScrape(requestId: requestId, url: url)
+                self.runScrape(requestId: requestId, url: url, source: source)
             }
         }
     }
 
-    private func runScrape(requestId: String, url: String) {
+    private func runScrape(requestId: String, url: String, source: String = "rym") {
         // Must be called from scrapeQueue.
         isScraping = true
-        bridgeLog.info("bridge: scraping requestId=\(requestId, privacy: .public) url=\(url, privacy: .public)")
+        bridgeLog.info("bridge: scraping source=\(source, privacy: .public) requestId=\(requestId, privacy: .public) url=\(url, privacy: .public)")
 
-        let fetcher = Fetcher()
-        fetcher.fetch(urlString: url) { [weak self] result in
-            guard let self = self else { return }
-            switch result {
-            case .success(let entries):
-                self.sendResult(requestId: requestId, entries: entries)
-            case .failure(let err):
-                self.sendError(requestId: requestId, message: err.description)
-            }
-            self.scrapeQueue.async { [weak self] in
+        if source == "bandcamp" {
+            BandcampFetcher.fetch(urlString: url) { [weak self] result in
                 guard let self = self else { return }
-                self.isScraping = false
-                if let next = self.pendingScrapes.first {
-                    self.pendingScrapes.removeFirst()
-                    self.runScrape(requestId: next.requestId, url: next.url)
+                switch result {
+                case .success(let releases):
+                    self.sendBandcampResult(requestId: requestId, releases: releases)
+                case .failure(let err):
+                    self.sendError(requestId: requestId, message: err.description)
+                }
+                self.scrapeQueue.async { [weak self] in
+                    guard let self = self else { return }
+                    self.isScraping = false
+                    if let next = self.pendingScrapes.first {
+                        self.pendingScrapes.removeFirst()
+                        self.runScrape(requestId: next.requestId, url: next.url, source: next.source)
+                    }
+                }
+            }
+        } else {
+            let fetcher = Fetcher()
+            fetcher.fetch(urlString: url) { [weak self] result in
+                guard let self = self else { return }
+                switch result {
+                case .success(let entries):
+                    self.sendResult(requestId: requestId, entries: entries)
+                case .failure(let err):
+                    self.sendError(requestId: requestId, message: err.description)
+                }
+                self.scrapeQueue.async { [weak self] in
+                    guard let self = self else { return }
+                    self.isScraping = false
+                    if let next = self.pendingScrapes.first {
+                        self.pendingScrapes.removeFirst()
+                        self.runScrape(requestId: next.requestId, url: next.url, source: next.source)
+                    }
                 }
             }
         }
@@ -174,6 +202,23 @@ final class BridgeClient {
         ]
         if let t = task { send(payload, via: t) }
         bridgeLog.info("bridge: sent scrape_result requestId=\(requestId, privacy: .public) entries=\(entries.count, privacy: .public)")
+    }
+
+    private func sendBandcampResult(requestId: String, releases: [BandcampRelease]) {
+        let releaseMaps: [[String: Any]] = releases.map { r in
+            var m: [String: Any] = ["title": r.title, "url": r.url]
+            if let artist = r.artist { m["artist"] = artist }
+            if let imageUrl = r.imageUrl { m["imageUrl"] = imageUrl }
+            return m
+        }
+        let payload: [String: Any] = [
+            "type": "scrape_result",
+            "requestId": requestId,
+            "source": "bandcamp",
+            "data": ["kind": "bandcamp", "releases": releaseMaps] as [String: Any]
+        ]
+        if let t = task { send(payload, via: t) }
+        bridgeLog.info("bridge: sent bandcamp scrape_result requestId=\(requestId, privacy: .public) releases=\(releases.count, privacy: .public)")
     }
 
     private func sendError(requestId: String, message: String) {
