@@ -6,7 +6,16 @@ export interface RymEntry {
   genres?: string[]; avgRating?: number; ratings?: number; wants?: number;
 }
 export type RymScrapeData = { kind: 'rym'; entries: RymEntry[] };
-export type ScrapeData = RymScrapeData; // extended with bandcamp later
+
+export interface BandcampRelease {
+  title: string;
+  artist?: string;
+  url: string;
+  imageUrl?: string;
+}
+export type BandcampScrapeData = { kind: 'bandcamp'; releases: BandcampRelease[] };
+
+export type ScrapeData = RymScrapeData | BandcampScrapeData;
 
 export type ScrapeStatus = 'pending' | 'done' | 'error';
 
