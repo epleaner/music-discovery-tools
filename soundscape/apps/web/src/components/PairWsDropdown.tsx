@@ -45,7 +45,7 @@ const PairWsDropdown: Component = () => {
     <div class="relative flex-shrink-0" ref={containerRef}>
       <button
         onClick={() => setOpen(!open())}
-        class="btn-secondary text-xs py-2.5"
+        class="btn-secondary text-xs"
         title="Pairing token and WebSocket debug"
       >
         Pair / WS
