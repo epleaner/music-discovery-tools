@@ -20,7 +20,7 @@ export type ScrapeData = RymScrapeData | BandcampScrapeData;
 export type ScrapeStatus = 'pending' | 'done' | 'error';
 
 export type RegisterMsg = { type: 'register'; token: string; clientType: ClientType };
-export type ScrapeMsg = { type: 'scrape'; requestId: string; source: ScrapeSource; url: string; mode?: 'label' };
+export type ScrapeMsg = { type: 'scrape'; requestId: string; source: ScrapeSource; url: string; mode?: 'label' | 'related' };
 export type ScrapeResultMsg = { type: 'scrape_result'; requestId: string; source: ScrapeSource; data: ScrapeData };
 export type ResultReadyMsg = { type: 'result_ready'; requestId: string };
 export type ScrapeErrorMsg = { type: 'scrape_error'; requestId: string; message: string };
