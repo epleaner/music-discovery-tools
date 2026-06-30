@@ -23,6 +23,10 @@ const ScrapePanel: Component = () => {
   const [entries, setEntries] = createSignal<RymEntry[]>([]);
   const [releases, setReleases] = createSignal<BandcampRelease[]>([]);
   const [activeRequestId, setActiveRequestId] = createSignal<string | null>(null);
+  const [currentLabel, setCurrentLabel] = createSignal<{ name: string; url: string } | null>(null);
+  const [isLabelResult, setIsLabelResult] = createSignal(false);
+  const [lastScrapedUrl, setLastScrapedUrl] = createSignal<string | null>(null);
+  const [pendingMode, setPendingMode] = createSignal<'label' | undefined>(undefined);
 
   // RYM chart builder state
   const [rymSearchTerm, setRYMSearchTerm] = createSignal<string[]>([]);
@@ -78,6 +82,9 @@ const ScrapePanel: Component = () => {
         setReleases(result.data.releases as BandcampRelease[]);
         setEntries([]);
         setStatus(null);
+        const label = (result.data as any).label as { name: string; url: string } | undefined;
+        setCurrentLabel(label ?? null);
+        setIsLabelResult(pendingMode() === 'label' && !!label);
       } else if (result.status === 'error') {
         setStatus(`Error: ${result.error ?? 'unknown'}`);
       }
@@ -100,13 +107,17 @@ const ScrapePanel: Component = () => {
       ? 'https://rateyourmusic.com/list/...'
       : 'https://bandcamp.com/tag/<tag>';
 
-  const handleScrape = (scrapeUrl?: string) => {
+  const handleScrape = (scrapeUrl?: string, mode?: 'label') => {
     const u = (scrapeUrl ?? url()).trim();
     if (!u || !hasToken() || !menubarOnline()) return;
     setEntries([]);
     setReleases([]);
+    setCurrentLabel(null);
+    setIsLabelResult(false);
+    setPendingMode(mode);
     setStatus('Scraping on your Mac…');
-    const id = requestScrape({ source: source(), url: u });
+    setLastScrapedUrl(u);
+    const id = requestScrape({ source: source(), url: u, mode });
     setActiveRequestId(id);
   };
 
@@ -293,6 +304,17 @@ const ScrapePanel: Component = () => {
 
         {/* Bandcamp results */}
         <Show when={releases().length > 0}>
+          <Show when={currentLabel() && !isLabelResult() && hasToken() && menubarOnline()}>
+            <button
+              onClick={() => handleScrape(lastScrapedUrl() ?? url(), 'label')}
+              class="self-start btn-secondary text-xs px-3 py-1"
+            >
+              Explore label: {currentLabel()?.name} →
+            </button>
+          </Show>
+          <Show when={isLabelResult() && currentLabel()}>
+            <div class="text-xs font-medium text-fg">Releases on {currentLabel()?.name}</div>
+          </Show>
           <div class="grid grid-cols-2 gap-3">
             <For each={releases()}>
               {(release) => (
