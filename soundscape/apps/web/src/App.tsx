@@ -49,6 +49,7 @@ import {
 } from '@soundscape/utils';
 import { useHashState } from './lib/use-hash-state';
 import { useTheme } from './lib/use-theme';
+import { menubarOnline, connected } from './lib/scrape-bridge';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -247,6 +248,17 @@ const App: Component = () => {
           />
 
           <div class="flex flex-1 gap-2 justify-end items-center w-full">
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2">
+                <span class={`w-2 h-2 rounded-full ${menubarOnline() ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span class="text-xs text-fg-muted">Menu bar</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class={`w-2 h-2 rounded-full ${connected() ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span class="text-xs text-fg-muted">WS</span>
+              </div>
+            </div>
+
             <PairWsDropdown />
 
             <div

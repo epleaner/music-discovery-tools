@@ -136,18 +136,6 @@ const ScrapePanel: Component = () => {
       </div>
 
       <div class="flex flex-col gap-4 p-4">
-        {/* Presence */}
-        <div class="flex items-center gap-1.5">
-          <Show when={menubarOnline()}>
-            <span class="w-2 h-2 rounded-full bg-green-500" />
-            <span class="text-green-600 dark:text-green-400">Menu bar connected</span>
-          </Show>
-          <Show when={!menubarOnline()}>
-            <span class="w-2 h-2 rounded-full bg-fg-subtle" />
-            <span class="text-fg-muted">Menu bar offline — open the RYM MenuBar app on your Mac</span>
-          </Show>
-        </div>
-
         {/* RYM chart builder (RYM sub-tab only) */}
         <Show when={source() === 'rym'}>
           <div class="flex flex-col gap-3">
