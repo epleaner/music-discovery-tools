@@ -89,7 +89,7 @@ export function disconnectScrapeBridge() {
   setMenubarOnline(false);
 }
 
-export function requestScrape(params: { source: 'rym'; url: string }): string {
+export function requestScrape(params: { source: 'rym' | 'bandcamp'; url: string }): string {
   const requestId = crypto.randomUUID();
   if (ws?.readyState !== WebSocket.OPEN) {
     setTimeout(() => scrapeErrorCbs.forEach((cb) => cb(requestId, 'connection lost')), 0);

@@ -1,5 +1,5 @@
 import { Component, Show, For, createSignal, onMount, onCleanup } from 'solid-js';
-import type { RymEntry } from '@soundscape/types';
+import type { RymEntry, BandcampRelease } from '@soundscape/types';
 import { trpc } from '../lib/trpc';
 import {
   initScrapeBridge,
@@ -12,12 +12,16 @@ import {
 
 const TOKEN_KEY = 'scrape_pairing_token';
 
+type Source = 'rym' | 'bandcamp';
+
 const ScrapePanel: Component = () => {
   const [token, setToken] = createSignal(localStorage.getItem(TOKEN_KEY) ?? '');
   const [tokenInput, setTokenInput] = createSignal('');
-  const [rymUrl, setRymUrl] = createSignal('');
+  const [url, setUrl] = createSignal('');
+  const [source, setSource] = createSignal<Source>('rym');
   const [status, setStatus] = createSignal<string | null>(null);
   const [entries, setEntries] = createSignal<RymEntry[]>([]);
+  const [releases, setReleases] = createSignal<BandcampRelease[]>([]);
   const [activeRequestId, setActiveRequestId] = createSignal<string | null>(null);
 
   onMount(() => {
@@ -35,6 +39,11 @@ const ScrapePanel: Component = () => {
       }
       if (result.status === 'done' && result.data?.kind === 'rym') {
         setEntries(result.data.entries as RymEntry[]);
+        setReleases([]);
+        setStatus(null);
+      } else if (result.status === 'done' && result.data?.kind === 'bandcamp') {
+        setReleases(result.data.releases as BandcampRelease[]);
+        setEntries([]);
         setStatus(null);
       } else if (result.status === 'error') {
         setStatus(`Error: ${result.error ?? 'unknown'}`);
@@ -68,16 +77,22 @@ const ScrapePanel: Component = () => {
     return t.slice(0, 4) + '…';
   };
 
+  const urlPlaceholder = () =>
+    source() === 'rym'
+      ? 'https://rateyourmusic.com/list/...'
+      : 'https://bandcamp.com/tag/<tag>';
+
   const handleScrape = () => {
-    const url = rymUrl().trim();
-    if (!url || !token() || !menubarOnline()) return;
+    const u = url().trim();
+    if (!u || !token() || !menubarOnline()) return;
     setEntries([]);
+    setReleases([]);
     setStatus('Scraping on your Mac…');
-    const id = requestScrape({ source: 'rym', url });
+    const id = requestScrape({ source: source(), url: u });
     setActiveRequestId(id);
   };
 
-  const scrapeDisabled = () => !token() || !menubarOnline() || !rymUrl().trim();
+  const scrapeDisabled = () => !token() || !menubarOnline() || !url().trim();
 
   return (
     <div class="flex flex-col gap-4 p-4 text-xs">
@@ -116,15 +131,34 @@ const ScrapePanel: Component = () => {
         </Show>
       </div>
 
+      {/* Source selector */}
+      <div class="flex flex-col gap-1.5">
+        <div class="font-medium text-fg">Source</div>
+        <div class="flex gap-1 p-0.5 bg-bg-muted rounded-md w-fit">
+          <button
+            onClick={() => setSource('rym')}
+            class={`px-3 py-1 rounded text-xs transition-colors ${source() === 'rym' ? 'bg-bg text-fg shadow-sm' : 'text-fg-muted hover:text-fg'}`}
+          >
+            RateYourMusic
+          </button>
+          <button
+            onClick={() => setSource('bandcamp')}
+            class={`px-3 py-1 rounded text-xs transition-colors ${source() === 'bandcamp' ? 'bg-bg text-fg shadow-sm' : 'text-fg-muted hover:text-fg'}`}
+          >
+            Bandcamp
+          </button>
+        </div>
+      </div>
+
       {/* URL + Scrape */}
       <div class="flex flex-col gap-1.5">
-        <div class="font-medium text-fg">RYM URL</div>
+        <div class="font-medium text-fg">URL</div>
         <div class="flex gap-2">
           <input
             type="url"
-            placeholder="https://rateyourmusic.com/list/..."
-            value={rymUrl()}
-            onInput={(e) => setRymUrl(e.currentTarget.value)}
+            placeholder={urlPlaceholder()}
+            value={url()}
+            onInput={(e) => setUrl(e.currentTarget.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !scrapeDisabled()) handleScrape(); }}
             class="flex-1 input text-xs"
           />
@@ -143,7 +177,7 @@ const ScrapePanel: Component = () => {
         <div class="text-fg-muted">{status()}</div>
       </Show>
 
-      {/* Results */}
+      {/* RYM results */}
       <Show when={entries().length > 0}>
         <div class="overflow-x-auto">
           <table class="w-full border-collapse text-xs">
@@ -170,6 +204,34 @@ const ScrapePanel: Component = () => {
               </For>
             </tbody>
           </table>
+        </div>
+      </Show>
+
+      {/* Bandcamp results */}
+      <Show when={releases().length > 0}>
+        <div class="grid grid-cols-2 gap-3">
+          <For each={releases()}>
+            {(release) => (
+              <a
+                href={release.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex flex-col gap-1.5 rounded-md border border-border p-2 hover:bg-bg-muted transition-colors"
+              >
+                <Show when={release.imageUrl}>
+                  <img
+                    src={release.imageUrl}
+                    alt={release.title}
+                    class="w-full aspect-square object-cover rounded"
+                  />
+                </Show>
+                <div class="font-medium text-fg leading-tight">{release.title}</div>
+                <Show when={release.artist}>
+                  <div class="text-fg-muted">{release.artist}</div>
+                </Show>
+              </a>
+            )}
+          </For>
         </div>
       </Show>
     </div>
