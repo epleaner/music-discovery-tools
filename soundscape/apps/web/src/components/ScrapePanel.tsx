@@ -25,8 +25,9 @@ const ScrapePanel: Component = () => {
   const [activeRequestId, setActiveRequestId] = createSignal<string | null>(null);
   const [currentLabel, setCurrentLabel] = createSignal<{ name: string; url: string } | null>(null);
   const [isLabelResult, setIsLabelResult] = createSignal(false);
+  const [isRelatedResult, setIsRelatedResult] = createSignal(false);
   const [lastScrapedUrl, setLastScrapedUrl] = createSignal<string | null>(null);
-  const [pendingMode, setPendingMode] = createSignal<'label' | undefined>(undefined);
+  const [pendingMode, setPendingMode] = createSignal<'label' | 'related' | undefined>(undefined);
 
   // RYM chart builder state
   const [rymSearchTerm, setRYMSearchTerm] = createSignal<string[]>([]);
@@ -85,6 +86,7 @@ const ScrapePanel: Component = () => {
         const label = (result.data as any).label as { name: string; url: string } | undefined;
         setCurrentLabel(label ?? null);
         setIsLabelResult(pendingMode() === 'label' && !!label);
+        setIsRelatedResult(pendingMode() === 'related');
       } else if (result.status === 'error') {
         setStatus(`Error: ${result.error ?? 'unknown'}`);
       }
@@ -107,13 +109,19 @@ const ScrapePanel: Component = () => {
       ? 'https://rateyourmusic.com/list/...'
       : 'https://bandcamp.com/tag/<tag>';
 
-  const handleScrape = (scrapeUrl?: string, mode?: 'label') => {
+  const isAlbumOrTrackUrl = () => {
+    const u = lastScrapedUrl();
+    return !!u && (u.includes('/album/') || u.includes('/track/'));
+  };
+
+  const handleScrape = (scrapeUrl?: string, mode?: 'label' | 'related') => {
     const u = (scrapeUrl ?? url()).trim();
     if (!u || !hasToken() || !menubarOnline()) return;
     setEntries([]);
     setReleases([]);
     setCurrentLabel(null);
     setIsLabelResult(false);
+    setIsRelatedResult(false);
     setPendingMode(mode);
     setStatus('Scraping on your Mac…');
     setLastScrapedUrl(u);
@@ -304,7 +312,7 @@ const ScrapePanel: Component = () => {
 
         {/* Explore-label button — show whenever a label is present, even if this
             page returned no release grid (an album page has a label but no grid). */}
-        <Show when={currentLabel() && !isLabelResult() && hasToken() && menubarOnline()}>
+        <Show when={currentLabel() && !isLabelResult() && !isRelatedResult() && hasToken() && menubarOnline()}>
           <button
             onClick={() => handleScrape(lastScrapedUrl() ?? url(), 'label')}
             class="self-start btn-secondary text-xs px-3 py-1"
@@ -313,10 +321,23 @@ const ScrapePanel: Component = () => {
           </button>
         </Show>
 
+        {/* Related button — only on album/track pages, not on label/related results */}
+        <Show when={hasToken() && menubarOnline() && isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()}>
+          <button
+            onClick={() => handleScrape(lastScrapedUrl() ?? url(), 'related')}
+            class="self-start btn-secondary text-xs px-3 py-1"
+          >
+            Related →
+          </button>
+        </Show>
+
         {/* Bandcamp results */}
         <Show when={releases().length > 0}>
           <Show when={isLabelResult() && currentLabel()}>
             <div class="text-xs font-medium text-fg">Releases on {currentLabel()?.name}</div>
+          </Show>
+          <Show when={isRelatedResult()}>
+            <div class="text-xs font-medium text-fg">You may also like</div>
           </Show>
           <div class="grid grid-cols-2 gap-3">
             <For each={releases()}>
