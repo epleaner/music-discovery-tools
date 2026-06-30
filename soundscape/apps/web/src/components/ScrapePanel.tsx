@@ -302,16 +302,19 @@ const ScrapePanel: Component = () => {
           </div>
         </Show>
 
+        {/* Explore-label button — show whenever a label is present, even if this
+            page returned no release grid (an album page has a label but no grid). */}
+        <Show when={currentLabel() && !isLabelResult() && hasToken() && menubarOnline()}>
+          <button
+            onClick={() => handleScrape(lastScrapedUrl() ?? url(), 'label')}
+            class="self-start btn-secondary text-xs px-3 py-1"
+          >
+            Explore label: {currentLabel()?.name} →
+          </button>
+        </Show>
+
         {/* Bandcamp results */}
         <Show when={releases().length > 0}>
-          <Show when={currentLabel() && !isLabelResult() && hasToken() && menubarOnline()}>
-            <button
-              onClick={() => handleScrape(lastScrapedUrl() ?? url(), 'label')}
-              class="self-start btn-secondary text-xs px-3 py-1"
-            >
-              Explore label: {currentLabel()?.name} →
-            </button>
-          </Show>
           <Show when={isLabelResult() && currentLabel()}>
             <div class="text-xs font-medium text-fg">Releases on {currentLabel()?.name}</div>
           </Show>
