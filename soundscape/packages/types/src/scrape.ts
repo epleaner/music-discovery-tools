@@ -13,14 +13,14 @@ export interface BandcampRelease {
   url: string;
   imageUrl?: string;
 }
-export type BandcampScrapeData = { kind: 'bandcamp'; releases: BandcampRelease[] };
+export type BandcampScrapeData = { kind: 'bandcamp'; releases: BandcampRelease[]; label?: { name: string; url: string } };
 
 export type ScrapeData = RymScrapeData | BandcampScrapeData;
 
 export type ScrapeStatus = 'pending' | 'done' | 'error';
 
 export type RegisterMsg = { type: 'register'; token: string; clientType: ClientType };
-export type ScrapeMsg = { type: 'scrape'; requestId: string; source: ScrapeSource; url: string };
+export type ScrapeMsg = { type: 'scrape'; requestId: string; source: ScrapeSource; url: string; mode?: 'label' };
 export type ScrapeResultMsg = { type: 'scrape_result'; requestId: string; source: ScrapeSource; data: ScrapeData };
 export type ResultReadyMsg = { type: 'result_ready'; requestId: string };
 export type ScrapeErrorMsg = { type: 'scrape_error'; requestId: string; message: string };

@@ -89,15 +89,15 @@ export function disconnectScrapeBridge() {
   setMenubarOnline(false);
 }
 
-export function requestScrape(params: { source: 'rym' | 'bandcamp'; url: string }): string {
+export function requestScrape(params: { source: 'rym' | 'bandcamp'; url: string; mode?: 'label' }): string {
   const requestId = crypto.randomUUID();
   if (ws?.readyState !== WebSocket.OPEN) {
     setTimeout(() => scrapeErrorCbs.forEach((cb) => cb(requestId, 'connection lost')), 0);
     return requestId;
   }
-  ws.send(
-    JSON.stringify({ type: 'scrape', requestId, source: params.source, url: params.url })
-  );
+  const msg: Record<string, unknown> = { type: 'scrape', requestId, source: params.source, url: params.url };
+  if (params.mode !== undefined) msg.mode = params.mode;
+  ws.send(JSON.stringify(msg));
   return requestId;
 }
 
