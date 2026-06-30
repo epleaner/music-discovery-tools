@@ -262,7 +262,7 @@ const App: Component = () => {
             <PairWsDropdown />
 
             <div
-              class="flex items-center gap-2.5 border border-border btn cursor-pointer py-1.5"
+              class="flex items-center gap-2.5 border border-border btn cursor-pointer h-8 py-0"
               ref={colorThemeContainerRef}
               onClick={() =>
                 setShowColorThemeDropdown(!showColorThemeDropdown())
