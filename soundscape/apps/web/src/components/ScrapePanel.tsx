@@ -1,5 +1,5 @@
 import { Component, Show, For, createSignal, createMemo, onMount, onCleanup } from 'solid-js';
-import type { RymEntry, BandcampRelease } from '@soundscape/types';
+import type { RymEntry, BandcampRelease, BandcampAlbumDetail } from '@soundscape/types';
 import { normalizeCharacters } from '@soundscape/utils';
 import { trpc } from '../lib/trpc';
 import {
@@ -11,6 +11,7 @@ import {
   menubarOnline,
 } from '../lib/scrape-bridge';
 import GenreSelect from './GenreSelect';
+import BandcampPlayer from './BandcampPlayer';
 
 const TOKEN_KEY = 'scrape_pairing_token';
 
@@ -24,6 +25,7 @@ const ScrapePanel: Component = () => {
   const [releases, setReleases] = createSignal<BandcampRelease[]>([]);
   const [activeRequestId, setActiveRequestId] = createSignal<string | null>(null);
   const [currentLabel, setCurrentLabel] = createSignal<{ name: string; url: string } | null>(null);
+  const [album, setAlbum] = createSignal<BandcampAlbumDetail | null>(null);
   const [isLabelResult, setIsLabelResult] = createSignal(false);
   const [isRelatedResult, setIsRelatedResult] = createSignal(false);
   const [lastScrapedUrl, setLastScrapedUrl] = createSignal<string | null>(null);
@@ -85,6 +87,7 @@ const ScrapePanel: Component = () => {
         setStatus(null);
         const label = (result.data as any).label as { name: string; url: string } | undefined;
         setCurrentLabel(label ?? null);
+        setAlbum((result.data as any).album ?? null);
         setIsLabelResult(pendingMode() === 'label' && !!label);
         setIsRelatedResult(pendingMode() === 'related');
       } else if (result.status === 'error') {
@@ -120,6 +123,7 @@ const ScrapePanel: Component = () => {
     setEntries([]);
     setReleases([]);
     setCurrentLabel(null);
+    setAlbum(null);
     setIsLabelResult(false);
     setIsRelatedResult(false);
     setPendingMode(mode);
@@ -329,6 +333,57 @@ const ScrapePanel: Component = () => {
           >
             Related →
           </button>
+        </Show>
+
+        {/* Bandcamp album detail */}
+        <Show when={album()}>
+          <div class="flex flex-col gap-3 rounded-md border border-border p-3">
+            <div class="flex gap-3">
+              <Show when={album()!.imageUrl}>
+                <img
+                  src={album()!.imageUrl}
+                  alt={album()!.title}
+                  class="w-24 h-24 object-cover rounded shrink-0"
+                />
+              </Show>
+              <div class="flex flex-col gap-1 min-w-0">
+                <div class="font-medium text-fg leading-tight">{album()!.title}</div>
+                <div class="text-fg-muted">{album()!.artist}</div>
+                <Show when={album()!.releaseDate}>
+                  <div class="text-fg-subtle">
+                    {album()!.releaseDate!.replace(/ \d{2}:\d{2}:\d{2}.*/, '')}
+                  </div>
+                </Show>
+                <Show when={album()!.tags && album()!.tags!.length > 0}>
+                  <div class="flex flex-wrap gap-1 mt-1">
+                    <For each={album()!.tags}>
+                      {(tag) => (
+                        <span class="px-1.5 py-0.5 rounded bg-bg-muted text-fg-subtle text-xs">
+                          {tag}
+                        </span>
+                      )}
+                    </For>
+                  </div>
+                </Show>
+                <a
+                  href={album()!.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="mt-1 self-start btn-secondary text-xs px-2 py-1"
+                >
+                  Buy / open on Bandcamp ↗
+                </a>
+              </div>
+            </div>
+            <BandcampPlayer
+              tracks={album()!.tracks.map((t, i) => ({
+                name: t.name,
+                position: t.position ?? i + 1,
+                duration: t.duration ?? null,
+                streamUrl: t.streamUrl ?? null,
+              }))}
+            />
+          </div>
         </Show>
 
         {/* Bandcamp results */}
