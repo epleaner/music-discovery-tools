@@ -45,6 +45,7 @@ import {
   type Track,
   type RecentAlbum,
   type RecentArtist,
+  type ScrapeQuery,
 } from '@soundscape/types';
 import {
   groupTracksByAlbum,
@@ -176,9 +177,9 @@ const App: Component = () => {
     requestResolveInPanel({ artist: artist.name, kind: 'artist' });
   };
 
-  const handleRymScrape = (url: string) => {
+  const handleRymScrape = (url: string, query: ScrapeQuery) => {
     updateState({ rightPanel: 'scrape' });
-    requestUrlScrapeInPanel({ source: 'rym', url });
+    requestUrlScrapeInPanel({ source: 'rym', url, query });
   };
 
   const tabs: { id: View; label: string }[] = [

@@ -1,5 +1,5 @@
 import { Component, Show, For, createSignal, createMemo, createEffect, onMount, onCleanup } from 'solid-js';
-import type { RymEntry, RymAlbumDetail, BandcampRelease, BandcampAlbumDetail } from '@soundscape/types';
+import type { RymEntry, RymAlbumDetail, BandcampRelease, BandcampAlbumDetail, ScrapeQuery } from '@soundscape/types';
 import { normalizeCharacters } from '@soundscape/utils';
 import { trpc } from '../lib/trpc';
 import {
@@ -127,7 +127,7 @@ const ScrapePanel: Component = () => {
     return !!u && (u.includes('/album/') || u.includes('/track/'));
   };
 
-  const handleScrape = (scrapeUrl?: string, mode?: 'label' | 'related') => {
+  const handleScrape = (scrapeUrl?: string, mode?: 'label' | 'related', query?: ScrapeQuery) => {
     const u = (scrapeUrl ?? url()).trim();
     if (!u || !hasToken() || !menubarOnline()) return;
     setEntries([]);
@@ -140,7 +140,7 @@ const ScrapePanel: Component = () => {
     setPendingMode(mode);
     setStatus('Scraping on your Mac…');
     setLastScrapedUrl(u);
-    const id = requestScrape({ source: source(), url: u, mode });
+    const id = requestScrape({ source: source(), url: u, mode, query });
     setActiveRequestId(id);
   };
 
@@ -182,7 +182,7 @@ const ScrapePanel: Component = () => {
     setPendingScrapeUrl(null);
     setSource(req.source);
     setUrl(req.url);
-    handleScrape(req.url);
+    handleScrape(req.url, undefined, req.query);
   });
 
   return (
