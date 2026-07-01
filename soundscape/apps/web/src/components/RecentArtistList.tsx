@@ -18,6 +18,7 @@ interface RecentArtistListProps {
   isLoading?: boolean;
   error?: Error | null;
   onArtistClick?: (artistName: string) => void;
+  onArtistRowClick?: (artist: RecentArtist) => void;
 }
 
 const RecentArtistList: Component<RecentArtistListProps> = (props) => {
@@ -97,7 +98,9 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
 
             return (
               <div class='bg-bg'>
-                <div class='flex gap-2 items-center p-2 transition-colors hover:bg-bg-subtle'>
+                <div
+                  class='flex gap-2 items-center p-2 transition-colors hover:bg-bg-subtle cursor-pointer'
+                  onClick={() => props.onArtistRowClick?.(artist)}>
                   <Show when={getImageUrl(artist)}>
                     <img
                       src={getImageUrl(artist)}

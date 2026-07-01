@@ -42,6 +42,9 @@ import {
   type TimePeriod,
   type RecentViewType,
   type TopViewType,
+  type Track,
+  type RecentAlbum,
+  type RecentArtist,
 } from '@soundscape/types';
 import {
   groupTracksByAlbum,
@@ -49,7 +52,7 @@ import {
 } from '@soundscape/utils';
 import { useHashState } from './lib/use-hash-state';
 import { useTheme } from './lib/use-theme';
-import { menubarOnline, connected } from './lib/scrape-bridge';
+import { menubarOnline, connected, requestResolveInPanel } from './lib/scrape-bridge';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -151,6 +154,26 @@ const App: Component = () => {
     updateState({
       artist: artistName,
     });
+  };
+
+  const handleTrackResolveClick = (track: Track) => {
+    updateState({ rightPanel: 'scrape' });
+    requestResolveInPanel({
+      artist: track.artist['#text'],
+      album: track.album['#text'] || undefined,
+      kind: 'album',
+    });
+  };
+
+  const handleAlbumResolveClick = (album: RecentAlbum) => {
+    updateState({ rightPanel: 'scrape' });
+    requestResolveInPanel({ artist: album.artist, album: album.name, kind: 'album' });
+  };
+
+  const handleArtistResolveClick = (artist: RecentArtist) => {
+    handleArtistClick(artist.name);
+    updateState({ rightPanel: 'scrape' });
+    requestResolveInPanel({ artist: artist.name, kind: 'artist' });
   };
 
   const tabs: { id: View; label: string }[] = [
@@ -489,6 +512,7 @@ const App: Component = () => {
                                   isLoading={recentTracks.isLoading()}
                                   error={recentTracks.error()}
                                   onArtistClick={handleArtistClick}
+                                  onTrackClick={handleTrackResolveClick}
                                 />
                               </Match>
                               <Match when={recentViewType() === 'albums'}>
@@ -498,6 +522,7 @@ const App: Component = () => {
                                   isLoading={recentTracks.isLoading()}
                                   error={recentTracks.error()}
                                   onArtistClick={handleArtistClick}
+                                  onAlbumClick={handleAlbumResolveClick}
                                 />
                               </Match>
                               <Match when={recentViewType() === 'artists'}>
@@ -507,6 +532,7 @@ const App: Component = () => {
                                   isLoading={recentTracks.isLoading()}
                                   error={recentTracks.error()}
                                   onArtistClick={handleArtistClick}
+                                  onArtistRowClick={handleArtistResolveClick}
                                 />
                               </Match>
                             </Switch>

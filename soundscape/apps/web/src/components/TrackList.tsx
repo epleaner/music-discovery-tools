@@ -12,6 +12,7 @@ interface TrackListProps {
   isLoading?: boolean;
   error?: Error | null;
   onArtistClick?: (artistName: string) => void;
+  onTrackClick?: (track: Track) => void;
 }
 
 const TrackList: Component<TrackListProps> = (props) => {
@@ -108,7 +109,9 @@ const TrackList: Component<TrackListProps> = (props) => {
           });
 
           return (
-            <div class='flex items-center gap-2 p-2 transition-colors border-b border-border hover:bg-bg-subtle'>
+            <div
+              class='flex items-center gap-2 p-2 transition-colors border-b border-border hover:bg-bg-subtle cursor-pointer'
+              onClick={() => props.onTrackClick?.(track)}>
               <Show when={getImageUrl(track)}>
                 <img
                   src={getImageUrl(track)}
