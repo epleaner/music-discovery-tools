@@ -226,6 +226,21 @@ final class BridgeClient {
         if let label = scrapeResult.label {
             data["label"] = ["name": label.name, "url": label.url]
         }
+        if let album = scrapeResult.album {
+            var albumMap: [String: Any] = ["title": album.title, "url": album.url]
+            if let artist = album.artist { albumMap["artist"] = artist }
+            if let imageUrl = album.imageUrl { albumMap["imageUrl"] = imageUrl }
+            if let releaseDate = album.releaseDate { albumMap["releaseDate"] = releaseDate }
+            if let tags = album.tags { albumMap["tags"] = tags }
+            albumMap["tracks"] = album.tracks.map { t -> [String: Any] in
+                var tm: [String: Any] = ["name": t.name]
+                if let position = t.position { tm["position"] = position }
+                if let duration = t.duration { tm["duration"] = duration }
+                if let streamUrl = t.streamUrl { tm["streamUrl"] = streamUrl }
+                return tm
+            }
+            data["album"] = albumMap
+        }
         let payload: [String: Any] = [
             "type": "scrape_result",
             "requestId": requestId,
