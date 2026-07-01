@@ -28,6 +28,15 @@ enum BandcampResolver {
         return c.url!
     }
 
+    static func artistSearchURL(artist: String) -> URL {
+        var c = URLComponents(string: "https://bandcamp.com/search")!
+        c.queryItems = [
+            URLQueryItem(name: "q", value: artist),
+            URLQueryItem(name: "item_type", value: "b")   // bands/artists only
+        ]
+        return c.url!
+    }
+
     static func resolve(artist: String, album: String,
                         completion: @escaping (Result<BandcampMatch, FetchError>) -> Void) {
         let search = searchURL(artist: artist, album: album)
@@ -54,6 +63,68 @@ enum BandcampResolver {
                 DispatchQueue.main.async { completion(.failure(.cdp(error.localizedDescription))) }
             }
         }
+    }
+
+    /// Resolves an artist/band name to their Bandcamp artist root URL (e.g. `https://fourtet.bandcamp.com`).
+    static func resolveArtist(artist: String,
+                              completion: @escaping (Result<BandcampMatch, FetchError>) -> Void) {
+        let search = artistSearchURL(artist: artist)
+        bcLog.info("resolveArtist: \(artist, privacy: .public)")
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let json = try CDPSession.scrape(url: search, scraperJS: resultsJS) { raw in
+                    guard let d = raw.data(using: .utf8),
+                          let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else { return false }
+                    if (o["n"] as? Int ?? 0) > 0 { return true }
+                    return (o["rs"] as? String) == "complete"
+                }
+                let match = pickBestArtist(json: json, artist: artist, fallback: search)
+                bcLog.info("resolveArtist result confident=\(match.confident, privacy: .public) url=\(match.url.absoluteString, privacy: .public)")
+                DispatchQueue.main.async { completion(.success(match)) }
+            } catch let e as FetchError {
+                bcLog.error("resolveArtist failed: \(e.description, privacy: .public)")
+                DispatchQueue.main.async { completion(.failure(e)) }
+            } catch {
+                DispatchQueue.main.async { completion(.failure(.cdp(error.localizedDescription))) }
+            }
+        }
+    }
+
+    static func pickBestArtist(json: String, artist: String, fallback: URL) -> BandcampMatch {
+        guard let data = json.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let results = obj["results"] as? [[String: Any]] else {
+            return BandcampMatch(url: fallback, confident: false)
+        }
+
+        let nar = norm(artist)
+
+        var bestURL: URL?
+        var bestScore = -1
+
+        for r in results {
+            let type = (r["type"] as? String)?.uppercased() ?? ""
+            guard type == "ARTIST" || type == "BAND",
+                  let urlStr = r["url"] as? String, let url = URL(string: urlStr) else { continue }
+            let name = norm(r["name"] as? String ?? "")
+
+            var score = 0
+            if name == nar { score = 3 }
+            else if name.hasPrefix(nar) || nar.hasPrefix(name) { score = 2 }
+            else if name.contains(nar) || nar.contains(name) { score = 1 }
+
+            if score > bestScore {
+                bestScore = score
+                bestURL = url
+            }
+        }
+
+        guard let url = bestURL else {
+            return BandcampMatch(url: fallback, confident: false)
+        }
+        let confident = bestScore >= 2
+        return BandcampMatch(url: confident ? url : fallback, confident: confident)
     }
 
     // MARK: - Scoring

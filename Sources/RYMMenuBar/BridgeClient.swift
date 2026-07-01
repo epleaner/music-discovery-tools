@@ -17,7 +17,7 @@ final class BridgeClient {
     // Serial scrape queue: only one in-flight scrape at a time (single CDP tab).
     private let scrapeQueue = DispatchQueue(label: "com.elipleaner.rym-menubar.bridge.scrape")
     private var isScraping = false
-    private var pendingScrapes: [(requestId: String, url: String, source: String, mode: String)] = []
+    private var pendingScrapes: [(requestId: String, url: String, source: String, mode: String, query: [String: Any]?)] = []
 
     init() {
         let urlString = ProcessInfo.processInfo.environment["SCRAPE_BRIDGE_URL"]
@@ -101,6 +101,13 @@ final class BridgeClient {
             }
             enqueueScrape(requestId: requestId, url: url, source: source, mode: mode)
         case "bandcamp":
+            if mode == "resolve" {
+                // No input url to allowlist-check: the resolve path only ever hits
+                // bandcamp.com/search and *.bandcamp.com result pages it discovers.
+                let query = obj["query"] as? [String: Any]
+                enqueueScrape(requestId: requestId, url: url, source: source, mode: mode, query: query)
+                return
+            }
             guard isAllowedBandcampHost(url) else {
                 sendError(requestId: requestId, message: "url not allowed"); return
             }
@@ -122,23 +129,34 @@ final class BridgeClient {
 
     // MARK: - Scrape serialization
 
-    private func enqueueScrape(requestId: String, url: String, source: String, mode: String = "") {
+    private func enqueueScrape(requestId: String, url: String, source: String, mode: String = "", query: [String: Any]? = nil) {
         scrapeQueue.async { [weak self] in
             guard let self = self else { return }
             if self.isScraping {
-                self.pendingScrapes.append((requestId: requestId, url: url, source: source, mode: mode))
+                self.pendingScrapes.append((requestId: requestId, url: url, source: source, mode: mode, query: query))
             } else {
-                self.runScrape(requestId: requestId, url: url, source: source, mode: mode)
+                self.runScrape(requestId: requestId, url: url, source: source, mode: mode, query: query)
             }
         }
     }
 
-    private func runScrape(requestId: String, url: String, source: String = "rym", mode: String = "") {
+    private func finishAndRunNext() {
+        // Must be called from scrapeQueue.
+        isScraping = false
+        if let next = pendingScrapes.first {
+            pendingScrapes.removeFirst()
+            runScrape(requestId: next.requestId, url: next.url, source: next.source, mode: next.mode, query: next.query)
+        }
+    }
+
+    private func runScrape(requestId: String, url: String, source: String = "rym", mode: String = "", query: [String: Any]? = nil) {
         // Must be called from scrapeQueue.
         isScraping = true
         bridgeLog.info("bridge: scraping source=\(source, privacy: .public) mode=\(mode, privacy: .public) requestId=\(requestId, privacy: .public) url=\(url, privacy: .public)")
 
-        if source == "bandcamp" {
+        if source == "bandcamp" && mode == "resolve" {
+            runResolveScrape(requestId: requestId, query: query)
+        } else if source == "bandcamp" {
             let fetcher: (@escaping (Result<BandcampScrapeResult, FetchError>) -> Void) -> Void
             switch mode {
             case "label":
@@ -157,14 +175,7 @@ final class BridgeClient {
                 case .failure(let err):
                     self.sendError(requestId: requestId, message: err.description)
                 }
-                self.scrapeQueue.async { [weak self] in
-                    guard let self = self else { return }
-                    self.isScraping = false
-                    if let next = self.pendingScrapes.first {
-                        self.pendingScrapes.removeFirst()
-                        self.runScrape(requestId: next.requestId, url: next.url, source: next.source, mode: next.mode)
-                    }
-                }
+                self.scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
             }
         } else {
             let fetcher = Fetcher()
@@ -176,13 +187,75 @@ final class BridgeClient {
                 case .failure(let err):
                     self.sendError(requestId: requestId, message: err.description)
                 }
-                self.scrapeQueue.async { [weak self] in
-                    guard let self = self else { return }
-                    self.isScraping = false
-                    if let next = self.pendingScrapes.first {
-                        self.pendingScrapes.removeFirst()
-                        self.runScrape(requestId: next.requestId, url: next.url, source: next.source, mode: next.mode)
+                self.scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
+            }
+        }
+    }
+
+    // MARK: - Resolve mode
+
+    private func runResolveScrape(requestId: String, query: [String: Any]?) {
+        // Must be called from scrapeQueue.
+        guard let query = query,
+              let artist = query["artist"] as? String, !artist.isEmpty else {
+            sendError(requestId: requestId, message: "resolve requires query.artist")
+            scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
+            return
+        }
+        let kind = query["kind"] as? String ?? "album"
+        let album = query["album"] as? String
+
+        if kind == "artist" {
+            BandcampResolver.resolveArtist(artist: artist) { [weak self] result in
+                guard let self = self else { return }
+                switch result {
+                case .success(let match) where match.confident:
+                    let musicURLString = match.url.absoluteString.hasSuffix("/music")
+                        ? match.url.absoluteString : match.url.absoluteString + "/music"
+                    BandcampFetcher.fetch(urlString: musicURLString) { [weak self] fetchResult in
+                        guard let self = self else { return }
+                        switch fetchResult {
+                        case .success(let scrapeResult):
+                            self.sendBandcampResult(requestId: requestId, scrapeResult: scrapeResult)
+                        case .failure(let err):
+                            self.sendError(requestId: requestId, message: err.description)
+                        }
+                        self.scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
                     }
+                case .success:
+                    self.sendError(requestId: requestId, message: "no Bandcamp match found")
+                    self.scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
+                case .failure(let err):
+                    self.sendError(requestId: requestId, message: err.description)
+                    self.scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
+                }
+            }
+        } else {
+            guard let album = album, !album.isEmpty else {
+                sendError(requestId: requestId, message: "resolve requires query.album for kind=\(kind)")
+                scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
+                return
+            }
+            BandcampResolver.resolve(artist: artist, album: album) { [weak self] result in
+                guard let self = self else { return }
+                switch result {
+                case .success(let match) where match.confident:
+                    BandcampFetcher.fetch(urlString: match.url.absoluteString) { [weak self] fetchResult in
+                        guard let self = self else { return }
+                        switch fetchResult {
+                        case .success(let scrapeResult):
+                            self.sendBandcampResult(requestId: requestId, scrapeResult: scrapeResult)
+                        case .failure(let err):
+                            self.sendError(requestId: requestId, message: err.description)
+                        }
+                        self.scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
+                    }
+                case .success:
+                    self.sendError(requestId: requestId, message: "no Bandcamp match found")
+                    self.scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
+                case .failure(let err):
+                    self.sendError(requestId: requestId, message: err.description)
+                    self.scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
                 }
             }
         }
