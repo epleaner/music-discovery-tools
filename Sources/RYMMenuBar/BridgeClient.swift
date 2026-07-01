@@ -99,7 +99,8 @@ final class BridgeClient {
             guard isAllowedHost(url, domain: "rateyourmusic.com") else {
                 sendError(requestId: requestId, message: "url not allowed"); return
             }
-            enqueueScrape(requestId: requestId, url: url, source: source, mode: mode)
+            let query = obj["query"] as? [String: Any]
+            enqueueScrape(requestId: requestId, url: url, source: source, mode: mode, query: query)
         case "bandcamp":
             if mode == "resolve" {
                 // No input url to allowlist-check: the resolve path only ever hits
@@ -184,9 +185,51 @@ final class BridgeClient {
                 switch result {
                 case .success(let scrapeResult):
                     self.sendResult(requestId: requestId, entries: scrapeResult.entries, album: scrapeResult.album)
+                    self.scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
+                case .failure(.notFound):
+                    self.runRymSearchFallback(requestId: requestId, query: query)
                 case .failure(let err):
                     self.sendError(requestId: requestId, message: err.description)
+                    self.scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
                 }
+            }
+        }
+    }
+
+    // MARK: - RYM not-found fallback
+
+    /// Called when the constructed RYM url 404s. Falls back to a DuckDuckGo
+    /// search (never RateYourMusic itself) to find the correct RYM url, then
+    /// scrapes that one url. Requires `query` (artist/album/kind) on the
+    /// original scrape request; without it, reports the original not-found error.
+    private func runRymSearchFallback(requestId: String, query: [String: Any]?) {
+        // Must be called from scrapeQueue.
+        guard let query = query,
+              let artist = query["artist"] as? String, !artist.isEmpty else {
+            sendError(requestId: requestId, message: FetchError.notFound.description)
+            scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
+            return
+        }
+        let kind = query["kind"] as? String ?? "album"
+        let album = query["album"] as? String
+
+        RymResolver.resolve(artist: artist, album: album, kind: kind) { [weak self] result in
+            guard let self = self else { return }
+            switch result {
+            case .success(let foundURL):
+                let fetcher = Fetcher()
+                fetcher.fetchScrape(urlString: foundURL.absoluteString) { [weak self] fetchResult in
+                    guard let self = self else { return }
+                    switch fetchResult {
+                    case .success(let scrapeResult):
+                        self.sendResult(requestId: requestId, entries: scrapeResult.entries, album: scrapeResult.album)
+                    case .failure(let err):
+                        self.sendError(requestId: requestId, message: err.description)
+                    }
+                    self.scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
+                }
+            case .failure(let err):
+                self.sendError(requestId: requestId, message: err.description)
                 self.scrapeQueue.async { [weak self] in self?.finishAndRunNext() }
             }
         }
