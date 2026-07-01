@@ -179,11 +179,11 @@ final class BridgeClient {
             }
         } else {
             let fetcher = Fetcher()
-            fetcher.fetch(urlString: url) { [weak self] result in
+            fetcher.fetchScrape(urlString: url) { [weak self] result in
                 guard let self = self else { return }
                 switch result {
-                case .success(let entries):
-                    self.sendResult(requestId: requestId, entries: entries)
+                case .success(let scrapeResult):
+                    self.sendResult(requestId: requestId, entries: scrapeResult.entries, album: scrapeResult.album)
                 case .failure(let err):
                     self.sendError(requestId: requestId, message: err.description)
                 }
@@ -263,7 +263,7 @@ final class BridgeClient {
 
     // MARK: - Outbound messages
 
-    private func sendResult(requestId: String, entries: [Entry]) {
+    private func sendResult(requestId: String, entries: [Entry], album: RymAlbumDetail? = nil) {
         var entryMaps: [[String: Any]] = []
         for e in entries {
             var m: [String: Any] = ["artist": e.artist, "album": e.album]
@@ -275,17 +275,25 @@ final class BridgeClient {
             if let wnt = e.wants { m["wants"] = wnt }
             entryMaps.append(m)
         }
+        var data: [String: Any] = ["kind": "rym", "entries": entryMaps]
+        if let album = album {
+            var albumMap: [String: Any] = ["title": album.title, "artist": album.artist, "url": album.url]
+            if let releaseDate = album.releaseDate { albumMap["releaseDate"] = releaseDate }
+            if let genres = album.genres, !genres.isEmpty { albumMap["genres"] = genres }
+            if let descriptors = album.descriptors, !descriptors.isEmpty { albumMap["descriptors"] = descriptors }
+            if let avgRating = album.avgRating { albumMap["avgRating"] = avgRating }
+            if let ratings = album.ratings { albumMap["ratings"] = ratings }
+            if let tracks = album.tracks, !tracks.isEmpty { albumMap["tracks"] = tracks }
+            data["album"] = albumMap
+        }
         let payload: [String: Any] = [
             "type": "scrape_result",
             "requestId": requestId,
             "source": "rym",
-            "data": [
-                "kind": "rym",
-                "entries": entryMaps
-            ] as [String: Any]
+            "data": data
         ]
         if let t = task { send(payload, via: t) }
-        bridgeLog.info("bridge: sent scrape_result requestId=\(requestId, privacy: .public) entries=\(entries.count, privacy: .public)")
+        bridgeLog.info("bridge: sent scrape_result requestId=\(requestId, privacy: .public) entries=\(entries.count, privacy: .public) album=\(album != nil, privacy: .public)")
     }
 
     private func sendBandcampResult(requestId: String, scrapeResult: BandcampScrapeResult) {
