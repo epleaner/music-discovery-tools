@@ -40,9 +40,24 @@ enum CDPSession {
                 throw FetchError.cdp("attachToTarget returned no sessionId")
             }
 
+            let targetHost = url.host ?? ""
+
             var last = ""
             for _ in 0..<maxPolls {
                 Thread.sleep(forTimeInterval: interval)
+
+                // Guard against the CDP navigation race: a freshly created tab
+                // reports readyState "complete" while still on the blank
+                // pre-navigation page, before Page.navigate has taken effect.
+                // Skip evaluating scraperJS until the tab has actually landed
+                // on the target host.
+                let locRes = try client.call("Runtime.evaluate",
+                                             ["expression": "document.location.host", "returnByValue": true],
+                                             sessionId: sessionId)
+                guard let locInner = locRes["result"] as? [String: Any],
+                      let host = locInner["value"] as? String,
+                      !host.isEmpty, host == targetHost else { continue }
+
                 let res = try client.call("Runtime.evaluate",
                                           ["expression": scraperJS, "returnByValue": true],
                                           sessionId: sessionId)

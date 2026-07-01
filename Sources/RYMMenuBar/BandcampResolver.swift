@@ -123,7 +123,10 @@ enum BandcampResolver {
         guard let url = bestURL else {
             return BandcampMatch(url: fallback, confident: false)
         }
-        let confident = bestScore >= 2
+        // Only an exact normalized match is confident enough to scrape
+        // directly — a prefix/contains match (e.g. "the beach boys" vs
+        // "the beach boy") is a different, unrelated artist.
+        let confident = bestScore == 3
         return BandcampMatch(url: confident ? url : fallback, confident: confident)
     }
 
