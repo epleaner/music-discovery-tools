@@ -344,30 +344,39 @@ const ScrapePanel: Component = () => {
           </div>
         </Show>
 
-        {/* Explore-label button — show whenever a label is present, even if this
-            page returned no release grid (an album page has a label but no grid). */}
-        <Show when={currentLabel() && !isLabelResult() && !isRelatedResult() && hasToken() && menubarOnline()}>
-          <button
-            onClick={() => handleScrape(lastScrapedUrl() ?? url(), 'label')}
-            class="self-start btn-secondary text-xs px-3 py-1"
-          >
-            Explore label: {currentLabel()?.name} →
-          </button>
-        </Show>
-
-        {/* Related button — only on album/track pages, not on label/related results */}
-        <Show when={hasToken() && menubarOnline() && isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()}>
-          <button
-            onClick={() => handleScrape(lastScrapedUrl() ?? url(), 'related')}
-            class="self-start btn-secondary text-xs px-3 py-1"
-          >
-            Related →
-          </button>
-        </Show>
+        {/* Branch actions — explore label, related, and buy/open in one row */}
+        <div class="flex flex-wrap gap-2">
+          <Show when={currentLabel() && !isLabelResult() && !isRelatedResult() && hasToken() && menubarOnline()}>
+            <button
+              onClick={() => handleScrape(lastScrapedUrl() ?? url(), 'label')}
+              class="btn-secondary text-xs px-3 py-1"
+            >
+              Explore label: {currentLabel()?.name} →
+            </button>
+          </Show>
+          <Show when={hasToken() && menubarOnline() && isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()}>
+            <button
+              onClick={() => handleScrape(lastScrapedUrl() ?? url(), 'related')}
+              class="btn-secondary text-xs px-3 py-1"
+            >
+              Related →
+            </button>
+          </Show>
+          <Show when={album()}>
+            <a
+              href={album()!.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-secondary text-xs px-3 py-1"
+            >
+              Buy / open on Bandcamp ↗
+            </a>
+          </Show>
+        </div>
 
         {/* Bandcamp album detail */}
         <Show when={album()}>
-          <div class="flex flex-col gap-3 rounded-md border border-border p-3">
+          <div class="flex flex-col gap-3">
             <div class="flex gap-3">
               <Show when={album()!.imageUrl}>
                 <img
@@ -395,14 +404,6 @@ const ScrapePanel: Component = () => {
                     </For>
                   </div>
                 </Show>
-                <a
-                  href={album()!.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="mt-1 self-start btn-secondary text-xs px-2 py-1"
-                >
-                  Buy / open on Bandcamp ↗
-                </a>
               </div>
             </div>
             <BandcampPlayer
