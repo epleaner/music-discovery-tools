@@ -6,9 +6,14 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001/ws';
 const [menubarOnline, setMenubarOnline] = createSignal(false);
 const [connected, setConnected] = createSignal(false);
 const [pendingResolve, setPendingResolve] = createSignal<ScrapeQuery | null>(null);
+const [pendingScrapeUrl, setPendingScrapeUrl] = createSignal<{ source: 'rym' | 'bandcamp'; url: string } | null>(null);
 
 export function requestResolveInPanel(q: ScrapeQuery) {
   setPendingResolve(q);
+}
+
+export function requestUrlScrapeInPanel(p: { source: 'rym' | 'bandcamp'; url: string }) {
+  setPendingScrapeUrl(p);
 }
 
 type ResultReadyCb = (requestId: string) => void;
@@ -136,4 +141,4 @@ export function setPairingToken(token: string): void {
   connect(token);
 }
 
-export { menubarOnline, connected, pendingResolve, setPendingResolve };
+export { menubarOnline, connected, pendingResolve, setPendingResolve, pendingScrapeUrl, setPendingScrapeUrl };

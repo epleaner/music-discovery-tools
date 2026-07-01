@@ -19,6 +19,7 @@ interface AlbumListProps {
   error?: Error | null;
   onArtistClick?: (artistName: string) => void;
   onAlbumClick?: (album: RecentAlbum) => void;
+  onRymScrape?: (url: string) => void;
 }
 
 const AlbumList: Component<AlbumListProps> = (props) => {
@@ -128,15 +129,15 @@ const AlbumList: Component<AlbumListProps> = (props) => {
                   <div class='flex-1 min-w-0'>
                     <div class='flex items-center gap-2'>
                       <div class='text-sm truncate'>{album.name}</div>
-                      <a
-                        href={getRYMAlbumUrl(album.artist, album.name)}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        onClick={(e) => e.stopPropagation()}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          props.onRymScrape?.(getRYMAlbumUrl(album.artist, album.name));
+                        }}
                         class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'
-                        title='View on RateYourMusic'>
+                        title='Scrape on RateYourMusic'>
                         rym
-                      </a>
+                      </button>
                     </div>
                     <div class='flex items-center gap-2'>
                       <div class='text-xs truncate text-fg-muted'>

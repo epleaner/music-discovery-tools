@@ -6,7 +6,7 @@ import type {
   ArtistInfoResponse,
 } from '@soundscape/types';
 import {
-  getRYMSearchUrl,
+  getRYMArtistUrl,
   fetchArtistInfo,
   getCached,
   getArtistCacheKey,
@@ -19,6 +19,7 @@ interface RecentArtistListProps {
   error?: Error | null;
   onArtistClick?: (artistName: string) => void;
   onArtistRowClick?: (artist: RecentArtist) => void;
+  onRymScrape?: (url: string) => void;
 }
 
 const RecentArtistList: Component<RecentArtistListProps> = (props) => {
@@ -111,15 +112,15 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                   <div class='flex-1 min-w-0'>
                     <div class='flex gap-2 items-center'>
                       <div class='text-sm truncate'>{artist.name}</div>
-                      <a
-                        href={getRYMSearchUrl(artist.name)}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        onClick={(e) => e.stopPropagation()}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          props.onRymScrape?.(getRYMArtistUrl(artist.name));
+                        }}
                         class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
-                        title='View on RateYourMusic'>
+                        title='Scrape on RateYourMusic'>
                         rym
-                      </a>
+                      </button>
                       <Show when={props.onArtistClick}>
                         <button
                           onClick={(e) => {

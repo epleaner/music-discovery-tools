@@ -1,5 +1,5 @@
 import { Component, Show, For, createSignal, createMemo, createEffect, onMount, onCleanup } from 'solid-js';
-import type { RymEntry, BandcampRelease, BandcampAlbumDetail } from '@soundscape/types';
+import type { RymEntry, RymAlbumDetail, BandcampRelease, BandcampAlbumDetail } from '@soundscape/types';
 import { normalizeCharacters } from '@soundscape/utils';
 import { trpc } from '../lib/trpc';
 import {
@@ -11,6 +11,8 @@ import {
   menubarOnline,
   pendingResolve,
   setPendingResolve,
+  pendingScrapeUrl,
+  setPendingScrapeUrl,
 } from '../lib/scrape-bridge';
 import GenreSelect from './GenreSelect';
 import BandcampPlayer from './BandcampPlayer';
@@ -24,6 +26,7 @@ const ScrapePanel: Component = () => {
   const [source, setSource] = createSignal<Source>('rym');
   const [status, setStatus] = createSignal<string | null>(null);
   const [entries, setEntries] = createSignal<RymEntry[]>([]);
+  const [rymAlbum, setRymAlbum] = createSignal<RymAlbumDetail | null>(null);
   const [releases, setReleases] = createSignal<BandcampRelease[]>([]);
   const [activeRequestId, setActiveRequestId] = createSignal<string | null>(null);
   const [currentLabel, setCurrentLabel] = createSignal<{ name: string; url: string } | null>(null);
@@ -81,6 +84,7 @@ const ScrapePanel: Component = () => {
       }
       if (result.status === 'done' && result.data?.kind === 'rym') {
         setEntries(result.data.entries as RymEntry[]);
+        setRymAlbum((result.data as any).album ?? null);
         setReleases([]);
         setStatus(null);
       } else if (result.status === 'done' && result.data?.kind === 'bandcamp') {
@@ -127,6 +131,7 @@ const ScrapePanel: Component = () => {
     const u = (scrapeUrl ?? url()).trim();
     if (!u || !hasToken() || !menubarOnline()) return;
     setEntries([]);
+    setRymAlbum(null);
     setReleases([]);
     setCurrentLabel(null);
     setAlbum(null);
@@ -152,6 +157,7 @@ const ScrapePanel: Component = () => {
     setPendingResolve(null);
     setSource('bandcamp');
     setEntries([]);
+    setRymAlbum(null);
     setReleases([]);
     setCurrentLabel(null);
     setAlbum(null);
@@ -164,6 +170,19 @@ const ScrapePanel: Component = () => {
     );
     const id = requestScrape({ source: 'bandcamp', mode: 'resolve', query });
     setActiveRequestId(id);
+  });
+
+  createEffect(() => {
+    const req = pendingScrapeUrl();
+    if (!req) return;
+    if (!hasToken() || !menubarOnline()) {
+      setStatus('Connect the menu bar & set a token to scrape.');
+      return;
+    }
+    setPendingScrapeUrl(null);
+    setSource(req.source);
+    setUrl(req.url);
+    handleScrape(req.url);
   });
 
   return (
@@ -341,6 +360,44 @@ const ScrapePanel: Component = () => {
                 </For>
               </tbody>
             </table>
+          </div>
+        </Show>
+
+        {/* RYM album detail */}
+        <Show when={rymAlbum()}>
+          <div class="flex flex-col gap-2">
+            <div class="font-medium text-fg leading-tight">{rymAlbum()!.title}</div>
+            <div class="text-fg-muted">{rymAlbum()!.artist}</div>
+            <Show when={rymAlbum()!.releaseDate}>
+              <div class="text-fg-subtle">{rymAlbum()!.releaseDate}</div>
+            </Show>
+            <Show when={rymAlbum()!.genres && rymAlbum()!.genres!.length > 0}>
+              <div class="flex flex-wrap gap-1">
+                <For each={rymAlbum()!.genres}>
+                  {(genre) => (
+                    <span class="px-1.5 py-0.5 rounded bg-bg-muted text-fg-subtle text-xs">
+                      {genre}
+                    </span>
+                  )}
+                </For>
+              </div>
+            </Show>
+            <Show when={rymAlbum()!.avgRating != null}>
+              <div class="text-fg-muted">
+                {rymAlbum()!.avgRating!.toFixed(2)}
+                <Show when={rymAlbum()!.ratings != null}> ({rymAlbum()!.ratings} ratings)</Show>
+              </div>
+            </Show>
+            <Show when={rymAlbum()!.descriptors && rymAlbum()!.descriptors!.length > 0}>
+              <div class="text-fg-subtle">{rymAlbum()!.descriptors!.join(', ')}</div>
+            </Show>
+            <Show when={rymAlbum()!.tracks && rymAlbum()!.tracks!.length > 0}>
+              <ol class="list-decimal list-inside text-fg-muted">
+                <For each={rymAlbum()!.tracks}>
+                  {(track) => <li>{track}</li>}
+                </For>
+              </ol>
+            </Show>
           </div>
         </Show>
 
