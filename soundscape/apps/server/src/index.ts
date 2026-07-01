@@ -173,11 +173,16 @@ wss.on('connection', (ws) => {
     }
 
     if (data.type === 'scrape') {
-      const { requestId, source, url } = data;
+      const { requestId, source, url, mode, query } = data;
       const token = connectionToken;
       if (!token) return;
 
-      if (!isUrlAllowed(source, url)) {
+      if (mode === 'resolve') {
+        if (!query || !query.artist) {
+          sender.send(JSON.stringify({ type: 'scrape_error', requestId, message: 'invalid resolve query' }));
+          return;
+        }
+      } else if (!url || !isUrlAllowed(source, url)) {
         sender.send(JSON.stringify({ type: 'scrape_error', requestId, message: 'url not allowed' }));
         return;
       }
@@ -197,7 +202,11 @@ wss.on('connection', (ws) => {
         return;
       }
 
-      scrapeHooks.onAccepted?.({ token, requestId, source, url });
+      const persistedUrl =
+        mode === 'resolve' && query
+          ? `resolve:${query.kind}:${query.artist}${query.album ? ' - ' + query.album : ''}`
+          : (url as string);
+      scrapeHooks.onAccepted?.({ token, requestId, source, url: persistedUrl });
 
       const timeout = setTimeout(() => {
         pendingTimeouts.delete(requestId);
