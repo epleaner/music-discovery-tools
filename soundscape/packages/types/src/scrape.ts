@@ -5,7 +5,18 @@ export interface RymEntry {
   artist: string; album: string; date?: string; path?: string;
   genres?: string[]; avgRating?: number; ratings?: number; wants?: number;
 }
-export type RymScrapeData = { kind: 'rym'; entries: RymEntry[] };
+export interface RymAlbumDetail {
+  title: string;
+  artist: string;
+  url: string;
+  releaseDate?: string;
+  genres?: string[];
+  descriptors?: string[];
+  avgRating?: number;
+  ratings?: number;
+  tracks?: string[];
+}
+export type RymScrapeData = { kind: 'rym'; entries: RymEntry[]; album?: RymAlbumDetail };
 
 export interface BandcampRelease {
   title: string;
