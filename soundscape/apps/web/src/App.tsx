@@ -52,7 +52,7 @@ import {
 } from '@soundscape/utils';
 import { useHashState } from './lib/use-hash-state';
 import { useTheme } from './lib/use-theme';
-import { menubarOnline, connected, requestResolveInPanel } from './lib/scrape-bridge';
+import { menubarOnline, connected, requestResolveInPanel, requestUrlScrapeInPanel } from './lib/scrape-bridge';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -174,6 +174,11 @@ const App: Component = () => {
     handleArtistClick(artist.name);
     updateState({ rightPanel: 'scrape' });
     requestResolveInPanel({ artist: artist.name, kind: 'artist' });
+  };
+
+  const handleRymScrape = (url: string) => {
+    updateState({ rightPanel: 'scrape' });
+    requestUrlScrapeInPanel({ source: 'rym', url });
   };
 
   const tabs: { id: View; label: string }[] = [
@@ -513,6 +518,7 @@ const App: Component = () => {
                                   error={recentTracks.error()}
                                   onArtistClick={handleArtistClick}
                                   onTrackClick={handleTrackResolveClick}
+                                  onRymScrape={handleRymScrape}
                                 />
                               </Match>
                               <Match when={recentViewType() === 'albums'}>
@@ -523,6 +529,7 @@ const App: Component = () => {
                                   error={recentTracks.error()}
                                   onArtistClick={handleArtistClick}
                                   onAlbumClick={handleAlbumResolveClick}
+                                  onRymScrape={handleRymScrape}
                                 />
                               </Match>
                               <Match when={recentViewType() === 'artists'}>
@@ -533,6 +540,7 @@ const App: Component = () => {
                                   error={recentTracks.error()}
                                   onArtistClick={handleArtistClick}
                                   onArtistRowClick={handleArtistResolveClick}
+                                  onRymScrape={handleRymScrape}
                                 />
                               </Match>
                             </Switch>

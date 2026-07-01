@@ -4,7 +4,8 @@ import {
   fetchTrackInfo,
   getCached,
   getTrackCacheKey,
-  getRYMSearchUrl,
+  getRYMArtistUrl,
+  getRYMAlbumUrl,
 } from '@soundscape/utils';
 
 interface TrackListProps {
@@ -13,6 +14,7 @@ interface TrackListProps {
   error?: Error | null;
   onArtistClick?: (artistName: string) => void;
   onTrackClick?: (track: Track) => void;
+  onRymScrape?: (url: string) => void;
 }
 
 const TrackList: Component<TrackListProps> = (props) => {
@@ -125,15 +127,19 @@ const TrackList: Component<TrackListProps> = (props) => {
                   <div class='text-xs truncate text-fg-muted'>
                     {track.artist['#text']}
                   </div>
-                  <a
-                    href={getRYMSearchUrl(track.artist['#text'])}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    onClick={(e) => e.stopPropagation()}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const albumName = track.album?.['#text'];
+                      const url = albumName
+                        ? getRYMAlbumUrl(track.artist['#text'], albumName)
+                        : getRYMArtistUrl(track.artist['#text']);
+                      props.onRymScrape?.(url);
+                    }}
                     class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
-                    title='View on RateYourMusic'>
+                    title='Scrape on RateYourMusic'>
                     rym
-                  </a>
+                  </button>
                   <Show when={props.onArtistClick}>
                     <button
                       onClick={(e) => {
