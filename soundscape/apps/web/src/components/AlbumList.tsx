@@ -18,6 +18,7 @@ interface AlbumListProps {
   isLoading?: boolean;
   error?: Error | null;
   onArtistClick?: (artistName: string) => void;
+  onAlbumClick?: (album: RecentAlbum) => void;
 }
 
 const AlbumList: Component<AlbumListProps> = (props) => {
@@ -114,7 +115,9 @@ const AlbumList: Component<AlbumListProps> = (props) => {
 
             return (
               <div class='bg-bg'>
-                <div class='flex gap-2 items-center p-2 transition-colors hover:bg-bg-subtle'>
+                <div
+                  class='flex gap-2 items-center p-2 transition-colors hover:bg-bg-subtle cursor-pointer'
+                  onClick={() => props.onAlbumClick?.(album)}>
                   <Show when={getImageUrl(album)}>
                     <img
                       src={getImageUrl(album)}

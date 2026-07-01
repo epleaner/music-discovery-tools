@@ -1,10 +1,15 @@
 import { createSignal } from 'solid-js';
-import type { BridgeMessage } from '@soundscape/types';
+import type { BridgeMessage, ScrapeQuery } from '@soundscape/types';
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001/ws';
 
 const [menubarOnline, setMenubarOnline] = createSignal(false);
 const [connected, setConnected] = createSignal(false);
+const [pendingResolve, setPendingResolve] = createSignal<ScrapeQuery | null>(null);
+
+export function requestResolveInPanel(q: ScrapeQuery) {
+  setPendingResolve(q);
+}
 
 type ResultReadyCb = (requestId: string) => void;
 type ScrapeErrorCb = (requestId: string, message: string) => void;
@@ -89,14 +94,25 @@ export function disconnectScrapeBridge() {
   setMenubarOnline(false);
 }
 
-export function requestScrape(params: { source: 'rym' | 'bandcamp'; url: string; mode?: 'label' }): string {
+export function requestScrape(params: {
+  source: 'rym' | 'bandcamp';
+  url?: string;
+  mode?: 'label' | 'related' | 'resolve';
+  query?: ScrapeQuery;
+}): string {
   const requestId = crypto.randomUUID();
   if (ws?.readyState !== WebSocket.OPEN) {
     setTimeout(() => scrapeErrorCbs.forEach((cb) => cb(requestId, 'connection lost')), 0);
     return requestId;
   }
-  const msg: Record<string, unknown> = { type: 'scrape', requestId, source: params.source, url: params.url };
-  if (params.mode !== undefined) msg.mode = params.mode;
+  const msg: Record<string, unknown> = { type: 'scrape', requestId, source: params.source };
+  if (params.mode === 'resolve') {
+    msg.mode = 'resolve';
+    msg.query = params.query;
+  } else {
+    msg.url = params.url;
+    if (params.mode !== undefined) msg.mode = params.mode;
+  }
   ws.send(JSON.stringify(msg));
   return requestId;
 }
@@ -120,4 +136,4 @@ export function setPairingToken(token: string): void {
   connect(token);
 }
 
-export { menubarOnline, connected };
+export { menubarOnline, connected, pendingResolve, setPendingResolve };

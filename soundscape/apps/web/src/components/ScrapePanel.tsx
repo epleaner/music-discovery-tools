@@ -1,4 +1,4 @@
-import { Component, Show, For, createSignal, createMemo, onMount, onCleanup } from 'solid-js';
+import { Component, Show, For, createSignal, createMemo, createEffect, onMount, onCleanup } from 'solid-js';
 import type { RymEntry, BandcampRelease, BandcampAlbumDetail } from '@soundscape/types';
 import { normalizeCharacters } from '@soundscape/utils';
 import { trpc } from '../lib/trpc';
@@ -9,6 +9,8 @@ import {
   onResultReady,
   onScrapeError,
   menubarOnline,
+  pendingResolve,
+  setPendingResolve,
 } from '../lib/scrape-bridge';
 import GenreSelect from './GenreSelect';
 import BandcampPlayer from './BandcampPlayer';
@@ -135,6 +137,30 @@ const ScrapePanel: Component = () => {
 
   const scrapeDisabled = () => !hasToken() || !menubarOnline() || !url().trim();
   const chartScrapeDisabled = () => !hasToken() || !menubarOnline();
+
+  createEffect(() => {
+    const query = pendingResolve();
+    if (!query) return;
+    if (!hasToken() || !menubarOnline()) {
+      setStatus('Connect the menu bar & set a token to resolve on Bandcamp.');
+      return;
+    }
+    setPendingResolve(null);
+    setSource('bandcamp');
+    setEntries([]);
+    setReleases([]);
+    setCurrentLabel(null);
+    setAlbum(null);
+    setIsLabelResult(false);
+    setIsRelatedResult(false);
+    setPendingMode(undefined);
+    setLastScrapedUrl(null);
+    setStatus(
+      `Resolving ${query.artist}${query.album ? ` — ${query.album}` : ''} on your Mac…`
+    );
+    const id = requestScrape({ source: 'bandcamp', mode: 'resolve', query });
+    setActiveRequestId(id);
+  });
 
   return (
     <div class="flex flex-col text-xs">
