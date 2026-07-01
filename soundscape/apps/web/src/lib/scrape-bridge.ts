@@ -6,13 +6,13 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001/ws';
 const [menubarOnline, setMenubarOnline] = createSignal(false);
 const [connected, setConnected] = createSignal(false);
 const [pendingResolve, setPendingResolve] = createSignal<ScrapeQuery | null>(null);
-const [pendingScrapeUrl, setPendingScrapeUrl] = createSignal<{ source: 'rym' | 'bandcamp'; url: string } | null>(null);
+const [pendingScrapeUrl, setPendingScrapeUrl] = createSignal<{ source: 'rym' | 'bandcamp'; url: string; query?: ScrapeQuery } | null>(null);
 
 export function requestResolveInPanel(q: ScrapeQuery) {
   setPendingResolve(q);
 }
 
-export function requestUrlScrapeInPanel(p: { source: 'rym' | 'bandcamp'; url: string }) {
+export function requestUrlScrapeInPanel(p: { source: 'rym' | 'bandcamp'; url: string; query?: ScrapeQuery }) {
   setPendingScrapeUrl(p);
 }
 
@@ -117,6 +117,7 @@ export function requestScrape(params: {
   } else {
     msg.url = params.url;
     if (params.mode !== undefined) msg.mode = params.mode;
+    if (params.query !== undefined) msg.query = params.query;
   }
   ws.send(JSON.stringify(msg));
   return requestId;

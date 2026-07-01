@@ -4,6 +4,7 @@ import type {
   Track,
   ArtistInfo,
   ArtistInfoResponse,
+  ScrapeQuery,
 } from '@soundscape/types';
 import {
   getRYMArtistUrl,
@@ -19,7 +20,7 @@ interface RecentArtistListProps {
   error?: Error | null;
   onArtistClick?: (artistName: string) => void;
   onArtistRowClick?: (artist: RecentArtist) => void;
-  onRymScrape?: (url: string) => void;
+  onRymScrape?: (url: string, query: ScrapeQuery) => void;
 }
 
 const RecentArtistList: Component<RecentArtistListProps> = (props) => {
@@ -115,7 +116,10 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          props.onRymScrape?.(getRYMArtistUrl(artist.name));
+                          props.onRymScrape?.(getRYMArtistUrl(artist.name), {
+                            artist: artist.name,
+                            kind: 'artist',
+                          });
                         }}
                         class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
                         title='Scrape on RateYourMusic'>

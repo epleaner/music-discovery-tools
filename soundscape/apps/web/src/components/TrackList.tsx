@@ -1,5 +1,5 @@
 import { Component, For, Show, createSignal, createEffect } from 'solid-js';
-import type { Track, TrackInfo, TrackInfoResponse } from '@soundscape/types';
+import type { Track, TrackInfo, TrackInfoResponse, ScrapeQuery } from '@soundscape/types';
 import {
   fetchTrackInfo,
   getCached,
@@ -14,7 +14,7 @@ interface TrackListProps {
   error?: Error | null;
   onArtistClick?: (artistName: string) => void;
   onTrackClick?: (track: Track) => void;
-  onRymScrape?: (url: string) => void;
+  onRymScrape?: (url: string, query: ScrapeQuery) => void;
 }
 
 const TrackList: Component<TrackListProps> = (props) => {
@@ -134,7 +134,10 @@ const TrackList: Component<TrackListProps> = (props) => {
                       const url = albumName
                         ? getRYMAlbumUrl(track.artist['#text'], albumName)
                         : getRYMArtistUrl(track.artist['#text']);
-                      props.onRymScrape?.(url);
+                      const query: ScrapeQuery = albumName
+                        ? { artist: track.artist['#text'], album: albumName, kind: 'album' }
+                        : { artist: track.artist['#text'], kind: 'artist' };
+                      props.onRymScrape?.(url, query);
                     }}
                     class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
                     title='Scrape on RateYourMusic'>
