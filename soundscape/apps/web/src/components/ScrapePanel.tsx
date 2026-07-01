@@ -89,7 +89,11 @@ const ScrapePanel: Component = () => {
         setStatus(null);
         const label = (result.data as any).label as { name: string; url: string } | undefined;
         setCurrentLabel(label ?? null);
-        setAlbum((result.data as any).album ?? null);
+        const albumDetail = (result.data as any).album as BandcampAlbumDetail | undefined;
+        setAlbum(albumDetail ?? null);
+        // A resolved album has no client-side URL until the result arrives; adopt
+        // it so the "Related →" / Explore-label branches work on resolved albums.
+        if (albumDetail?.url) setLastScrapedUrl(albumDetail.url);
         setIsLabelResult(pendingMode() === 'label' && !!label);
         setIsRelatedResult(pendingMode() === 'related');
       } else if (result.status === 'error') {
