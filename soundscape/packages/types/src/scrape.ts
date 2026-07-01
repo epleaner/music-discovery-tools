@@ -13,7 +13,27 @@ export interface BandcampRelease {
   url: string;
   imageUrl?: string;
 }
-export type BandcampScrapeData = { kind: 'bandcamp'; releases: BandcampRelease[]; label?: { name: string; url: string } };
+export interface BandcampTrack {
+  name: string;
+  position?: number;
+  duration?: number;   // seconds
+  streamUrl?: string;  // token-signed mp3-128 (ephemeral)
+}
+export interface BandcampAlbumDetail {
+  title: string;
+  artist: string;
+  url: string;
+  imageUrl?: string;
+  releaseDate?: string;
+  tags?: string[];
+  tracks: BandcampTrack[];
+}
+export type BandcampScrapeData = {
+  kind: 'bandcamp';
+  releases: BandcampRelease[];
+  label?: { name: string; url: string };
+  album?: BandcampAlbumDetail;   // populated when scraping a single album/track page
+};
 
 export type ScrapeData = RymScrapeData | BandcampScrapeData;
 
