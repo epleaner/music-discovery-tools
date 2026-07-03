@@ -34,9 +34,10 @@ function sanitize(state: NavState): NavState {
 export function useNav() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const state = createMemo<NavState>(() =>
-    sanitize(deserialize(searchParams.nav) ?? homeState(HOME))
-  );
+  const state = createMemo<NavState>(() => {
+    const raw = typeof searchParams.nav === 'string' ? searchParams.nav : '';
+    return sanitize(deserialize(raw) ?? homeState(HOME));
+  });
 
   const current = () => state().stack[state().index];
 
