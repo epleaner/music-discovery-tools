@@ -24,6 +24,7 @@ import PairWsDropdown from './components/PairWsDropdown';
 import NewsletterPanel from './components/NewsletterPanel';
 import BandcampPanel from './components/BandcampPanel';
 import ScrapePanel from './components/ScrapePanel';
+import Breadcrumbs from './components/Breadcrumbs';
 import {
   buildRightPanelModel,
   resolveRightPanelMode,
@@ -390,6 +391,8 @@ const App: Component = () => {
         </div>
 
       </div>
+
+      <Breadcrumbs />
 
       <Show when={appLayoutModel().showMainLayout}>
         <ResizableBottom
