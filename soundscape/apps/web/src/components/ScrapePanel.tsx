@@ -169,12 +169,9 @@ const ScrapePanel: Component = () => {
     title: string,
     params: { source: Source; url?: string; mode?: 'label' | 'related' | 'resolve'; query?: ScrapeQuery },
   ) => {
-    const cur = nav.current();
-    const siblingGroup = cur.restore.type === 'tab' ? 'panel-tab' : undefined;
     nav.navigate({
       kind: 'scrape',
       label: title,
-      siblingGroup,
       restore: { type: 'scrape', requestId, title, ...params },
     });
   };
@@ -241,10 +238,24 @@ const ScrapePanel: Component = () => {
     handleScrape(req.url, undefined, req.query);
   });
 
-  // Restore a scrape crumb's cached result when it becomes the current view
+  // Restore the most recent scrape crumb's cached result when it changes
   // (e.g. after clicking a back-crumb). Does not trigger a new scrape.
   createEffect(() => {
-    const restore = nav.current().restore;
+    const last = nav.lastScrape();
+    if (!last) {
+      if (activeRequestId() === null) return;
+      setEntries([]);
+      setRymAlbum(null);
+      setReleases([]);
+      setCurrentLabel(null);
+      setAlbum(null);
+      setIsLabelResult(false);
+      setIsRelatedResult(false);
+      setActiveRequestId(null);
+      setStatus(null);
+      return;
+    }
+    const restore = last.restore;
     if (restore.type !== 'scrape' || restore.requestId === activeRequestId()) return;
     const requestId = restore.requestId;
     if (restore.source) setSource(restore.source);

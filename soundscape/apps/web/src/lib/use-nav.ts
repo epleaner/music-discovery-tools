@@ -41,6 +41,22 @@ export function useNav() {
 
   const current = () => state().stack[state().index];
 
+  const lastArtist = createMemo<NavView | null>(() => {
+    const s = state();
+    for (let i = s.index; i >= 0; i--) {
+      if (s.stack[i].restore.type === 'artist') return s.stack[i];
+    }
+    return null;
+  });
+
+  const lastScrape = createMemo<NavView | null>(() => {
+    const s = state();
+    for (let i = s.index; i >= 0; i--) {
+      if (s.stack[i].restore.type === 'scrape') return s.stack[i];
+    }
+    return null;
+  });
+
   const navigate = (view: Omit<NavView, 'id'>) => {
     setSearchParams({
       nav: serialize(appendOrReplace(state(), view, crypto.randomUUID())),
@@ -90,6 +106,8 @@ export function useNav() {
   return {
     state,
     current,
+    lastArtist,
+    lastScrape,
     navigate,
     goTo,
     home,
