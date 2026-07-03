@@ -22,13 +22,9 @@ import ResizableBottom from './components/ResizableBottom';
 import EveryNoiseViewer from './components/EveryNoiseViewer';
 import PairWsDropdown from './components/PairWsDropdown';
 import NewsletterPanel from './components/NewsletterPanel';
-import BandcampPanel from './components/BandcampPanel';
 import ScrapePanel from './components/ScrapePanel';
 import Breadcrumbs from './components/Breadcrumbs';
-import {
-  buildRightPanelModel,
-  resolveRightPanelMode,
-} from './lib/app-right-panel';
+import { buildSimilarPanelModel } from './lib/app-right-panel';
 import { buildAppLayoutModel } from './lib/app-layout';
 import {
   createRecentTracksResource,
@@ -66,7 +62,6 @@ interface AppState extends Record<string, string> {
   topSubview: string;
   period: string;
   sites: string; // JSON-encoded array of sites
-  bandcampUrl: string;
 }
 
 const App: Component = () => {
@@ -85,10 +80,13 @@ const App: Component = () => {
     topSubview: 'artists',
     period: '7day',
     sites: JSON.stringify(defaultSites),
-    bandcampUrl: '',
   });
 
   const nav = useNav();
+
+  const [bottomTab, setBottomTab] = createSignal<'newsletters' | 'sites'>(
+    'newsletters'
+  );
 
   const { theme, toggleTheme, colorTheme, setColorTheme } = useTheme();
 
@@ -99,17 +97,10 @@ const App: Component = () => {
   const topViewType = () => state().topSubview as TopViewType;
   const period = () => state().period as TimePeriod;
   const selectedArtist = () => {
-    const restore = nav.current().restore;
-    return restore.type === 'artist' ? restore.name : '';
-  };
-  const rightPanelMode = () => {
-    const restore = nav.current().restore;
-    if (restore.type === 'artist') return 'similar';
-    if (restore.type === 'scrape') return 'scrape';
-    return resolveRightPanelMode(restore.panel);
+    const restore = nav.lastArtist()?.restore;
+    return restore?.type === 'artist' ? restore.name : '';
   };
   const sitesString = () => state().sites;
-  const bandcampUrl = () => state().bandcampUrl;
 
   // Parse sites only when the sites string actually changes
   const musicSites = createMemo((prev) => {
@@ -135,8 +126,7 @@ const App: Component = () => {
   const similarArtists = createSimilarArtistsResource(selectedArtist);
   const everyNoiseGenre = createEveryNoiseResource(selectedArtist);
   const rightPanelModel = createMemo(() =>
-    buildRightPanelModel({
-      mode: rightPanelMode(),
+    buildSimilarPanelModel({
       selectedArtist: selectedArtist(),
     })
   );
@@ -167,17 +157,7 @@ const App: Component = () => {
     });
   };
 
-  const navigateToScrapeTab = () => {
-    nav.navigate({
-      kind: 'tab',
-      label: 'Scrape',
-      restore: { type: 'tab', panel: 'scrape' },
-      siblingGroup: 'panel-tab',
-    });
-  };
-
   const handleTrackResolveClick = (track: Track) => {
-    navigateToScrapeTab();
     requestResolveInPanel({
       artist: track.artist['#text'],
       album: track.album['#text'] || undefined,
@@ -186,18 +166,15 @@ const App: Component = () => {
   };
 
   const handleAlbumResolveClick = (album: RecentAlbum) => {
-    navigateToScrapeTab();
     requestResolveInPanel({ artist: album.artist, album: album.name, kind: 'album' });
   };
 
   const handleArtistResolveClick = (artist: RecentArtist) => {
     handleArtistClick(artist.name);
-    navigateToScrapeTab();
     requestResolveInPanel({ artist: artist.name, kind: 'artist' });
   };
 
   const handleRymScrape = (url: string, query: ScrapeQuery) => {
-    navigateToScrapeTab();
     requestUrlScrapeInPanel({ source: 'rym', url, query });
   };
 
@@ -624,135 +601,98 @@ const App: Component = () => {
                 </div>
               }
               rightPanel={
-                <div class="flex flex-col h-full">
-                  <div class="flex flex-shrink-0 gap-1 p-2 border-b bg-bg border-border">
-                    <button
-                      onClick={() =>
-                        nav.navigate({
-                          kind: 'tab',
-                          label: 'Similar',
-                          restore: { type: 'tab', panel: 'similar' },
-                          siblingGroup: 'panel-tab',
-                        })
+                <div class="flex h-full">
+                  {/* Similar artists column */}
+                  <div class="flex flex-col flex-1 w-1/2 h-full overflow-y-auto border-r border-border">
+                    <Show
+                      when={
+                        rightPanelModel().showSimilarArtists &&
+                        rightPanelModel().similarArtistTitle
                       }
-                      class={`px-2 py-1 text-xs whitespace-nowrap ${
-                        rightPanelModel().activeMode === 'similar'
-                          ? 'bg-accent text-bg'
-                          : 'text-fg-muted hover:text-fg'
-                      }`}
                     >
-                      Similar
-                    </button>
-                    <button
-                      onClick={() =>
-                        nav.navigate({
-                          kind: 'tab',
-                          label: 'Newsletters',
-                          restore: { type: 'tab', panel: 'newsletters' },
-                          siblingGroup: 'panel-tab',
-                        })
-                      }
-                      class={`px-2 py-1 text-xs whitespace-nowrap ${
-                        rightPanelModel().activeMode === 'newsletters'
-                          ? 'bg-accent text-bg'
-                          : 'text-fg-muted hover:text-fg'
-                      }`}
-                    >
-                      Newsletters
-                    </button>
-                    <button
-                      onClick={() =>
-                        nav.navigate({
-                          kind: 'tab',
-                          label: 'Bandcamp',
-                          restore: { type: 'tab', panel: 'bandcamp' },
-                          siblingGroup: 'panel-tab',
-                        })
-                      }
-                      class={`px-2 py-1 text-xs whitespace-nowrap ${
-                        rightPanelModel().activeMode === 'bandcamp'
-                          ? 'bg-accent text-bg'
-                          : 'text-fg-muted hover:text-fg'
-                      }`}
-                    >
-                      Bandcamp
-                    </button>
-                    <button
-                      onClick={navigateToScrapeTab}
-                      class={`px-2 py-1 text-xs whitespace-nowrap ${
-                        rightPanelModel().activeMode === 'scrape'
-                          ? 'bg-accent text-bg'
-                          : 'text-fg-muted hover:text-fg'
-                      }`}
-                    >
-                      Scrape
-                    </button>
-                  </div>
-
-                  <Show
-                    when={
-                      rightPanelModel().showSimilarArtists &&
-                      rightPanelModel().similarArtistTitle
-                    }
-                  >
-                    <div class="flex flex-shrink-0 justify-between py-2 border-b bg-bg border-border">
-                      <div>
-                        <h2 class="text-sm font-medium">
-                          {rightPanelModel().similarArtistTitle}
-                        </h2>
-                        <div class="mt-1 text-xs text-fg-muted">
-                          Similar Artists
+                      <div class="flex flex-shrink-0 justify-between py-2 px-2 border-b bg-bg border-border">
+                        <div>
+                          <h2 class="text-sm font-medium">
+                            {rightPanelModel().similarArtistTitle}
+                          </h2>
+                          <div class="mt-1 text-xs text-fg-muted">
+                            Similar Artists
+                          </div>
+                        </div>
+                        <div class="flex-shrink-0">
+                          <EveryNoiseViewer
+                            genre={everyNoiseGenre.genre()}
+                            isLoading={everyNoiseGenre.isLoading()}
+                            artistName={selectedArtist()}
+                          />
                         </div>
                       </div>
-                      <div class="flex-shrink-0">
-                        <EveryNoiseViewer
-                          genre={everyNoiseGenre.genre()}
-                          isLoading={everyNoiseGenre.isLoading()}
-                          artistName={selectedArtist()}
-                        />
-                      </div>
-                    </div>
-                  </Show>
+                    </Show>
 
-                  <div class="overflow-y-auto flex-1 min-h-0">
-                    <Switch>
-                      <Match when={rightPanelModel().showNewsletterPanel}>
-                        <NewsletterPanel />
-                      </Match>
-                      <Match when={rightPanelModel().showBandcampPanel}>
-                        <BandcampPanel
-                          bandcampUrl={bandcampUrl()}
-                          onUrlChange={(url) => updateState({ bandcampUrl: url })}
-                        />
-                      </Match>
-                      <Match when={rightPanelModel().showScrapePanel}>
-                        <ScrapePanel />
-                      </Match>
-                      <Match when={selectedArtist()}>
-                        <ArtistList
-                          artists={similarArtists.artists()}
-                          isLoading={similarArtists.isLoading()}
-                          error={similarArtists.error()}
-                          onArtistClick={handleArtistClick}
-                          showMatch={true}
-                        />
-                      </Match>
-                      <Match when={rightPanelModel().showSimilarArtists}>
+                    <Show
+                      when={selectedArtist()}
+                      fallback={
                         <div class="py-8 text-xs text-center text-fg-muted">
                           {rightPanelModel().emptyMessage}
                         </div>
-                      </Match>
-                    </Switch>
+                      }
+                    >
+                      <ArtistList
+                        artists={similarArtists.artists()}
+                        isLoading={similarArtists.isLoading()}
+                        error={similarArtists.error()}
+                        onArtistClick={handleArtistClick}
+                        showMatch={true}
+                      />
+                    </Show>
+                  </div>
+
+                  {/* Scrape column */}
+                  <div class="flex-1 w-1/2 h-full overflow-y-auto">
+                    <ScrapePanel />
                   </div>
                 </div>
               }
             />
           }
           bottomPanel={
-            <SiteViewer
-              sites={musicSites()}
-              onSitesChange={handleSitesChange}
-            />
+            <div class="flex flex-col h-full">
+              <div class="flex flex-shrink-0 gap-1 p-2 border-b bg-bg border-border">
+                <button
+                  onClick={() => setBottomTab('newsletters')}
+                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                    bottomTab() === 'newsletters'
+                      ? 'bg-accent text-bg'
+                      : 'text-fg-muted hover:text-fg'
+                  }`}
+                >
+                  Newsletters
+                </button>
+                <button
+                  onClick={() => setBottomTab('sites')}
+                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                    bottomTab() === 'sites'
+                      ? 'bg-accent text-bg'
+                      : 'text-fg-muted hover:text-fg'
+                  }`}
+                >
+                  Sites
+                </button>
+              </div>
+              <div class="overflow-y-auto flex-1 min-h-0">
+                <Switch>
+                  <Match when={bottomTab() === 'newsletters'}>
+                    <NewsletterPanel />
+                  </Match>
+                  <Match when={bottomTab() === 'sites'}>
+                    <SiteViewer
+                      sites={musicSites()}
+                      onSitesChange={handleSitesChange}
+                    />
+                  </Match>
+                </Switch>
+              </div>
+            </div>
           }
         />
       </Show>
