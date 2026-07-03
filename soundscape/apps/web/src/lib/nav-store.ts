@@ -3,7 +3,15 @@ export type ViewKind = 'home' | 'tab' | 'artist' | 'scrape';
 export type RestoreRef =
   | { type: 'tab'; panel: string; subview?: string }
   | { type: 'artist'; name: string }
-  | { type: 'scrape'; requestId: string; title: string };
+  | {
+      type: 'scrape';
+      requestId: string;
+      title: string;
+      source?: 'rym' | 'bandcamp';
+      url?: string;
+      mode?: 'label' | 'related' | 'resolve';
+      query?: { artist: string; album?: string; kind: 'album' | 'artist' };
+    };
 
 export interface NavView {
   id: string;

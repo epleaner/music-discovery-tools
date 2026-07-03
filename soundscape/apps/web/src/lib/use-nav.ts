@@ -59,10 +59,11 @@ export function useNav() {
     const currentState = state();
     const stack = currentState.stack.slice();
     const view = stack[currentState.index];
+    if (view.restore.type !== 'scrape' || view.restore.requestId !== requestId) return;
     stack[currentState.index] = {
       ...view,
       label: title,
-      restore: { type: 'scrape', requestId, title },
+      restore: { ...view.restore, title },
     };
     setSearchParams(
       { nav: serialize({ stack, index: currentState.index }) },
