@@ -7,6 +7,11 @@ const [menubarOnline, setMenubarOnline] = createSignal(false);
 const [connected, setConnected] = createSignal(false);
 const [pendingResolve, setPendingResolve] = createSignal<ScrapeQuery | null>(null);
 const [pendingScrapeUrl, setPendingScrapeUrl] = createSignal<{ source: 'rym' | 'bandcamp'; url: string; query?: ScrapeQuery } | null>(null);
+const [refreshTick, setRefreshTick] = createSignal(0);
+
+export function requestScrapeRefresh() {
+  setRefreshTick((t) => t + 1);
+}
 
 export function requestResolveInPanel(q: ScrapeQuery) {
   setPendingResolve(q);
@@ -142,4 +147,4 @@ export function setPairingToken(token: string): void {
   connect(token);
 }
 
-export { menubarOnline, connected, pendingResolve, setPendingResolve, pendingScrapeUrl, setPendingScrapeUrl };
+export { menubarOnline, connected, pendingResolve, setPendingResolve, pendingScrapeUrl, setPendingScrapeUrl, refreshTick };

@@ -1,4 +1,4 @@
-import { Component, Show, For, createSignal, createMemo, createEffect, onMount, onCleanup } from 'solid-js';
+import { Component, Show, For, createSignal, createMemo, createEffect, on, onMount, onCleanup } from 'solid-js';
 import type { RymEntry, RymAlbumDetail, BandcampRelease, BandcampAlbumDetail, ScrapeQuery } from '@soundscape/types';
 import { normalizeCharacters } from '@soundscape/utils';
 import { trpc } from '../lib/trpc';
@@ -14,6 +14,7 @@ import {
   setPendingResolve,
   pendingScrapeUrl,
   setPendingScrapeUrl,
+  refreshTick,
 } from '../lib/scrape-bridge';
 import GenreSelect from './GenreSelect';
 import BandcampPlayer from './BandcampPlayer';
@@ -283,6 +284,41 @@ const ScrapePanel: Component = () => {
       }
     })();
   });
+
+  // ↻ refresh: re-scrape the current crumb's stored params and retarget the
+  // crumb to the new requestId. Only reacts to explicit refresh requests.
+  createEffect(
+    on(
+      refreshTick,
+      () => {
+        const cur = nav.current();
+        if (cur.restore.type !== 'scrape') return;
+        if (!menubarOnline()) {
+          setStatus('Connect the menu bar to refresh.');
+          return;
+        }
+        const restore = cur.restore;
+        setEntries([]);
+        setRymAlbum(null);
+        setReleases([]);
+        setCurrentLabel(null);
+        setAlbum(null);
+        setIsLabelResult(false);
+        setIsRelatedResult(false);
+        setStatus('Refreshing…');
+        const refreshSource: Source = restore.source ?? source();
+        setSource(refreshSource);
+        const id =
+          restore.mode === 'resolve'
+            ? requestScrape({ source: refreshSource, mode: 'resolve', query: restore.query })
+            : requestScrape({ source: refreshSource, url: restore.url, mode: restore.mode });
+        setActiveRequestId(id);
+        setPendingMode(restore.mode === 'label' || restore.mode === 'related' ? restore.mode : undefined);
+        nav.retargetCurrentScrape(id, restore.title);
+      },
+      { defer: true }
+    )
+  );
 
   return (
     <div class="flex flex-col text-xs">

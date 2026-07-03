@@ -71,5 +71,29 @@ export function useNav() {
     );
   };
 
-  return { state, current, navigate, goTo, home, replaceCurrentScrape };
+  const retargetCurrentScrape = (requestId: string, title: string) => {
+    const currentState = state();
+    const stack = currentState.stack.slice();
+    const view = stack[currentState.index];
+    if (view.restore.type !== 'scrape') return;
+    stack[currentState.index] = {
+      ...view,
+      label: title,
+      restore: { ...view.restore, requestId, title },
+    };
+    setSearchParams(
+      { nav: serialize({ stack, index: currentState.index }) },
+      { replace: true }
+    );
+  };
+
+  return {
+    state,
+    current,
+    navigate,
+    goTo,
+    home,
+    replaceCurrentScrape,
+    retargetCurrentScrape,
+  };
 }

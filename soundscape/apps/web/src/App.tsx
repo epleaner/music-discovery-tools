@@ -55,7 +55,7 @@ import {
 import { useSearchState } from './lib/use-search-state';
 import { useNav } from './lib/use-nav';
 import { useTheme } from './lib/use-theme';
-import { menubarOnline, connected, requestResolveInPanel, requestUrlScrapeInPanel } from './lib/scrape-bridge';
+import { menubarOnline, connected, requestResolveInPanel, requestUrlScrapeInPanel, requestScrapeRefresh } from './lib/scrape-bridge';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -392,7 +392,7 @@ const App: Component = () => {
 
       </div>
 
-      <Breadcrumbs />
+      <Breadcrumbs onRefresh={requestScrapeRefresh} />
 
       <Show when={appLayoutModel().showMainLayout}>
         <ResizableBottom
