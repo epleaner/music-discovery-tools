@@ -1,7 +1,8 @@
-import { Component, Show, For, createSignal, createMemo, createEffect, onMount, onCleanup } from 'solid-js';
+import { Component, Show, For, createSignal, createMemo, createEffect, on, onMount, onCleanup } from 'solid-js';
 import type { RymEntry, RymAlbumDetail, BandcampRelease, BandcampAlbumDetail, ScrapeQuery } from '@soundscape/types';
 import { normalizeCharacters } from '@soundscape/utils';
 import { trpc } from '../lib/trpc';
+import { useNav } from '../lib/use-nav';
 import {
   initScrapeBridge,
   disconnectScrapeBridge,
@@ -13,6 +14,7 @@ import {
   setPendingResolve,
   pendingScrapeUrl,
   setPendingScrapeUrl,
+  refreshTick,
 } from '../lib/scrape-bridge';
 import GenreSelect from './GenreSelect';
 import BandcampPlayer from './BandcampPlayer';
@@ -21,7 +23,18 @@ const TOKEN_KEY = 'scrape_pairing_token';
 
 type Source = 'rym' | 'bandcamp';
 
+const titleFromUrl = (u: string): string => {
+  try {
+    const parsed = new URL(u);
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    return segments.length > 0 ? decodeURIComponent(segments[segments.length - 1]) : parsed.hostname;
+  } catch {
+    return u;
+  }
+};
+
 const ScrapePanel: Component = () => {
+  const nav = useNav();
   const [url, setUrl] = createSignal('');
   const [source, setSource] = createSignal<Source>('rym');
   const [status, setStatus] = createSignal<string | null>(null);
@@ -83,10 +96,22 @@ const ScrapePanel: Component = () => {
         return;
       }
       if (result.status === 'done' && result.data?.kind === 'rym') {
-        setEntries(result.data.entries as RymEntry[]);
-        setRymAlbum((result.data as any).album ?? null);
+        const rymEntries = result.data.entries as RymEntry[];
+        const rymAlbumDetail = (result.data as any).album as RymAlbumDetail | null | undefined;
+        setEntries(rymEntries);
+        setRymAlbum(rymAlbumDetail ?? null);
         setReleases([]);
         setStatus(null);
+        const cur = nav.current();
+        if (cur.restore.type === 'scrape' && cur.restore.requestId === requestId) {
+          let title: string | undefined;
+          if (rymAlbumDetail) {
+            title = rymAlbumDetail.title;
+          } else if (cur.restore.url?.includes('/artist/') && rymEntries[0]?.artist) {
+            title = rymEntries[0].artist;
+          }
+          if (title) nav.replaceCurrentScrape(requestId, title);
+        }
       } else if (result.status === 'done' && result.data?.kind === 'bandcamp') {
         setReleases(result.data.releases as BandcampRelease[]);
         setEntries([]);
@@ -95,6 +120,18 @@ const ScrapePanel: Component = () => {
         setCurrentLabel(label ?? null);
         const albumDetail = (result.data as any).album as BandcampAlbumDetail | undefined;
         setAlbum(albumDetail ?? null);
+        const cur = nav.current();
+        if (cur.restore.type === 'scrape' && cur.restore.requestId === requestId) {
+          let title: string | undefined;
+          if (albumDetail) {
+            title = albumDetail.title;
+          } else if (pendingMode() === 'label' && label) {
+            title = `Releases on ${label.name}`;
+          } else if (pendingMode() === 'related') {
+            title = 'Related';
+          }
+          if (title) nav.replaceCurrentScrape(requestId, title);
+        }
         // A resolved album has no client-side URL until the result arrives; adopt
         // it so the "Related →" / Explore-label branches work on resolved albums.
         if (albumDetail?.url) setLastScrapedUrl(albumDetail.url);
@@ -127,6 +164,21 @@ const ScrapePanel: Component = () => {
     return !!u && (u.includes('/album/') || u.includes('/track/'));
   };
 
+  const pushScrapeCrumb = (
+    requestId: string,
+    title: string,
+    params: { source: Source; url?: string; mode?: 'label' | 'related' | 'resolve'; query?: ScrapeQuery },
+  ) => {
+    const cur = nav.current();
+    const siblingGroup = cur.restore.type === 'tab' ? 'panel-tab' : undefined;
+    nav.navigate({
+      kind: 'scrape',
+      label: title,
+      siblingGroup,
+      restore: { type: 'scrape', requestId, title, ...params },
+    });
+  };
+
   const handleScrape = (scrapeUrl?: string, mode?: 'label' | 'related', query?: ScrapeQuery) => {
     const u = (scrapeUrl ?? url()).trim();
     if (!u || !hasToken() || !menubarOnline()) return;
@@ -142,6 +194,9 @@ const ScrapePanel: Component = () => {
     setLastScrapedUrl(u);
     const id = requestScrape({ source: source(), url: u, mode, query });
     setActiveRequestId(id);
+    const provisionalTitle =
+      mode === 'related' ? 'Related' : mode === 'label' ? (currentLabel()?.name ?? 'Label') : titleFromUrl(u);
+    pushScrapeCrumb(id, provisionalTitle, { source: source(), url: u, mode, query });
   };
 
   const scrapeDisabled = () => !hasToken() || !menubarOnline() || !url().trim();
@@ -170,6 +225,7 @@ const ScrapePanel: Component = () => {
     );
     const id = requestScrape({ source: 'bandcamp', mode: 'resolve', query });
     setActiveRequestId(id);
+    pushScrapeCrumb(id, query.album ?? query.artist, { source: 'bandcamp', mode: 'resolve', query });
   });
 
   createEffect(() => {
@@ -184,6 +240,85 @@ const ScrapePanel: Component = () => {
     setUrl(req.url);
     handleScrape(req.url, undefined, req.query);
   });
+
+  // Restore a scrape crumb's cached result when it becomes the current view
+  // (e.g. after clicking a back-crumb). Does not trigger a new scrape.
+  createEffect(() => {
+    const restore = nav.current().restore;
+    if (restore.type !== 'scrape' || restore.requestId === activeRequestId()) return;
+    const requestId = restore.requestId;
+    if (restore.source) setSource(restore.source);
+    setActiveRequestId(requestId);
+    setPendingMode(restore.mode === 'label' || restore.mode === 'related' ? restore.mode : undefined);
+    void (async () => {
+      const result = await (trpc.scrape.getResult as any).query({ requestId });
+      if (!result?.data) {
+        setEntries([]);
+        setRymAlbum(null);
+        setReleases([]);
+        setCurrentLabel(null);
+        setAlbum(null);
+        setStatus('result no longer cached — use ↻ to re-scrape');
+        return;
+      }
+      setStatus(null);
+      if (result.data.kind === 'rym') {
+        setSource('rym');
+        setEntries(result.data.entries as RymEntry[]);
+        setRymAlbum((result.data as any).album ?? null);
+        setReleases([]);
+        setCurrentLabel(null);
+        setAlbum(null);
+      } else if (result.data.kind === 'bandcamp') {
+        setSource('bandcamp');
+        setReleases(result.data.releases as BandcampRelease[]);
+        setEntries([]);
+        setRymAlbum(null);
+        const label = (result.data as any).label as { name: string; url: string } | undefined;
+        setCurrentLabel(label ?? null);
+        const albumDetail = (result.data as any).album as BandcampAlbumDetail | undefined;
+        setAlbum(albumDetail ?? null);
+        if (albumDetail?.url) setLastScrapedUrl(albumDetail.url);
+        setIsLabelResult(restore.mode === 'label' && !!label);
+        setIsRelatedResult(restore.mode === 'related');
+      }
+    })();
+  });
+
+  // ↻ refresh: re-scrape the current crumb's stored params and retarget the
+  // crumb to the new requestId. Only reacts to explicit refresh requests.
+  createEffect(
+    on(
+      refreshTick,
+      () => {
+        const cur = nav.current();
+        if (cur.restore.type !== 'scrape') return;
+        if (!menubarOnline()) {
+          setStatus('Connect the menu bar to refresh.');
+          return;
+        }
+        const restore = cur.restore;
+        setEntries([]);
+        setRymAlbum(null);
+        setReleases([]);
+        setCurrentLabel(null);
+        setAlbum(null);
+        setIsLabelResult(false);
+        setIsRelatedResult(false);
+        setStatus('Refreshing…');
+        const refreshSource: Source = restore.source ?? source();
+        setSource(refreshSource);
+        const id =
+          restore.mode === 'resolve'
+            ? requestScrape({ source: refreshSource, mode: 'resolve', query: restore.query })
+            : requestScrape({ source: refreshSource, url: restore.url, mode: restore.mode });
+        setActiveRequestId(id);
+        setPendingMode(restore.mode === 'label' || restore.mode === 'related' ? restore.mode : undefined);
+        nav.retargetCurrentScrape(id, restore.title);
+      },
+      { defer: true }
+    )
+  );
 
   return (
     <div class="flex flex-col text-xs">

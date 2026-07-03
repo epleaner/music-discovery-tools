@@ -176,6 +176,9 @@ importers:
       '@ark-ui/solid':
         specifier: ^5.27.1
         version: 5.27.1(solid-js@1.9.9)
+      '@solidjs/router':
+        specifier: ^0.16.1
+        version: 0.16.1(solid-js@1.9.9)
       '@soundscape/api':
         specifier: workspace:*
         version: link:../../packages/api
@@ -1345,6 +1348,11 @@ packages:
     resolution: {integrity: sha512-BgoEdqPw48URnI+L5sZIHdF4ua4Las1eWEBBPaoSFs42kkhnHue+rwCBPL2Z9ebOyQ75sUhUfOETdJfmv0D6Kg==}
     peerDependencies:
       solid-js: ^1.6.12
+
+  '@solidjs/router@0.16.1':
+    resolution: {integrity: sha512-IhyjedgC6LRpw/8CPGGI89FrV+r0xTHzOl2c4CRyzYQ1bLepJxbVI1LLKvsavMWY5TRBRacV7hAeOhuTXkjiqg==}
+    peerDependencies:
+      solid-js: ^1.8.6
 
   '@stoplight/better-ajv-errors@1.0.3':
     resolution: {integrity: sha512-0p9uXkuB22qGdNfy3VeEhxkU5uwvp/KrBTAbrLBURv6ilxIVwanKwjMc41lQfIVgPGcOkmLbTolfFrSsueu7zA==}
@@ -6544,6 +6552,10 @@ snapshots:
   '@shikijs/vscode-textmate@10.0.2': {}
 
   '@solid-primitives/keyed@1.5.2(solid-js@1.9.9)':
+    dependencies:
+      solid-js: 1.9.9
+
+  '@solidjs/router@0.16.1(solid-js@1.9.9)':
     dependencies:
       solid-js: 1.9.9
 

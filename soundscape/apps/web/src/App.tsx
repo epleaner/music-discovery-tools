@@ -24,6 +24,7 @@ import PairWsDropdown from './components/PairWsDropdown';
 import NewsletterPanel from './components/NewsletterPanel';
 import BandcampPanel from './components/BandcampPanel';
 import ScrapePanel from './components/ScrapePanel';
+import Breadcrumbs from './components/Breadcrumbs';
 import {
   buildRightPanelModel,
   resolveRightPanelMode,
@@ -51,9 +52,10 @@ import {
   groupTracksByAlbum,
   groupTracksByArtist,
 } from '@soundscape/utils';
-import { useHashState } from './lib/use-hash-state';
+import { useSearchState } from './lib/use-search-state';
+import { useNav } from './lib/use-nav';
 import { useTheme } from './lib/use-theme';
-import { menubarOnline, connected, requestResolveInPanel, requestUrlScrapeInPanel } from './lib/scrape-bridge';
+import { menubarOnline, connected, requestResolveInPanel, requestUrlScrapeInPanel, requestScrapeRefresh } from './lib/scrape-bridge';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -63,8 +65,6 @@ interface AppState extends Record<string, string> {
   subview: string;
   topSubview: string;
   period: string;
-  artist: string;
-  rightPanel: string;
   sites: string; // JSON-encoded array of sites
   bandcampUrl: string;
 }
@@ -78,17 +78,17 @@ const App: Component = () => {
     },
   ];
 
-  const [state, updateState] = useHashState<AppState>({
+  const [state, updateState] = useSearchState<AppState>({
     username: 'pleanut',
     view: 'recent',
     subview: 'tracks',
     topSubview: 'artists',
     period: '7day',
-    artist: '',
-    rightPanel: 'similar',
     sites: JSON.stringify(defaultSites),
     bandcampUrl: '',
   });
+
+  const nav = useNav();
 
   const { theme, toggleTheme, colorTheme, setColorTheme } = useTheme();
 
@@ -98,8 +98,16 @@ const App: Component = () => {
   const recentViewType = () => state().subview;
   const topViewType = () => state().topSubview as TopViewType;
   const period = () => state().period as TimePeriod;
-  const selectedArtist = () => state().artist;
-  const rightPanelMode = () => resolveRightPanelMode(state().rightPanel);
+  const selectedArtist = () => {
+    const restore = nav.current().restore;
+    return restore.type === 'artist' ? restore.name : '';
+  };
+  const rightPanelMode = () => {
+    const restore = nav.current().restore;
+    if (restore.type === 'artist') return 'similar';
+    if (restore.type === 'scrape') return 'scrape';
+    return resolveRightPanelMode(restore.panel);
+  };
   const sitesString = () => state().sites;
   const bandcampUrl = () => state().bandcampUrl;
 
@@ -146,19 +154,30 @@ const App: Component = () => {
       username: newUsername,
       view: 'recent',
       subview: 'tracks',
-      artist: '', // Reset selected artist when username changes
     });
+    nav.home();
     recentTracks.reset();
   };
 
   const handleArtistClick = (artistName: string) => {
-    updateState({
-      artist: artistName,
+    nav.navigate({
+      kind: 'artist',
+      label: artistName,
+      restore: { type: 'artist', name: artistName },
+    });
+  };
+
+  const navigateToScrapeTab = () => {
+    nav.navigate({
+      kind: 'tab',
+      label: 'Scrape',
+      restore: { type: 'tab', panel: 'scrape' },
+      siblingGroup: 'panel-tab',
     });
   };
 
   const handleTrackResolveClick = (track: Track) => {
-    updateState({ rightPanel: 'scrape' });
+    navigateToScrapeTab();
     requestResolveInPanel({
       artist: track.artist['#text'],
       album: track.album['#text'] || undefined,
@@ -167,18 +186,18 @@ const App: Component = () => {
   };
 
   const handleAlbumResolveClick = (album: RecentAlbum) => {
-    updateState({ rightPanel: 'scrape' });
+    navigateToScrapeTab();
     requestResolveInPanel({ artist: album.artist, album: album.name, kind: 'album' });
   };
 
   const handleArtistResolveClick = (artist: RecentArtist) => {
     handleArtistClick(artist.name);
-    updateState({ rightPanel: 'scrape' });
+    navigateToScrapeTab();
     requestResolveInPanel({ artist: artist.name, kind: 'artist' });
   };
 
   const handleRymScrape = (url: string, query: ScrapeQuery) => {
-    updateState({ rightPanel: 'scrape' });
+    navigateToScrapeTab();
     requestUrlScrapeInPanel({ source: 'rym', url, query });
   };
 
@@ -372,6 +391,8 @@ const App: Component = () => {
         </div>
 
       </div>
+
+      <Breadcrumbs onRefresh={requestScrapeRefresh} />
 
       <Show when={appLayoutModel().showMainLayout}>
         <ResizableBottom
@@ -606,7 +627,14 @@ const App: Component = () => {
                 <div class="flex flex-col h-full">
                   <div class="flex flex-shrink-0 gap-1 p-2 border-b bg-bg border-border">
                     <button
-                      onClick={() => updateState({ rightPanel: 'similar' })}
+                      onClick={() =>
+                        nav.navigate({
+                          kind: 'tab',
+                          label: 'Similar',
+                          restore: { type: 'tab', panel: 'similar' },
+                          siblingGroup: 'panel-tab',
+                        })
+                      }
                       class={`px-2 py-1 text-xs whitespace-nowrap ${
                         rightPanelModel().activeMode === 'similar'
                           ? 'bg-accent text-bg'
@@ -616,7 +644,14 @@ const App: Component = () => {
                       Similar
                     </button>
                     <button
-                      onClick={() => updateState({ rightPanel: 'newsletters' })}
+                      onClick={() =>
+                        nav.navigate({
+                          kind: 'tab',
+                          label: 'Newsletters',
+                          restore: { type: 'tab', panel: 'newsletters' },
+                          siblingGroup: 'panel-tab',
+                        })
+                      }
                       class={`px-2 py-1 text-xs whitespace-nowrap ${
                         rightPanelModel().activeMode === 'newsletters'
                           ? 'bg-accent text-bg'
@@ -626,7 +661,14 @@ const App: Component = () => {
                       Newsletters
                     </button>
                     <button
-                      onClick={() => updateState({ rightPanel: 'bandcamp' })}
+                      onClick={() =>
+                        nav.navigate({
+                          kind: 'tab',
+                          label: 'Bandcamp',
+                          restore: { type: 'tab', panel: 'bandcamp' },
+                          siblingGroup: 'panel-tab',
+                        })
+                      }
                       class={`px-2 py-1 text-xs whitespace-nowrap ${
                         rightPanelModel().activeMode === 'bandcamp'
                           ? 'bg-accent text-bg'
@@ -636,7 +678,7 @@ const App: Component = () => {
                       Bandcamp
                     </button>
                     <button
-                      onClick={() => updateState({ rightPanel: 'scrape' })}
+                      onClick={navigateToScrapeTab}
                       class={`px-2 py-1 text-xs whitespace-nowrap ${
                         rightPanelModel().activeMode === 'scrape'
                           ? 'bg-accent text-bg'

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@ark-ui/solid": "^5.27.1",
+    "@solidjs/router": "^0.16.1",
     "@soundscape/api": "workspace:*",
     "@soundscape/types": "workspace:*",
     "@soundscape/ui": "workspace:*",
