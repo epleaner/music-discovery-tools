@@ -51,7 +51,7 @@ import {
   groupTracksByAlbum,
   groupTracksByArtist,
 } from '@soundscape/utils';
-import { useHashState } from './lib/use-hash-state';
+import { useSearchState } from './lib/use-search-state';
 import { useTheme } from './lib/use-theme';
 import { menubarOnline, connected, requestResolveInPanel, requestUrlScrapeInPanel } from './lib/scrape-bridge';
 
@@ -78,7 +78,7 @@ const App: Component = () => {
     },
   ];
 
-  const [state, updateState] = useHashState<AppState>({
+  const [state, updateState] = useSearchState<AppState>({
     username: 'pleanut',
     view: 'recent',
     subview: 'tracks',
