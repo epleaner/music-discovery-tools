@@ -1,13 +1,6 @@
 import { Component, For, Show, createSignal, createEffect } from 'solid-js';
-import type {
-  RecentAlbum,
-  Track,
-  AlbumInfo,
-  AlbumInfoResponse,
-  ScrapeQuery,
-} from '@soundscape/types';
+import type { RecentAlbum, Track, AlbumInfo, AlbumInfoResponse } from '@soundscape/types';
 import {
-  getRYMAlbumUrl,
   fetchAlbumInfo,
   getCached,
   getAlbumCacheKey,
@@ -18,9 +11,7 @@ interface AlbumListProps {
   tracks: Track[];
   isLoading?: boolean;
   error?: Error | null;
-  onArtistClick?: (artistName: string) => void;
   onAlbumClick?: (album: RecentAlbum) => void;
-  onRymScrape?: (url: string, query: ScrapeQuery) => void;
 }
 
 const AlbumList: Component<AlbumListProps> = (props) => {
@@ -130,34 +121,11 @@ const AlbumList: Component<AlbumListProps> = (props) => {
                   <div class='flex-1 min-w-0'>
                     <div class='flex items-center gap-2'>
                       <div class='text-sm truncate'>{album.name}</div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          props.onRymScrape?.(getRYMAlbumUrl(album.artist, album.name), {
-                            artist: album.artist,
-                            album: album.name,
-                            kind: 'album',
-                          });
-                        }}
-                        class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'
-                        title='Scrape on RateYourMusic'>
-                        rym
-                      </button>
                     </div>
                     <div class='flex items-center gap-2'>
                       <div class='text-xs truncate text-fg-muted'>
                         {album.artist}
                       </div>
-                      <Show when={props.onArtistClick}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            props.onArtistClick?.(album.artist);
-                          }}
-                          class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'>
-                          similar →
-                        </button>
-                      </Show>
                     </div>
                     <Show
                       when={info()?.tags?.tag && info()!.tags.tag.length > 0}>

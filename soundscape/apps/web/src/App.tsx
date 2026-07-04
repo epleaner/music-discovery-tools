@@ -44,7 +44,6 @@ import {
   type Track,
   type RecentAlbum,
   type RecentArtist,
-  type ScrapeQuery,
 } from '@soundscape/types';
 import {
   groupTracksByAlbum,
@@ -170,10 +169,6 @@ const App: Component = () => {
 
   const handleArtistResolveClick = (artist: RecentArtist) => {
     nav.navigateToItem({ artist: artist.name, itemKind: 'artist' });
-  };
-
-  const handleRymScrape = (_url: string, query: ScrapeQuery) => {
-    nav.navigateToItem({ artist: query.artist, album: query.album, itemKind: query.kind });
   };
 
   const tabs: { id: View; label: string }[] = [
@@ -513,9 +508,7 @@ const App: Component = () => {
                                   tracks={recentTracks.tracks()}
                                   isLoading={recentTracks.isLoading()}
                                   error={recentTracks.error()}
-                                  onArtistClick={handleArtistClick}
                                   onTrackClick={handleTrackResolveClick}
-                                  onRymScrape={handleRymScrape}
                                 />
                               </Match>
                               <Match when={recentViewType() === 'albums'}>
@@ -524,9 +517,7 @@ const App: Component = () => {
                                   tracks={recentTracks.tracks()}
                                   isLoading={recentTracks.isLoading()}
                                   error={recentTracks.error()}
-                                  onArtistClick={handleArtistClick}
                                   onAlbumClick={handleAlbumResolveClick}
-                                  onRymScrape={handleRymScrape}
                                 />
                               </Match>
                               <Match when={recentViewType() === 'artists'}>
@@ -535,9 +526,7 @@ const App: Component = () => {
                                   tracks={recentTracks.tracks()}
                                   isLoading={recentTracks.isLoading()}
                                   error={recentTracks.error()}
-                                  onArtistClick={handleArtistClick}
                                   onArtistRowClick={handleArtistResolveClick}
-                                  onRymScrape={handleRymScrape}
                                 />
                               </Match>
                             </Switch>
