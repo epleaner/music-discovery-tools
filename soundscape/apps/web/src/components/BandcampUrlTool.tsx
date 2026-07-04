@@ -80,40 +80,44 @@ const BandcampUrlTool: Component = () => {
   };
 
   return (
-    <div class="flex flex-col gap-4 p-3 text-xs">
-      <div class="flex flex-col gap-1.5">
-        <div class="font-medium text-fg">URL</div>
-        <div class="flex gap-2">
-          <input
-            type="url"
-            placeholder="https://bandcamp.com/tag/<tag>"
-            value={bcUrl()}
-            onInput={(e) => setBcUrl(e.currentTarget.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !bcScrapeDisabled()) scrapeBandcampUrl(bcUrl()); }}
-            class="flex-1 input text-xs"
-          />
-          <button
-            onClick={() => scrapeBandcampUrl(bcUrl())}
-            disabled={bcScrapeDisabled()}
-            class="btn-primary text-xs px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Scrape
-          </button>
+    <div class="flex gap-3 p-3 h-full text-xs">
+      <div class="flex flex-col gap-3 w-64 flex-shrink-0 overflow-y-auto">
+        <div class="flex flex-col gap-1.5">
+          <div class="font-medium text-fg">URL</div>
+          <div class="flex gap-2">
+            <input
+              type="url"
+              placeholder="https://bandcamp.com/tag/<tag>"
+              value={bcUrl()}
+              onInput={(e) => setBcUrl(e.currentTarget.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !bcScrapeDisabled()) scrapeBandcampUrl(bcUrl()); }}
+              class="flex-1 input text-xs"
+            />
+            <button
+              onClick={() => scrapeBandcampUrl(bcUrl())}
+              disabled={bcScrapeDisabled()}
+              class="btn-primary text-xs px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Scrape
+            </button>
+          </div>
         </div>
       </div>
 
-      <BandcampResults
-        releases={releases()}
-        album={album()}
-        currentLabel={currentLabel()}
-        status={bcStatus()}
-        isLabelResult={isLabelResult()}
-        isRelatedResult={isRelatedResult()}
-        showExploreLabel={!!currentLabel() && !isLabelResult() && !isRelatedResult() && hasToken() && menubarOnline()}
-        showRelated={hasToken() && menubarOnline() && isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()}
-        onExploreLabel={() => scrapeBandcampUrl(lastScrapedUrl() ?? bcUrl(), 'label')}
-        onRelated={() => scrapeBandcampUrl(lastScrapedUrl() ?? bcUrl(), 'related')}
-      />
+      <div class="flex-1 min-w-0 overflow-y-auto">
+        <BandcampResults
+          releases={releases()}
+          album={album()}
+          currentLabel={currentLabel()}
+          status={bcStatus()}
+          isLabelResult={isLabelResult()}
+          isRelatedResult={isRelatedResult()}
+          showExploreLabel={!!currentLabel() && !isLabelResult() && !isRelatedResult() && hasToken() && menubarOnline()}
+          showRelated={hasToken() && menubarOnline() && isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()}
+          onExploreLabel={() => scrapeBandcampUrl(lastScrapedUrl() ?? bcUrl(), 'label')}
+          onRelated={() => scrapeBandcampUrl(lastScrapedUrl() ?? bcUrl(), 'related')}
+        />
+      </div>
     </div>
   );
 };

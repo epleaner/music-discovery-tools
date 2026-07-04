@@ -1,4 +1,4 @@
-import { Component, For, createSignal, createMemo, onMount, onCleanup } from 'solid-js';
+import { Component, For, Show, createSignal, createMemo, onMount, onCleanup } from 'solid-js';
 import type { RymEntry, RymAlbumDetail } from '@soundscape/types';
 import { normalizeCharacters } from '@soundscape/utils';
 import { trpc } from '../lib/trpc';
@@ -94,121 +94,127 @@ const RymChartTool: Component = () => {
   const chartScrapeDisabled = () => !hasToken() || !menubarOnline();
 
   return (
-    <div class="flex flex-col gap-4 p-3 text-xs">
-      {/* Chart builder */}
-      <div class="flex flex-col gap-3">
-        <GenreSelect value={rymSearchTerm()} onValueChange={setRYMSearchTerm} />
-        <div class="flex gap-2">
-          <div class="flex-1">
-            <label class="block mb-1 text-xs text-fg-muted">Range</label>
-            <div class="flex gap-1">
-              <button
-                onClick={() => setRYMTimeRange('year')}
-                class={`flex-1 px-2 py-1 text-xs ${
-                  rymTimeRange() === 'year'
-                    ? 'bg-accent text-bg'
-                    : 'text-fg-muted hover:text-fg border border-border'
-                }`}
-              >
-                Year
-              </button>
-              <button
-                onClick={() => setRYMTimeRange('decade')}
-                class={`flex-1 px-2 py-1 text-xs ${
-                  rymTimeRange() === 'decade'
-                    ? 'bg-accent text-bg'
-                    : 'text-fg-muted hover:text-fg border border-border'
-                }`}
-              >
-                Decade
-              </button>
-              <button
-                onClick={() => setRYMTimeRange('all-time')}
-                class={`flex-1 px-2 py-1 text-xs whitespace-nowrap ${
-                  rymTimeRange() === 'all-time'
-                    ? 'bg-accent text-bg'
-                    : 'text-fg-muted hover:text-fg border border-border'
-                }`}
-              >
-                All Time
-              </button>
+    <div class="flex gap-3 p-3 h-full text-xs">
+      <div class="flex flex-col gap-3 w-64 flex-shrink-0 overflow-y-auto">
+        {/* Chart builder */}
+        <div class="flex flex-col gap-3">
+          <GenreSelect value={rymSearchTerm()} onValueChange={setRYMSearchTerm} />
+          <div class="flex flex-col gap-2">
+            <div>
+              <label class="block mb-1 text-xs text-fg-muted">Range</label>
+              <div class="flex gap-1">
+                <button
+                  onClick={() => setRYMTimeRange('year')}
+                  class={`flex-1 px-2 py-1 text-xs ${
+                    rymTimeRange() === 'year'
+                      ? 'bg-accent text-bg'
+                      : 'text-fg-muted hover:text-fg border border-border'
+                  }`}
+                >
+                  Year
+                </button>
+                <button
+                  onClick={() => setRYMTimeRange('decade')}
+                  class={`flex-1 px-2 py-1 text-xs ${
+                    rymTimeRange() === 'decade'
+                      ? 'bg-accent text-bg'
+                      : 'text-fg-muted hover:text-fg border border-border'
+                  }`}
+                >
+                  Decade
+                </button>
+                <button
+                  onClick={() => setRYMTimeRange('all-time')}
+                  class={`flex-1 px-2 py-1 text-xs whitespace-nowrap ${
+                    rymTimeRange() === 'all-time'
+                      ? 'bg-accent text-bg'
+                      : 'text-fg-muted hover:text-fg border border-border'
+                  }`}
+                >
+                  All Time
+                </button>
+              </div>
             </div>
+            <Show when={rymTimeRange() !== 'all-time'}>
+              <div>
+                <div class="flex items-center gap-1 mb-1">
+                  <label class="block text-xs text-fg-muted">
+                    {rymTimeRange() === 'year' ? 'Year' : 'Decade'}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const randomIndex = Math.floor(Math.random() * rymYears.length);
+                      setRYMYear(rymYears[randomIndex]);
+                    }}
+                    class="text-xs text-fg-muted hover:text-fg px-1"
+                    title="Shuffle year/decade"
+                  >
+                    ↻
+                  </button>
+                </div>
+                <select
+                  value={rymYear()}
+                  onChange={(e) => setRYMYear(parseInt(e.currentTarget.value))}
+                  class="w-full text-xs input"
+                >
+                  <For each={rymYears}>
+                    {(year) => (
+                      <option value={year}>
+                        {rymTimeRange() === 'decade' ? `${Math.floor(year / 10) * 10}s` : year}
+                      </option>
+                    )}
+                  </For>
+                </select>
+              </div>
+            </Show>
           </div>
-          <div class="flex-1">
-            <div class="flex items-center gap-1 mb-1">
-              <label class="block text-xs text-fg-muted">
-                {rymTimeRange() === 'year' ? 'Year' : 'Decade'}
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  const randomIndex = Math.floor(Math.random() * rymYears.length);
-                  setRYMYear(rymYears[randomIndex]);
-                }}
-                class="text-xs text-fg-muted hover:text-fg px-1"
-                title="Shuffle year/decade"
-              >
-                ↻
-              </button>
-            </div>
-            <select
-              value={rymYear()}
-              onChange={(e) => setRYMYear(parseInt(e.currentTarget.value))}
-              class="w-full text-xs input"
+          <div class="flex gap-2">
+            <button
+              onClick={() => scrapeRym(getRYMChartUrl())}
+              disabled={chartScrapeDisabled()}
+              class="flex-1 py-1.5 text-xs btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <For each={rymYears}>
-                {(year) => (
-                  <option value={year}>
-                    {rymTimeRange() === 'decade' ? `${Math.floor(year / 10) * 10}s` : year}
-                  </option>
-                )}
-              </For>
-            </select>
+              Scrape charts
+            </button>
+            <button
+              onClick={() => window.open(getRYMChartUrl(), '_blank', 'noopener')}
+              class="flex-1 py-1.5 text-xs btn-secondary"
+            >
+              Open in RateYourMusic ↗
+            </button>
+          </div>
+          <div class="flex items-center gap-2 text-fg-subtle">
+            <div class="flex-1 border-t border-border" />
+            <span class="text-xs">or paste a URL</span>
+            <div class="flex-1 border-t border-border" />
           </div>
         </div>
-        <div class="flex gap-2">
-          <button
-            onClick={() => scrapeRym(getRYMChartUrl())}
-            disabled={chartScrapeDisabled()}
-            class="flex-1 py-1.5 text-xs btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Scrape charts
-          </button>
-          <button
-            onClick={() => window.open(getRYMChartUrl(), '_blank', 'noopener')}
-            class="flex-1 py-1.5 text-xs btn-secondary"
-          >
-            Open in RateYourMusic ↗
-          </button>
-        </div>
-        <div class="flex items-center gap-2 text-fg-subtle">
-          <div class="flex-1 border-t border-border" />
-          <span class="text-xs">or paste a URL</span>
-          <div class="flex-1 border-t border-border" />
+
+        <div class="flex flex-col gap-1.5">
+          <div class="flex gap-2">
+            <input
+              type="url"
+              placeholder="https://rateyourmusic.com/list/..."
+              value={rymUrl()}
+              onInput={(e) => setRymUrl(e.currentTarget.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !rymScrapeDisabled()) scrapeRym(rymUrl()); }}
+              class="flex-1 input text-xs"
+            />
+            <button
+              onClick={() => scrapeRym(rymUrl())}
+              disabled={rymScrapeDisabled()}
+              class="btn-primary text-xs px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Scrape
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="flex flex-col gap-1.5">
-        <div class="flex gap-2">
-          <input
-            type="url"
-            placeholder="https://rateyourmusic.com/list/..."
-            value={rymUrl()}
-            onInput={(e) => setRymUrl(e.currentTarget.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !rymScrapeDisabled()) scrapeRym(rymUrl()); }}
-            class="flex-1 input text-xs"
-          />
-          <button
-            onClick={() => scrapeRym(rymUrl())}
-            disabled={rymScrapeDisabled()}
-            class="btn-primary text-xs px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Scrape
-          </button>
-        </div>
+      <div class="flex-1 min-w-0 overflow-y-auto">
+        <RymResults entries={entries()} album={rymAlbum()} status={rymStatus()} />
       </div>
-
-      <RymResults entries={entries()} album={rymAlbum()} status={rymStatus()} />
     </div>
   );
 };
