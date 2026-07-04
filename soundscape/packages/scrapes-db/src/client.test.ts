@@ -108,6 +108,55 @@ if (!dbUrl) {
     assert.ok(rows.length <= 2);
   });
 
+  test('getFresh returns the data of a recently done row matching source+url', async () => {
+    const id = randomUUID();
+    testIds.push(id);
+    const url = `resolve:album:getFresh-test-${randomUUID()}`;
+    const data = { kind: 'rym' as const, entries: [] };
+    await db.createPending({ id, tokenHash: tokenHashA, source: 'rym', url });
+    await db.markDone({ id, data });
+
+    const result = await db.getFresh({ source: 'rym', url, maxAgeMs: 60_000 });
+    assert.deepEqual(result, data);
+  });
+
+  test('getFresh returns null when the only matching row is older than maxAgeMs', async () => {
+    const id = randomUUID();
+    testIds.push(id);
+    const url = `resolve:album:getFresh-stale-${randomUUID()}`;
+    const data = { kind: 'rym' as const, entries: [] };
+    await db.createPending({ id, tokenHash: tokenHashA, source: 'rym', url });
+    await db.markDone({ id, data });
+
+    // maxAgeMs: 0 means "created_at > now()", which the just-inserted row fails.
+    const result = await db.getFresh({ source: 'rym', url, maxAgeMs: 0 });
+    assert.equal(result, null);
+  });
+
+  test('getFresh returns null for a different source or url', async () => {
+    const id = randomUUID();
+    testIds.push(id);
+    const url = `resolve:album:getFresh-mismatch-${randomUUID()}`;
+    const data = { kind: 'rym' as const, entries: [] };
+    await db.createPending({ id, tokenHash: tokenHashA, source: 'rym', url });
+    await db.markDone({ id, data });
+
+    assert.equal(await db.getFresh({ source: 'bandcamp', url, maxAgeMs: 60_000 }), null);
+    assert.equal(await db.getFresh({ source: 'rym', url: `${url}-other`, maxAgeMs: 60_000 }), null);
+  });
+
+  test('getFresh ignores token_hash — a row created under token A is found with no token specified', async () => {
+    const id = randomUUID();
+    testIds.push(id);
+    const url = `resolve:album:getFresh-shared-${randomUUID()}`;
+    const data = { kind: 'rym' as const, entries: [] };
+    await db.createPending({ id, tokenHash: tokenHashA, source: 'rym', url });
+    await db.markDone({ id, data });
+
+    const result = await db.getFresh({ source: 'rym', url, maxAgeMs: 60_000 });
+    assert.deepEqual(result, data);
+  });
+
   test('cleanup test rows', async () => {
     const sql = postgres(dbUrl);
     for (const id of testIds) {
