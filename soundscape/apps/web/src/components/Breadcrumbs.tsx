@@ -42,7 +42,7 @@ const Breadcrumbs: Component<BreadcrumbsProps> = (props) => {
             {item.view.label}
           </button>
         </Show>
-        <Show when={isCurrent() && nav.current().restore.type === 'scrape' && props.onRefresh}>
+        <Show when={isCurrent() && nav.current().restore.type === 'item' && props.onRefresh}>
           <button
             onClick={() => props.onRefresh?.()}
             title="Refresh"

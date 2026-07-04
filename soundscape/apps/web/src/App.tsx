@@ -22,7 +22,7 @@ import ResizableBottom from './components/ResizableBottom';
 import EveryNoiseViewer from './components/EveryNoiseViewer';
 import PairWsDropdown from './components/PairWsDropdown';
 import NewsletterPanel from './components/NewsletterPanel';
-import ScrapePanel from './components/ScrapePanel';
+import ScrapeSections from './components/ScrapeSections';
 import Breadcrumbs from './components/Breadcrumbs';
 import { buildSimilarPanelModel } from './lib/app-right-panel';
 import { buildAppLayoutModel } from './lib/app-layout';
@@ -51,7 +51,7 @@ import {
 import { useSearchState } from './lib/use-search-state';
 import { useNav } from './lib/use-nav';
 import { useTheme } from './lib/use-theme';
-import { menubarOnline, connected, requestResolveInPanel, requestUrlScrapeInPanel, requestScrapeRefresh } from './lib/scrape-bridge';
+import { menubarOnline, connected, requestScrapeRefresh } from './lib/scrape-bridge';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -97,8 +97,8 @@ const App: Component = () => {
   const topViewType = () => state().topSubview as TopViewType;
   const period = () => state().period as TimePeriod;
   const selectedArtist = () => {
-    const restore = nav.lastArtist()?.restore;
-    return restore?.type === 'artist' ? restore.name : '';
+    const restore = nav.lastItem()?.restore;
+    return restore?.type === 'item' ? restore.artist : '';
   };
   const sitesString = () => state().sites;
 
@@ -150,32 +150,28 @@ const App: Component = () => {
   };
 
   const handleArtistClick = (artistName: string) => {
-    nav.navigate({
-      kind: 'artist',
-      label: artistName,
-      restore: { type: 'artist', name: artistName },
-    });
+    nav.navigateToItem({ artist: artistName, itemKind: 'artist' });
   };
 
   const handleTrackResolveClick = (track: Track) => {
-    requestResolveInPanel({
+    const albumName = track.album['#text'] || undefined;
+    nav.navigateToItem({
       artist: track.artist['#text'],
-      album: track.album['#text'] || undefined,
-      kind: 'album',
+      album: albumName,
+      itemKind: albumName ? 'album' : 'artist',
     });
   };
 
   const handleAlbumResolveClick = (album: RecentAlbum) => {
-    requestResolveInPanel({ artist: album.artist, album: album.name, kind: 'album' });
+    nav.navigateToItem({ artist: album.artist, album: album.name, itemKind: 'album' });
   };
 
   const handleArtistResolveClick = (artist: RecentArtist) => {
-    handleArtistClick(artist.name);
-    requestResolveInPanel({ artist: artist.name, kind: 'artist' });
+    nav.navigateToItem({ artist: artist.name, itemKind: 'artist' });
   };
 
-  const handleRymScrape = (url: string, query: ScrapeQuery) => {
-    requestUrlScrapeInPanel({ source: 'rym', url, query });
+  const handleRymScrape = (_url: string, query: ScrapeQuery) => {
+    nav.navigateToItem({ artist: query.artist, album: query.album, itemKind: query.kind });
   };
 
   const tabs: { id: View; label: string }[] = [
@@ -601,34 +597,21 @@ const App: Component = () => {
                 </div>
               }
               rightPanel={
-                <div class="flex h-full">
-                  {/* Similar artists column */}
-                  <div class="flex flex-col flex-1 w-1/2 h-full overflow-y-auto border-r border-border">
-                    <Show
-                      when={
-                        rightPanelModel().showSimilarArtists &&
-                        rightPanelModel().similarArtistTitle
-                      }
-                    >
-                      <div class="flex flex-shrink-0 justify-between py-2 px-2 border-b bg-bg border-border">
-                        <div>
-                          <h2 class="text-sm font-medium">
-                            {rightPanelModel().similarArtistTitle}
-                          </h2>
-                          <div class="mt-1 text-xs text-fg-muted">
-                            Similar Artists
-                          </div>
-                        </div>
-                        <div class="flex-shrink-0">
-                          <EveryNoiseViewer
-                            genre={everyNoiseGenre.genre()}
-                            isLoading={everyNoiseGenre.isLoading()}
-                            artistName={selectedArtist()}
-                          />
-                        </div>
+                <div class="flex flex-col h-full overflow-y-auto">
+                  {/* LastFM: Similar section */}
+                  <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
+                    <h2 class="text-xs font-medium text-fg-muted">LastFM: Similar</h2>
+                    <Show when={rightPanelModel().showSimilarArtists}>
+                      <div class="flex-shrink-0">
+                        <EveryNoiseViewer
+                          genre={everyNoiseGenre.genre()}
+                          isLoading={everyNoiseGenre.isLoading()}
+                          artistName={selectedArtist()}
+                        />
                       </div>
                     </Show>
-
+                  </div>
+                  <div class="flex-shrink-0">
                     <Show
                       when={selectedArtist()}
                       fallback={
@@ -647,10 +630,7 @@ const App: Component = () => {
                     </Show>
                   </div>
 
-                  {/* Scrape column */}
-                  <div class="flex-1 w-1/2 h-full overflow-y-auto">
-                    <ScrapePanel />
-                  </div>
+                  <ScrapeSections />
                 </div>
               }
             />

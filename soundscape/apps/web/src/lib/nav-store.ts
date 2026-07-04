@@ -1,4 +1,4 @@
-export type ViewKind = 'home' | 'tab' | 'artist' | 'scrape';
+export type ViewKind = 'home' | 'tab' | 'artist' | 'scrape' | 'item';
 
 export type RestoreRef =
   | { type: 'tab'; panel: string; subview?: string }
@@ -11,6 +11,12 @@ export type RestoreRef =
       url?: string;
       mode?: 'label' | 'related' | 'resolve';
       query?: { artist: string; album?: string; kind: 'album' | 'artist' };
+    }
+  | {
+      type: 'item';
+      artist: string;
+      album?: string;
+      itemKind: 'album' | 'artist';
     };
 
 export interface NavView {
