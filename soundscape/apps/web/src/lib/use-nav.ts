@@ -41,22 +41,6 @@ export function useNav() {
 
   const current = () => state().stack[state().index];
 
-  const lastArtist = createMemo<NavView | null>(() => {
-    const s = state();
-    for (let i = s.index; i >= 0; i--) {
-      if (s.stack[i].restore.type === 'artist') return s.stack[i];
-    }
-    return null;
-  });
-
-  const lastScrape = createMemo<NavView | null>(() => {
-    const s = state();
-    for (let i = s.index; i >= 0; i--) {
-      if (s.stack[i].restore.type === 'scrape') return s.stack[i];
-    }
-    return null;
-  });
-
   const lastItem = createMemo<NavView | null>(() => {
     const s = state();
     for (let i = s.index; i >= 0; i--) {
@@ -91,49 +75,13 @@ export function useNav() {
     setSearchParams({ nav: serialize(homeState(HOME)) });
   };
 
-  const replaceCurrentScrape = (requestId: string, title: string) => {
-    const currentState = state();
-    const stack = currentState.stack.slice();
-    const view = stack[currentState.index];
-    if (view.restore.type !== 'scrape' || view.restore.requestId !== requestId) return;
-    stack[currentState.index] = {
-      ...view,
-      label: title,
-      restore: { ...view.restore, title },
-    };
-    setSearchParams(
-      { nav: serialize({ stack, index: currentState.index }) },
-      { replace: true }
-    );
-  };
-
-  const retargetCurrentScrape = (requestId: string, title: string) => {
-    const currentState = state();
-    const stack = currentState.stack.slice();
-    const view = stack[currentState.index];
-    if (view.restore.type !== 'scrape') return;
-    stack[currentState.index] = {
-      ...view,
-      label: title,
-      restore: { ...view.restore, requestId, title },
-    };
-    setSearchParams(
-      { nav: serialize({ stack, index: currentState.index }) },
-      { replace: true }
-    );
-  };
-
   return {
     state,
     current,
-    lastArtist,
-    lastScrape,
     lastItem,
     navigate,
     navigateToItem,
     goTo,
     home,
-    replaceCurrentScrape,
-    retargetCurrentScrape,
   };
 }
