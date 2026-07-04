@@ -30,6 +30,9 @@ function makeScrapesDb(rows: ScrapeRow[]): ScrapesDb {
     async createPending() {},
     async markDone() {},
     async markError() {},
+    async getFresh() {
+      return null;
+    },
     async getById(id) {
       return rows.find(r => r.id === id) ?? null;
     },
