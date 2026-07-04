@@ -9,7 +9,7 @@ export const scrapeRouter = router({
       if (!ctx.scrapesDb) return null;
       const row = await ctx.scrapesDb.getById(input.requestId);
       if (!row) return null;
-      return { status: row.status, source: row.source, url: row.url, data: row.data, error: row.error };
+      return { status: row.status, source: row.source, url: row.url, data: row.data, error: row.error, fetchedAt: row.fetched_at };
     }),
 
   listScrapes: publicProcedure

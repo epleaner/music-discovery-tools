@@ -117,7 +117,9 @@ if (!dbUrl) {
     await db.markDone({ id, data });
 
     const result = await db.getFresh({ source: 'rym', url, maxAgeMs: 60_000 });
-    assert.deepEqual(result, data);
+    assert.ok(result);
+    assert.deepEqual(result.data, data);
+    assert.ok(result.fetchedAt instanceof Date);
   });
 
   test('getFresh returns null when the only matching row is older than maxAgeMs', async () => {
@@ -154,7 +156,26 @@ if (!dbUrl) {
     await db.markDone({ id, data });
 
     const result = await db.getFresh({ source: 'rym', url, maxAgeMs: 60_000 });
-    assert.deepEqual(result, data);
+    assert.ok(result);
+    assert.deepEqual(result.data, data);
+  });
+
+  test('markDone preserves an explicit past fetchedAt (cache-hit copy)', async () => {
+    const id = randomUUID();
+    testIds.push(id);
+    const url = `resolve:album:getFresh-fetchedAt-${randomUUID()}`;
+    const data = { kind: 'rym' as const, entries: [] };
+    const originalFetchedAt = new Date('2026-01-01T00:00:00Z');
+    await db.createPending({ id, tokenHash: tokenHashA, source: 'rym', url });
+    await db.markDone({ id, data, fetchedAt: originalFetchedAt });
+
+    const row = await db.getById(id);
+    assert.ok(row);
+    assert.deepEqual(row.fetched_at, originalFetchedAt);
+
+    const result = await db.getFresh({ source: 'rym', url, maxAgeMs: 60_000 });
+    assert.ok(result);
+    assert.deepEqual(result.fetchedAt, originalFetchedAt);
   });
 
   test('cleanup test rows', async () => {
