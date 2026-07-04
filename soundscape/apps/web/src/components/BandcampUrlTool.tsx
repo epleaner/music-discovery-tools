@@ -3,6 +3,7 @@ import type { BandcampRelease, BandcampAlbumDetail } from '@soundscape/types';
 import { trpc } from '../lib/trpc';
 import { requestScrape, onResultReady, onScrapeError, menubarOnline } from '../lib/scrape-bridge';
 import BandcampResults from './BandcampResults';
+import CacheAge from './CacheAge';
 
 const TOKEN_KEY = 'scrape_pairing_token';
 
@@ -107,6 +108,15 @@ const BandcampUrlTool: Component = () => {
       </div>
 
       <div class="flex-1 min-w-0 overflow-y-auto">
+        <div class="flex justify-end mb-1">
+          <CacheAge
+            fetchedAt={bcFetchedAt()}
+            onRefresh={() => {
+              const url = lastScrapedUrl();
+              if (url) scrapeBandcampUrl(url, undefined, true);
+            }}
+          />
+        </div>
         <BandcampResults
           releases={releases()}
           album={album()}
@@ -118,11 +128,6 @@ const BandcampUrlTool: Component = () => {
           showRelated={hasToken() && menubarOnline() && isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()}
           onExploreLabel={() => scrapeBandcampUrl(lastScrapedUrl() ?? bcUrl(), 'label')}
           onRelated={() => scrapeBandcampUrl(lastScrapedUrl() ?? bcUrl(), 'related')}
-          fetchedAt={bcFetchedAt()}
-          onRefresh={() => {
-            const url = lastScrapedUrl();
-            if (url) scrapeBandcampUrl(url, undefined, true);
-          }}
         />
       </div>
     </div>
