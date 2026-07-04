@@ -201,14 +201,19 @@ wss.on('connection', (ws) => {
           : (url as string);
 
       void (async () => {
-        if (!force && scrapeHooks.getCached) {
-          const cached = await scrapeHooks.getCached({ source, url: persistedUrl });
-          if (cached) {
-            await scrapeHooks.onAccepted?.({ token, requestId, source, url: persistedUrl });
-            scrapeHooks.onResult?.({ requestId, data: cached });
-            rooms.sendToWebs(token, { type: 'result_ready', requestId });
-            return;
+        try {
+          if (!force && scrapeHooks.getCached) {
+            const cached = await scrapeHooks.getCached({ source, url: persistedUrl });
+            if (cached) {
+              await scrapeHooks.onAccepted?.({ token, requestId, source, url: persistedUrl });
+              scrapeHooks.onResult?.({ requestId, data: cached });
+              rooms.sendToWebs(token, { type: 'result_ready', requestId });
+              return;
+            }
           }
+        } catch (err) {
+          console.error('[scrapes] cache lookup failed; falling through to scrape', err);
+          // fall through to the menu-bar path below
         }
 
         // Rate limiting (only real scrapes that reach the menu bar count)
@@ -226,6 +231,9 @@ wss.on('connection', (ws) => {
           return;
         }
 
+        // Fire-and-forget: unlike the awaited cache-hit path above, the natural WS
+        // round-trip (menu bar scrapes, then POSTs the result) provides INSERT-before-UPDATE
+        // ordering here, so this doesn't need to be awaited.
         scrapeHooks.onAccepted?.({ token, requestId, source, url: persistedUrl });
 
         const timeout = setTimeout(() => {
