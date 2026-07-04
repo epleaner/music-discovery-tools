@@ -1,7 +1,6 @@
 import { Component, Show, For, createSignal, createEffect } from 'solid-js';
 import type { TopAlbum, AlbumInfo, AlbumInfoResponse } from '@soundscape/types';
 import {
-  getRYMAlbumUrl,
   fetchAlbumInfo,
   getCached,
   getAlbumCacheKey,
@@ -11,7 +10,7 @@ interface TopAlbumListProps {
   albums: TopAlbum[];
   isLoading: boolean;
   error: any;
-  onArtistClick?: (artistName: string) => void;
+  onAlbumClick?: (album: TopAlbum) => void;
 }
 
 const TopAlbumList: Component<TopAlbumListProps> = (props) => {
@@ -94,25 +93,15 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
             });
 
             return (
-              <div class='flex gap-2 items-center p-2 text-xs border-b border-border hover:bg-bg-subtle'>
+              <div
+                class='flex gap-2 items-center p-2 text-xs border-b border-border hover:bg-bg-subtle cursor-pointer'
+                onClick={() => props.onAlbumClick?.(album)}>
                 <div class='flex-1 min-w-0'>
                   <div class='flex gap-1 items-center'>
                     <span class='font-medium truncate'>{album.name}</span>
-                    <a
-                      href={getRYMAlbumUrl(album.artist.name, album.name)}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      class='text-[10px] hover:underline text-fg-subtle'
-                      title='View on RateYourMusic'>
-                      rym
-                    </a>
                   </div>
                   <div class='flex gap-1 items-center text-fg-muted'>
-                    <button
-                      onClick={() => props.onArtistClick?.(album.artist.name)}
-                      class='hover:underline'>
-                      {album.artist.name}
-                    </button>
+                    <span>{album.artist.name}</span>
                   </div>
                   <Show when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
                     <div class='flex gap-1 text-fg-muted'>

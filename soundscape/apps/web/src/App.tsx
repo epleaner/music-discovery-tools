@@ -568,7 +568,12 @@ const App: Component = () => {
                                   tracks={topTracks.tracks()}
                                   isLoading={topTracks.isLoading()}
                                   error={topTracks.error()}
-                                  onArtistClick={handleArtistClick}
+                                  onTrackClick={(track) =>
+                                    nav.navigateToItem({
+                                      artist: track.artist.name,
+                                      itemKind: 'artist',
+                                    })
+                                  }
                                 />
                               </Match>
                               <Match when={topViewType() === 'albums'}>
@@ -576,7 +581,13 @@ const App: Component = () => {
                                   albums={topAlbums.albums()}
                                   isLoading={topAlbums.isLoading()}
                                   error={topAlbums.error()}
-                                  onArtistClick={handleArtistClick}
+                                  onAlbumClick={(album) =>
+                                    nav.navigateToItem({
+                                      artist: album.artist.name,
+                                      album: album.name,
+                                      itemKind: 'album',
+                                    })
+                                  }
                                 />
                               </Match>
                             </Switch>
