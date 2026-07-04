@@ -321,8 +321,8 @@ const ScrapePanel: Component = () => {
         setSource(refreshSource);
         const id =
           restore.mode === 'resolve'
-            ? requestScrape({ source: refreshSource, mode: 'resolve', query: restore.query })
-            : requestScrape({ source: refreshSource, url: restore.url, mode: restore.mode });
+            ? requestScrape({ source: refreshSource, mode: 'resolve', query: restore.query, force: true })
+            : requestScrape({ source: refreshSource, url: restore.url, mode: restore.mode, force: true });
         setActiveRequestId(id);
         setPendingMode(restore.mode === 'label' || restore.mode === 'related' ? restore.mode : undefined);
         nav.retargetCurrentScrape(id, restore.title);

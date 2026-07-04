@@ -59,6 +59,7 @@ export type ScrapeMsg = {
   url?: string;                 // absent for mode:'resolve' (menu bar resolves it)
   mode?: 'label' | 'related' | 'resolve';
   query?: ScrapeQuery;          // present for mode:'resolve'
+  force?: boolean;              // skip the shared cache and always re-scrape
 };
 export type ScrapeResultMsg = { type: 'scrape_result'; requestId: string; source: ScrapeSource; data: ScrapeData };
 export type ResultReadyMsg = { type: 'result_ready'; requestId: string };
