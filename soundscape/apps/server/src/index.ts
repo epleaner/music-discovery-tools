@@ -17,9 +17,9 @@ import { setScrapesDb } from './scrapes-state.js';
 // Filled in by the persistence task; default no-ops.
 export const scrapeHooks: {
   onAccepted?: (a: { token: string; requestId: string; source: string; url: string }) => Promise<void> | void;
-  onResult?: (a: { requestId: string; data: unknown }) => void;
+  onResult?: (a: { requestId: string; data: unknown; fetchedAt?: Date }) => void;
   onError?: (a: { requestId: string; error: string }) => void;
-  getCached?: (a: { source: string; url: string }) => Promise<unknown | null>;
+  getCached?: (a: { source: string; url: string }) => Promise<{ data: unknown; fetchedAt: Date } | null>;
 } = {};
 
 const CACHE_TTL_MS = Number(process.env.SCRAPE_CACHE_TTL_MS) || 30 * 24 * 60 * 60 * 1000;
@@ -42,8 +42,8 @@ async function initScrapesDb() {
         console.error('[scrapes] createPending', err);
       }
     };
-    scrapeHooks.onResult = ({ requestId, data }) => {
-      db.markDone({ id: requestId, data: data as ScrapeData })
+    scrapeHooks.onResult = ({ requestId, data, fetchedAt }) => {
+      db.markDone({ id: requestId, data: data as ScrapeData, fetchedAt })
         .catch((err) => console.error('[scrapes] markDone', err));
     };
     scrapeHooks.onError = ({ requestId, error }) => {
@@ -211,7 +211,7 @@ wss.on('connection', (ws) => {
             const cached = await scrapeHooks.getCached({ source, url: persistedUrl });
             if (cached) {
               await scrapeHooks.onAccepted?.({ token, requestId, source, url: persistedUrl });
-              scrapeHooks.onResult?.({ requestId, data: cached });
+              scrapeHooks.onResult?.({ requestId, data: cached.data, fetchedAt: cached.fetchedAt });
               rooms.sendToWebs(token, { type: 'result_ready', requestId });
               return;
             }

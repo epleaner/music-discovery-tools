@@ -20,6 +20,7 @@ function makeRow(overrides: Partial<ScrapeRow> = {}): ScrapeRow {
     error: null,
     created_at: new Date('2026-01-01T00:00:00Z'),
     updated_at: new Date('2026-01-01T00:00:00Z'),
+    fetched_at: new Date('2026-01-01T00:00:00Z'),
     ...overrides,
   };
 }
@@ -28,7 +29,7 @@ function makeScrapesDb(rows: ScrapeRow[]): ScrapesDb {
   return {
     async init() {},
     async createPending() {},
-    async markDone() {},
+    async markDone(_a: { id: string; data: unknown; fetchedAt?: Date }) {},
     async markError() {},
     async getFresh() {
       return null;
@@ -62,6 +63,7 @@ test('scrape.getResult returns mapped row when present', async () => {
   assert.equal(result.url, 'https://rateyourmusic.com/album/foo');
   assert.deepEqual(result.data, { type: 'rym' });
   assert.equal(result.error, null);
+  assert.deepEqual(result.fetchedAt, row.fetched_at);
 });
 
 test('scrape.getResult returns null for unknown id', async () => {

@@ -13,6 +13,7 @@ const BandcampUrlTool: Component = () => {
   const [releases, setReleases] = createSignal<BandcampRelease[]>([]);
   const [currentLabel, setCurrentLabel] = createSignal<{ name: string; url: string } | null>(null);
   const [album, setAlbum] = createSignal<BandcampAlbumDetail | null>(null);
+  const [bcFetchedAt, setBcFetchedAt] = createSignal<string | null>(null);
   const [isLabelResult, setIsLabelResult] = createSignal(false);
   const [isRelatedResult, setIsRelatedResult] = createSignal(false);
   const [lastScrapedUrl, setLastScrapedUrl] = createSignal<string | null>(null);
@@ -20,7 +21,7 @@ const BandcampUrlTool: Component = () => {
 
   const hasToken = () => !!localStorage.getItem(TOKEN_KEY);
 
-  const scrapeBandcampUrl = (url: string, mode?: 'label' | 'related') => {
+  const scrapeBandcampUrl = (url: string, mode?: 'label' | 'related', force = false) => {
     if (!hasToken() || !menubarOnline()) {
       setBcStatus('Connect the menu bar & set a token to scrape Bandcamp.');
       return;
@@ -33,7 +34,7 @@ const BandcampUrlTool: Component = () => {
     setPendingMode(mode);
     setBcStatus('Scraping on your Mac…');
     setLastScrapedUrl(url);
-    const id = requestScrape({ source: 'bandcamp', url, mode });
+    const id = requestScrape({ source: 'bandcamp', url, mode, force });
     setBcReqId(id);
   };
 
@@ -55,6 +56,7 @@ const BandcampUrlTool: Component = () => {
         setCurrentLabel(label ?? null);
         const albumDetail = (result.data as any).album as BandcampAlbumDetail | undefined;
         setAlbum(albumDetail ?? null);
+        setBcFetchedAt((result as any).fetchedAt ?? null);
         setBcStatus(null);
         if (albumDetail?.url) setLastScrapedUrl(albumDetail.url);
         setIsLabelResult(pendingMode() === 'label' && !!label);
@@ -116,6 +118,11 @@ const BandcampUrlTool: Component = () => {
           showRelated={hasToken() && menubarOnline() && isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()}
           onExploreLabel={() => scrapeBandcampUrl(lastScrapedUrl() ?? bcUrl(), 'label')}
           onRelated={() => scrapeBandcampUrl(lastScrapedUrl() ?? bcUrl(), 'related')}
+          fetchedAt={bcFetchedAt()}
+          onRefresh={() => {
+            const url = lastScrapedUrl();
+            if (url) scrapeBandcampUrl(url, undefined, true);
+          }}
         />
       </div>
     </div>

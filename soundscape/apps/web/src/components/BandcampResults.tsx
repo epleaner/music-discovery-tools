@@ -1,6 +1,7 @@
 import { Component, Show, For } from 'solid-js';
 import type { BandcampRelease, BandcampAlbumDetail } from '@soundscape/types';
 import BandcampPlayer from './BandcampPlayer';
+import { relativeTime } from '../lib/relative-time';
 
 interface BandcampResultsProps {
   releases: BandcampRelease[];
@@ -13,13 +14,32 @@ interface BandcampResultsProps {
   showRelated?: boolean;
   onExploreLabel?: () => void;
   onRelated?: () => void;
+  fetchedAt?: string | Date | null;
+  onRefresh?: () => void;
 }
 
 const BandcampResults: Component<BandcampResultsProps> = (props) => {
+  const hasResults = () => props.releases.length > 0 || !!props.album;
+
   return (
     <>
       <Show when={props.status}>
         <div class="text-fg-muted">{props.status}</div>
+      </Show>
+
+      <Show when={!props.status && hasResults() && props.fetchedAt}>
+        <div class="flex items-center justify-end gap-1 text-[10px] text-fg-subtle">
+          <span>last fetched {relativeTime(props.fetchedAt)}</span>
+          <Show when={props.onRefresh}>
+            <button
+              onClick={() => props.onRefresh?.()}
+              class="text-fg-subtle hover:text-fg text-xs"
+              title="Re-scrape"
+            >
+              ↻
+            </button>
+          </Show>
+        </div>
       </Show>
 
       <div class="flex flex-wrap gap-2">

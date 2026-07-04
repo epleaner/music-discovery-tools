@@ -16,16 +16,17 @@ export interface ScrapeRow {
   error: string | null;
   created_at: Date;
   updated_at: Date;
+  fetched_at: Date;
 }
 
 export interface ScrapesDb {
   init(): Promise<void>;
   createPending(a: { id: string; tokenHash: string; source: ScrapeSource; url: string }): Promise<void>;
-  markDone(a: { id: string; data: ScrapeData }): Promise<void>;
+  markDone(a: { id: string; data: ScrapeData; fetchedAt?: Date }): Promise<void>;
   markError(a: { id: string; error: string }): Promise<void>;
   getById(id: string): Promise<ScrapeRow | null>;
   listByToken(a: { tokenHash: string; source?: ScrapeSource; limit: number }): Promise<ScrapeRow[]>;
-  getFresh(a: { source: ScrapeSource; url: string; maxAgeMs: number }): Promise<ScrapeData | null>;
+  getFresh(a: { source: ScrapeSource; url: string; maxAgeMs: number }): Promise<{ data: ScrapeData; fetchedAt: Date } | null>;
   close(): Promise<void>;
 }
 
@@ -66,8 +67,12 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
               data        jsonb,
               error       text,
               created_at  timestamptz NOT NULL DEFAULT now(),
-              updated_at  timestamptz NOT NULL DEFAULT now()
+              updated_at  timestamptz NOT NULL DEFAULT now(),
+              fetched_at  timestamptz NOT NULL DEFAULT now()
             )
+          `;
+          await sql`
+            ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS fetched_at timestamptz NOT NULL DEFAULT now()
           `;
           await sql`
             CREATE INDEX IF NOT EXISTS scrapes_token_source_created_idx
@@ -95,11 +100,12 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
       `;
     },
 
-    async markDone({ id, data }) {
+    async markDone({ id, data, fetchedAt }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await sql`
         UPDATE scrapes
-        SET status = 'done', data = ${sql.json(data as any)}, updated_at = now()
+        SET status = 'done', data = ${sql.json(data as any)}, updated_at = now(),
+            fetched_at = COALESCE(${fetchedAt ?? null}, now())
         WHERE id = ${id}
       `;
     },
@@ -137,13 +143,14 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
     },
 
     async getFresh({ source, url, maxAgeMs }) {
-      const rows = await sql<{ data: ScrapeData }[]>`
-        SELECT data FROM scrapes
+      const rows = await sql<{ data: ScrapeData; fetched_at: Date }[]>`
+        SELECT data, fetched_at FROM scrapes
         WHERE source = ${source} AND url = ${url} AND status = 'done'
           AND created_at > now() - (${maxAgeMs}::bigint * interval '1 millisecond')
         ORDER BY created_at DESC LIMIT 1
       `;
-      return rows[0]?.data ?? null;
+      const row = rows[0];
+      return row ? { data: row.data, fetchedAt: row.fetched_at } : null;
     },
 
     async close() {

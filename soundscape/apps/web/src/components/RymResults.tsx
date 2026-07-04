@@ -1,17 +1,37 @@
 import { Component, Show, For } from 'solid-js';
 import type { RymEntry, RymAlbumDetail } from '@soundscape/types';
+import { relativeTime } from '../lib/relative-time';
 
 interface RymResultsProps {
   entries: RymEntry[];
   album: RymAlbumDetail | null;
   status: string | null;
+  fetchedAt?: string | Date | null;
+  onRefresh?: () => void;
 }
 
 const RymResults: Component<RymResultsProps> = (props) => {
+  const hasResults = () => props.entries.length > 0 || !!props.album;
+
   return (
     <>
       <Show when={props.status}>
         <div class="text-fg-muted">{props.status}</div>
+      </Show>
+
+      <Show when={!props.status && hasResults() && props.fetchedAt}>
+        <div class="flex items-center justify-end gap-1 text-[10px] text-fg-subtle">
+          <span>last fetched {relativeTime(props.fetchedAt)}</span>
+          <Show when={props.onRefresh}>
+            <button
+              onClick={() => props.onRefresh?.()}
+              class="text-fg-subtle hover:text-fg text-xs"
+              title="Re-scrape"
+            >
+              ↻
+            </button>
+          </Show>
+        </div>
       </Show>
 
       <Show when={props.entries.length > 0}>
