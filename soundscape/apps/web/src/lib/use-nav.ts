@@ -57,9 +57,29 @@ export function useNav() {
     return null;
   });
 
+  const lastItem = createMemo<NavView | null>(() => {
+    const s = state();
+    for (let i = s.index; i >= 0; i--) {
+      if (s.stack[i].restore.type === 'item') return s.stack[i];
+    }
+    return null;
+  });
+
   const navigate = (view: Omit<NavView, 'id'>) => {
     setSearchParams({
       nav: serialize(appendOrReplace(state(), view, crypto.randomUUID())),
+    });
+  };
+
+  const navigateToItem = (item: {
+    artist: string;
+    album?: string;
+    itemKind: 'album' | 'artist';
+  }) => {
+    navigate({
+      kind: 'item',
+      label: item.album ?? item.artist,
+      restore: { type: 'item', ...item },
     });
   };
 
@@ -108,7 +128,9 @@ export function useNav() {
     current,
     lastArtist,
     lastScrape,
+    lastItem,
     navigate,
+    navigateToItem,
     goTo,
     home,
     replaceCurrentScrape,
