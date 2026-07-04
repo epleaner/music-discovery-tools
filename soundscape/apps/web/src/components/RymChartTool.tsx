@@ -17,7 +17,7 @@ const RymChartTool: Component = () => {
 
   const [rymSearchTerm, setRYMSearchTerm] = createSignal<string[]>([]);
   const [rymYear, setRYMYear] = createSignal(2025);
-  const [rymTimeRange, setRYMTimeRange] = createSignal<'year' | 'decade'>('year');
+  const [rymTimeRange, setRYMTimeRange] = createSignal<'year' | 'decade' | 'all-time'>('year');
 
   const currentYear = new Date().getFullYear();
   const rymYears = Array.from(
@@ -37,12 +37,14 @@ const RymChartTool: Component = () => {
     const genres = rymSearchTerm();
     const genreSlug = genres.map(formatGenreForURL).join(',');
     const encodedGenreSlug = encodeURIComponent(genreSlug);
-    if (rymTimeRange() === 'year') {
-      return `https://rateyourmusic.com/charts/top/album/${rymYear()}/ge:${encodedGenreSlug}/`;
-    } else {
-      const decade = Math.floor(rymYear() / 10) * 10;
-      return `https://rateyourmusic.com/charts/top/album/${decade}s/ge:${encodedGenreSlug}/`;
-    }
+    const range = rymTimeRange();
+    const period =
+      range === 'year'
+        ? `${rymYear()}`
+        : range === 'decade'
+          ? `${Math.floor(rymYear() / 10) * 10}s`
+          : 'all-time';
+    return `https://rateyourmusic.com/charts/top/album/${period}/ge:${encodedGenreSlug}/`;
   });
 
   const hasToken = () => !!localStorage.getItem(TOKEN_KEY);
@@ -119,6 +121,16 @@ const RymChartTool: Component = () => {
                 }`}
               >
                 Decade
+              </button>
+              <button
+                onClick={() => setRYMTimeRange('all-time')}
+                class={`flex-1 px-2 py-1 text-xs whitespace-nowrap ${
+                  rymTimeRange() === 'all-time'
+                    ? 'bg-accent text-bg'
+                    : 'text-fg-muted hover:text-fg border border-border'
+                }`}
+              >
+                All Time
               </button>
             </div>
           </div>
