@@ -23,6 +23,8 @@ import EveryNoiseViewer from './components/EveryNoiseViewer';
 import PairWsDropdown from './components/PairWsDropdown';
 import NewsletterPanel from './components/NewsletterPanel';
 import ScrapeSections from './components/ScrapeSections';
+import RymChartTool from './components/RymChartTool';
+import BandcampUrlTool from './components/BandcampUrlTool';
 import Breadcrumbs from './components/Breadcrumbs';
 import { buildSimilarPanelModel } from './lib/app-right-panel';
 import { buildAppLayoutModel } from './lib/app-layout';
@@ -84,9 +86,9 @@ const App: Component = () => {
 
   const nav = useNav();
 
-  const [bottomTab, setBottomTab] = createSignal<'newsletters' | 'sites'>(
-    'newsletters'
-  );
+  const [bottomTab, setBottomTab] = createSignal<
+    'newsletters' | 'sites' | 'rym-charts' | 'bandcamp'
+  >('newsletters');
 
   const { theme, toggleTheme, colorTheme, setColorTheme } = useTheme();
 
@@ -658,6 +660,26 @@ const App: Component = () => {
                 >
                   Sites
                 </button>
+                <button
+                  onClick={() => setBottomTab('rym-charts')}
+                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                    bottomTab() === 'rym-charts'
+                      ? 'bg-accent text-bg'
+                      : 'text-fg-muted hover:text-fg'
+                  }`}
+                >
+                  RYM Charts
+                </button>
+                <button
+                  onClick={() => setBottomTab('bandcamp')}
+                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                    bottomTab() === 'bandcamp'
+                      ? 'bg-accent text-bg'
+                      : 'text-fg-muted hover:text-fg'
+                  }`}
+                >
+                  Bandcamp
+                </button>
               </div>
               <div class="overflow-y-auto flex-1 min-h-0">
                 <Switch>
@@ -669,6 +691,12 @@ const App: Component = () => {
                       sites={musicSites()}
                       onSitesChange={handleSitesChange}
                     />
+                  </Match>
+                  <Match when={bottomTab() === 'rym-charts'}>
+                    <RymChartTool />
+                  </Match>
+                  <Match when={bottomTab() === 'bandcamp'}>
+                    <BandcampUrlTool />
                   </Match>
                 </Switch>
               </div>
