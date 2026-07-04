@@ -112,12 +112,6 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
                       title='View on RateYourMusic'>
                       rym
                     </a>
-                    <button
-                      onClick={() => props.onArtistClick?.(track.artist.name)}
-                      class='text-[10px] hover:underline'
-                      title='View similar artists'>
-                      similar →
-                    </button>
                   </div>
                   <Show
                     when={

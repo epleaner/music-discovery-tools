@@ -4,10 +4,8 @@ import type {
   Track,
   ArtistInfo,
   ArtistInfoResponse,
-  ScrapeQuery,
 } from '@soundscape/types';
 import {
-  getRYMArtistUrl,
   fetchArtistInfo,
   getCached,
   getArtistCacheKey,
@@ -18,9 +16,7 @@ interface RecentArtistListProps {
   tracks: Track[];
   isLoading?: boolean;
   error?: Error | null;
-  onArtistClick?: (artistName: string) => void;
   onArtistRowClick?: (artist: RecentArtist) => void;
-  onRymScrape?: (url: string, query: ScrapeQuery) => void;
 }
 
 const RecentArtistList: Component<RecentArtistListProps> = (props) => {
@@ -113,28 +109,6 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                   <div class='flex-1 min-w-0'>
                     <div class='flex gap-2 items-center'>
                       <div class='text-sm truncate'>{artist.name}</div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          props.onRymScrape?.(getRYMArtistUrl(artist.name), {
-                            artist: artist.name,
-                            kind: 'artist',
-                          });
-                        }}
-                        class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
-                        title='Scrape on RateYourMusic'>
-                        rym
-                      </button>
-                      <Show when={props.onArtistClick}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            props.onArtistClick?.(artist.name);
-                          }}
-                          class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'>
-                          similar →
-                        </button>
-                      </Show>
                     </div>
                     <div class='flex gap-1 items-center text-xs text-fg-muted'>
                       <span>

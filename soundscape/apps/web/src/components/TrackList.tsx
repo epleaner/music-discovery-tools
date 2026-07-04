@@ -1,20 +1,16 @@
 import { Component, For, Show, createSignal, createEffect } from 'solid-js';
-import type { Track, TrackInfo, TrackInfoResponse, ScrapeQuery } from '@soundscape/types';
+import type { Track, TrackInfo, TrackInfoResponse } from '@soundscape/types';
 import {
   fetchTrackInfo,
   getCached,
   getTrackCacheKey,
-  getRYMArtistUrl,
-  getRYMAlbumUrl,
 } from '@soundscape/utils';
 
 interface TrackListProps {
   tracks: Track[];
   isLoading?: boolean;
   error?: Error | null;
-  onArtistClick?: (artistName: string) => void;
   onTrackClick?: (track: Track) => void;
-  onRymScrape?: (url: string, query: ScrapeQuery) => void;
 }
 
 const TrackList: Component<TrackListProps> = (props) => {
@@ -127,32 +123,6 @@ const TrackList: Component<TrackListProps> = (props) => {
                   <div class='text-xs truncate text-fg-muted'>
                     {track.artist['#text']}
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const albumName = track.album?.['#text'];
-                      const url = albumName
-                        ? getRYMAlbumUrl(track.artist['#text'], albumName)
-                        : getRYMArtistUrl(track.artist['#text']);
-                      const query: ScrapeQuery = albumName
-                        ? { artist: track.artist['#text'], album: albumName, kind: 'album' }
-                        : { artist: track.artist['#text'], kind: 'artist' };
-                      props.onRymScrape?.(url, query);
-                    }}
-                    class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
-                    title='Scrape on RateYourMusic'>
-                    rym
-                  </button>
-                  <Show when={props.onArtistClick}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        props.onArtistClick?.(track.artist['#text']);
-                      }}
-                      class='text-xs text-fg-subtle hover:text-fg whitespace-nowrap'>
-                      similar →
-                    </button>
-                  </Show>
                 </div>
                 <Show
                   when={info()?.toptags?.tag && info()!.toptags.tag.length > 0}>

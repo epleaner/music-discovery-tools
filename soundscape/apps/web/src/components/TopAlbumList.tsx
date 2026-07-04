@@ -113,12 +113,6 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
                       class='hover:underline'>
                       {album.artist.name}
                     </button>
-                    <button
-                      onClick={() => props.onArtistClick?.(album.artist.name)}
-                      class='text-[10px] hover:underline'
-                      title='View similar artists'>
-                      similar →
-                    </button>
                   </div>
                   <Show when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
                     <div class='flex gap-1 text-fg-muted'>
