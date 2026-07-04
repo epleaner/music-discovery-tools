@@ -25,6 +25,7 @@ export interface ScrapesDb {
   markError(a: { id: string; error: string }): Promise<void>;
   getById(id: string): Promise<ScrapeRow | null>;
   listByToken(a: { tokenHash: string; source?: ScrapeSource; limit: number }): Promise<ScrapeRow[]>;
+  getFresh(a: { source: ScrapeSource; url: string; maxAgeMs: number }): Promise<ScrapeData | null>;
   close(): Promise<void>;
 }
 
@@ -71,6 +72,10 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
           await sql`
             CREATE INDEX IF NOT EXISTS scrapes_token_source_created_idx
               ON scrapes (token_hash, source, created_at DESC)
+          `;
+          await sql`
+            CREATE INDEX IF NOT EXISTS scrapes_source_url_created_idx
+              ON scrapes (source, url, created_at DESC)
           `;
           return;
         } catch (err) {
@@ -129,6 +134,16 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
         ORDER BY created_at DESC
         LIMIT ${limit}
       `;
+    },
+
+    async getFresh({ source, url, maxAgeMs }) {
+      const rows = await sql<{ data: ScrapeData }[]>`
+        SELECT data FROM scrapes
+        WHERE source = ${source} AND url = ${url} AND status = 'done'
+          AND created_at > now() - (${maxAgeMs}::bigint * interval '1 millisecond')
+        ORDER BY created_at DESC LIMIT 1
+      `;
+      return rows[0]?.data ?? null;
     },
 
     async close() {

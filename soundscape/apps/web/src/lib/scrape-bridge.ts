@@ -109,6 +109,7 @@ export function requestScrape(params: {
   url?: string;
   mode?: 'label' | 'related' | 'resolve';
   query?: ScrapeQuery;
+  force?: boolean;
 }): string {
   const requestId = crypto.randomUUID();
   if (ws?.readyState !== WebSocket.OPEN) {
@@ -116,6 +117,7 @@ export function requestScrape(params: {
     return requestId;
   }
   const msg: Record<string, unknown> = { type: 'scrape', requestId, source: params.source };
+  if (params.force) msg.force = true;
   if (params.mode === 'resolve') {
     msg.mode = 'resolve';
     msg.query = params.query;

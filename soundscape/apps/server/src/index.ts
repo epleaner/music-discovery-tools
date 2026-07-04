@@ -16,10 +16,13 @@ import { setScrapesDb } from './scrapes-state.js';
 
 // Filled in by the persistence task; default no-ops.
 export const scrapeHooks: {
-  onAccepted?: (a: { token: string; requestId: string; source: string; url: string }) => void;
+  onAccepted?: (a: { token: string; requestId: string; source: string; url: string }) => Promise<void> | void;
   onResult?: (a: { requestId: string; data: unknown }) => void;
   onError?: (a: { requestId: string; error: string }) => void;
+  getCached?: (a: { source: string; url: string }) => Promise<unknown | null>;
 } = {};
+
+const CACHE_TTL_MS = Number(process.env.SCRAPE_CACHE_TTL_MS) || 30 * 24 * 60 * 60 * 1000;
 
 async function initScrapesDb() {
   if (!process.env.DATABASE_URL) {
@@ -32,9 +35,12 @@ async function initScrapesDb() {
     setScrapesDb(db);
     console.log('[scrapes] Postgres persistence enabled');
 
-    scrapeHooks.onAccepted = ({ token, requestId, source, url }) => {
-      db.createPending({ id: requestId, tokenHash: hashToken(token), source: source as ScrapeSource, url })
-        .catch((err) => console.error('[scrapes] createPending', err));
+    scrapeHooks.onAccepted = async ({ token, requestId, source, url }) => {
+      try {
+        await db.createPending({ id: requestId, tokenHash: hashToken(token), source: source as ScrapeSource, url });
+      } catch (err) {
+        console.error('[scrapes] createPending', err);
+      }
     };
     scrapeHooks.onResult = ({ requestId, data }) => {
       db.markDone({ id: requestId, data: data as ScrapeData })
@@ -44,6 +50,8 @@ async function initScrapesDb() {
       db.markError({ id: requestId, error })
         .catch((err) => console.error('[scrapes] markError', err));
     };
+    scrapeHooks.getCached = ({ source, url }) =>
+      db.getFresh({ source: source as ScrapeSource, url, maxAgeMs: CACHE_TTL_MS });
   } catch (err) {
     console.error('[scrapes] Failed to init scrapes DB — persistence disabled:', err);
   }
@@ -173,7 +181,7 @@ wss.on('connection', (ws) => {
     }
 
     if (data.type === 'scrape') {
-      const { requestId, source, url, mode, query } = data;
+      const { requestId, source, url, mode, query, force } = data;
       const token = connectionToken;
       if (!token) return;
 
@@ -187,33 +195,54 @@ wss.on('connection', (ws) => {
         return;
       }
 
-      // Rate limiting
-      const now = Date.now();
-      const timestamps = (scrapeTimestamps.get(token) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-      if (timestamps.length >= RATE_LIMIT_MAX) {
-        sender.send(JSON.stringify({ type: 'scrape_error', requestId, message: 'rate limited' }));
-        return;
-      }
-      timestamps.push(now);
-      scrapeTimestamps.set(token, timestamps);
-
-      if (!rooms.sendToMenubar(token, data)) {
-        sender.send(JSON.stringify({ type: 'scrape_error', requestId, message: 'menu bar offline' }));
-        return;
-      }
-
       const persistedUrl =
         mode === 'resolve' && query
           ? `resolve:${query.kind}:${query.artist}${query.album ? ' - ' + query.album : ''}`
           : (url as string);
-      scrapeHooks.onAccepted?.({ token, requestId, source, url: persistedUrl });
 
-      const timeout = setTimeout(() => {
-        pendingTimeouts.delete(requestId);
-        scrapeHooks.onError?.({ requestId, error: 'timeout' });
-        rooms.sendToWebs(token, { type: 'scrape_error', requestId, message: 'timeout' });
-      }, SCRAPE_TIMEOUT_MS);
-      pendingTimeouts.set(requestId, timeout);
+      void (async () => {
+        try {
+          if (!force && scrapeHooks.getCached) {
+            const cached = await scrapeHooks.getCached({ source, url: persistedUrl });
+            if (cached) {
+              await scrapeHooks.onAccepted?.({ token, requestId, source, url: persistedUrl });
+              scrapeHooks.onResult?.({ requestId, data: cached });
+              rooms.sendToWebs(token, { type: 'result_ready', requestId });
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('[scrapes] cache lookup failed; falling through to scrape', err);
+          // fall through to the menu-bar path below
+        }
+
+        // Rate limiting (only real scrapes that reach the menu bar count)
+        const now = Date.now();
+        const timestamps = (scrapeTimestamps.get(token) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+        if (timestamps.length >= RATE_LIMIT_MAX) {
+          sender.send(JSON.stringify({ type: 'scrape_error', requestId, message: 'rate limited' }));
+          return;
+        }
+        timestamps.push(now);
+        scrapeTimestamps.set(token, timestamps);
+
+        if (!rooms.sendToMenubar(token, data)) {
+          sender.send(JSON.stringify({ type: 'scrape_error', requestId, message: 'menu bar offline' }));
+          return;
+        }
+
+        // Fire-and-forget: unlike the awaited cache-hit path above, the natural WS
+        // round-trip (menu bar scrapes, then POSTs the result) provides INSERT-before-UPDATE
+        // ordering here, so this doesn't need to be awaited.
+        scrapeHooks.onAccepted?.({ token, requestId, source, url: persistedUrl });
+
+        const timeout = setTimeout(() => {
+          pendingTimeouts.delete(requestId);
+          scrapeHooks.onError?.({ requestId, error: 'timeout' });
+          rooms.sendToWebs(token, { type: 'scrape_error', requestId, message: 'timeout' });
+        }, SCRAPE_TIMEOUT_MS);
+        pendingTimeouts.set(requestId, timeout);
+      })();
       return;
     }
 
