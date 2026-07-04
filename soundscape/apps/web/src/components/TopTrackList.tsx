@@ -4,14 +4,13 @@ import {
   fetchTrackInfo,
   getCached,
   getTrackCacheKey,
-  getRYMSearchUrl,
 } from '@soundscape/utils';
 
 interface TopTrackListProps {
   tracks: TopTrack[];
   isLoading: boolean;
   error: any;
-  onArtistClick?: (artistName: string) => void;
+  onTrackClick?: (track: TopTrack) => void;
 }
 
 const TopTrackList: Component<TopTrackListProps> = (props) => {
@@ -94,24 +93,13 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
             });
 
             return (
-              <div class='flex items-center gap-2 p-2 text-xs border-b border-border hover:bg-bg-subtle'>
+              <div
+                class='flex items-center gap-2 p-2 text-xs border-b border-border hover:bg-bg-subtle cursor-pointer'
+                onClick={() => props.onTrackClick?.(track)}>
                 <div class='flex-1 min-w-0'>
                   <div class='font-medium truncate'>{track.name}</div>
                   <div class='flex gap-1 items-center text-fg-muted'>
-                    <button
-                      onClick={() => props.onArtistClick?.(track.artist.name)}
-                      class='hover:underline'>
-                      {track.artist.name}
-                    </button>
-                    <a
-                      href={getRYMSearchUrl(track.artist.name)}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      onClick={(e) => e.stopPropagation()}
-                      class='text-[10px] hover:underline text-fg-subtle'
-                      title='View on RateYourMusic'>
-                      rym
-                    </a>
+                    <span>{track.artist.name}</span>
                   </div>
                   <Show
                     when={
