@@ -195,10 +195,15 @@ wss.on('connection', (ws) => {
         return;
       }
 
+      // Cache key. Must distinguish scrape MODE so a 'related'/'label' scrape of a
+      // URL doesn't collide with a normal scrape of the same URL (they return
+      // different data). resolve scrapes are already distinct via their pseudo-url.
       const persistedUrl =
         mode === 'resolve' && query
           ? `resolve:${query.kind}:${query.artist}${query.album ? ' - ' + query.album : ''}`
-          : (url as string);
+          : mode === 'label' || mode === 'related'
+            ? `${url}#${mode}`
+            : (url as string);
 
       void (async () => {
         try {
