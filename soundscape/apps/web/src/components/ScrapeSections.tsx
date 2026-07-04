@@ -29,6 +29,7 @@ const ScrapeSections: Component = () => {
   const [rymReqId, setRymReqId] = createSignal<string | null>(null);
   const [entries, setEntries] = createSignal<RymEntry[]>([]);
   const [rymAlbum, setRymAlbum] = createSignal<RymAlbumDetail | null>(null);
+  const [rymFetchedAt, setRymFetchedAt] = createSignal<string | null>(null);
 
   // Bandcamp section state
   const [bcStatus, setBcStatus] = createSignal<string | null>(null);
@@ -36,6 +37,7 @@ const ScrapeSections: Component = () => {
   const [releases, setReleases] = createSignal<BandcampRelease[]>([]);
   const [currentLabel, setCurrentLabel] = createSignal<{ name: string; url: string } | null>(null);
   const [album, setAlbum] = createSignal<BandcampAlbumDetail | null>(null);
+  const [bcFetchedAt, setBcFetchedAt] = createSignal<string | null>(null);
   const [isLabelResult, setIsLabelResult] = createSignal(false);
   const [isRelatedResult, setIsRelatedResult] = createSignal(false);
   const [lastScrapedUrl, setLastScrapedUrl] = createSignal<string | null>(null);
@@ -169,6 +171,7 @@ const ScrapeSections: Component = () => {
       if (isRym && result.data?.kind === 'rym') {
         setEntries(result.data.entries as RymEntry[]);
         setRymAlbum((result.data as any).album ?? null);
+        setRymFetchedAt((result as any).fetchedAt ?? null);
         setRymStatus(null);
       } else if (isBc && result.data?.kind === 'bandcamp') {
         setReleases(result.data.releases as BandcampRelease[]);
@@ -176,6 +179,7 @@ const ScrapeSections: Component = () => {
         setCurrentLabel(label ?? null);
         const albumDetail = (result.data as any).album as BandcampAlbumDetail | undefined;
         setAlbum(albumDetail ?? null);
+        setBcFetchedAt((result as any).fetchedAt ?? null);
         setBcStatus(null);
         if (albumDetail?.url) setLastScrapedUrl(albumDetail.url);
         setIsLabelResult(pendingMode() === 'label' && !!label);
@@ -207,7 +211,18 @@ const ScrapeSections: Component = () => {
         <h2 class="text-xs font-medium text-fg-muted">RYM</h2>
       </div>
       <div class="flex flex-col gap-4 p-3 text-xs">
-        <RymResults entries={entries()} album={rymAlbum()} status={rymStatus()} />
+        <RymResults
+          entries={entries()}
+          album={rymAlbum()}
+          status={rymStatus()}
+          fetchedAt={rymFetchedAt()}
+          onRefresh={() => {
+            const item = nav.lastItem();
+            if (!item || item.restore.type !== 'item') return;
+            const restore = item.restore;
+            scrapeItemRym({ artist: restore.artist, album: restore.album, itemKind: restore.itemKind }, true);
+          }}
+        />
       </div>
 
       {/* Bandcamp section */}
@@ -226,6 +241,13 @@ const ScrapeSections: Component = () => {
           showRelated={hasToken() && menubarOnline() && isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()}
           onExploreLabel={() => scrapeBandcampUrl(lastScrapedUrl() ?? '', 'label')}
           onRelated={() => scrapeBandcampUrl(lastScrapedUrl() ?? '', 'related')}
+          fetchedAt={bcFetchedAt()}
+          onRefresh={() => {
+            const item = nav.lastItem();
+            if (!item || item.restore.type !== 'item') return;
+            const restore = item.restore;
+            scrapeItemBandcamp({ artist: restore.artist, album: restore.album, itemKind: restore.itemKind }, true);
+          }}
         />
       </div>
     </>

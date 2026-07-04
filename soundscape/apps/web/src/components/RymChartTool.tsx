@@ -14,6 +14,8 @@ const RymChartTool: Component = () => {
   const [rymReqId, setRymReqId] = createSignal<string | null>(null);
   const [entries, setEntries] = createSignal<RymEntry[]>([]);
   const [rymAlbum, setRymAlbum] = createSignal<RymAlbumDetail | null>(null);
+  const [rymFetchedAt, setRymFetchedAt] = createSignal<string | null>(null);
+  const [lastScrapedUrl, setLastScrapedUrl] = createSignal<string | null>(null);
 
   const [rymSearchTerm, setRYMSearchTerm] = createSignal<string[]>([]);
   const [rymYear, setRYMYear] = createSignal(2025);
@@ -49,7 +51,7 @@ const RymChartTool: Component = () => {
 
   const hasToken = () => !!localStorage.getItem(TOKEN_KEY);
 
-  const scrapeRym = (url: string) => {
+  const scrapeRym = (url: string, force = false) => {
     if (!hasToken() || !menubarOnline()) {
       setRymStatus('Connect the menu bar & set a token to scrape RYM.');
       return;
@@ -57,7 +59,8 @@ const RymChartTool: Component = () => {
     setEntries([]);
     setRymAlbum(null);
     setRymStatus('Scraping on your Mac…');
-    const id = requestScrape({ source: 'rym', url });
+    setLastScrapedUrl(url);
+    const id = requestScrape({ source: 'rym', url, force });
     setRymReqId(id);
   };
 
@@ -76,6 +79,7 @@ const RymChartTool: Component = () => {
       if (result.data?.kind === 'rym') {
         setEntries(result.data.entries as RymEntry[]);
         setRymAlbum((result.data as any).album ?? null);
+        setRymFetchedAt((result as any).fetchedAt ?? null);
         setRymStatus(null);
       }
     });
@@ -213,7 +217,16 @@ const RymChartTool: Component = () => {
       </div>
 
       <div class="flex-1 min-w-0 overflow-y-auto">
-        <RymResults entries={entries()} album={rymAlbum()} status={rymStatus()} />
+        <RymResults
+          entries={entries()}
+          album={rymAlbum()}
+          status={rymStatus()}
+          fetchedAt={rymFetchedAt()}
+          onRefresh={() => {
+            const url = lastScrapedUrl();
+            if (url) scrapeRym(url, true);
+          }}
+        />
       </div>
     </div>
   );
