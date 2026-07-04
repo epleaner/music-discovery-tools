@@ -14,6 +14,7 @@ import {
 } from '../lib/scrape-bridge';
 import RymResults from './RymResults';
 import BandcampResults from './BandcampResults';
+import CacheAge from './CacheAge';
 
 const TOKEN_KEY = 'scrape_pairing_token';
 
@@ -209,12 +210,7 @@ const ScrapeSections: Component = () => {
       {/* RYM section */}
       <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
         <h2 class="text-xs font-medium text-fg-muted">RYM</h2>
-      </div>
-      <div class="flex flex-col gap-4 p-3 text-xs">
-        <RymResults
-          entries={entries()}
-          album={rymAlbum()}
-          status={rymStatus()}
+        <CacheAge
           fetchedAt={rymFetchedAt()}
           onRefresh={() => {
             const item = nav.lastItem();
@@ -224,10 +220,26 @@ const ScrapeSections: Component = () => {
           }}
         />
       </div>
+      <div class="flex flex-col gap-4 p-3 text-xs">
+        <RymResults
+          entries={entries()}
+          album={rymAlbum()}
+          status={rymStatus()}
+        />
+      </div>
 
       {/* Bandcamp section */}
       <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
         <h2 class="text-xs font-medium text-fg-muted">Bandcamp</h2>
+        <CacheAge
+          fetchedAt={bcFetchedAt()}
+          onRefresh={() => {
+            const item = nav.lastItem();
+            if (!item || item.restore.type !== 'item') return;
+            const restore = item.restore;
+            scrapeItemBandcamp({ artist: restore.artist, album: restore.album, itemKind: restore.itemKind }, true);
+          }}
+        />
       </div>
       <div class="flex flex-col gap-4 p-3 text-xs">
         <BandcampResults
@@ -241,13 +253,6 @@ const ScrapeSections: Component = () => {
           showRelated={hasToken() && menubarOnline() && isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()}
           onExploreLabel={() => scrapeBandcampUrl(lastScrapedUrl() ?? '', 'label')}
           onRelated={() => scrapeBandcampUrl(lastScrapedUrl() ?? '', 'related')}
-          fetchedAt={bcFetchedAt()}
-          onRefresh={() => {
-            const item = nav.lastItem();
-            if (!item || item.restore.type !== 'item') return;
-            const restore = item.restore;
-            scrapeItemBandcamp({ artist: restore.artist, album: restore.album, itemKind: restore.itemKind }, true);
-          }}
         />
       </div>
     </>

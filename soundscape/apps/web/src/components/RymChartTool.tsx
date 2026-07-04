@@ -5,6 +5,7 @@ import { trpc } from '../lib/trpc';
 import { requestScrape, onResultReady, onScrapeError, menubarOnline } from '../lib/scrape-bridge';
 import GenreSelect from './GenreSelect';
 import RymResults from './RymResults';
+import CacheAge from './CacheAge';
 
 const TOKEN_KEY = 'scrape_pairing_token';
 
@@ -217,15 +218,19 @@ const RymChartTool: Component = () => {
       </div>
 
       <div class="flex-1 min-w-0 overflow-y-auto">
+        <div class="flex justify-end mb-1">
+          <CacheAge
+            fetchedAt={rymFetchedAt()}
+            onRefresh={() => {
+              const url = lastScrapedUrl();
+              if (url) scrapeRym(url, true);
+            }}
+          />
+        </div>
         <RymResults
           entries={entries()}
           album={rymAlbum()}
           status={rymStatus()}
-          fetchedAt={rymFetchedAt()}
-          onRefresh={() => {
-            const url = lastScrapedUrl();
-            if (url) scrapeRym(url, true);
-          }}
         />
       </div>
     </div>
