@@ -3,7 +3,6 @@ import {
   menubarOnline,
   connected,
   setPairingToken,
-  pairingToken,
 } from '../lib/scrape-bridge';
 
 const TOKEN_KEY = 'scrape_pairing_token';

@@ -293,8 +293,8 @@ const App: Component = () => {
                 }}
                 class="flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg w-3 h-3"
                 style={{ transform: `rotate(${getThemeRotation()})` }}
-                aria-label="Switch theme"
-                title="Switch theme: light, dark, or system"
+                aria-label={`Switch theme (currently ${theme()})`}
+                title={`Switch theme (currently ${theme()})`}
               >
                 <span class="theme-icon" />
               </button>
