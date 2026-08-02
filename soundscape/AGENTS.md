@@ -1,449 +1,176 @@
+<!-- OPENSPEC:START -->
+
+# OpenSpec Instructions
+
+These instructions are for AI assistants working in this project.
+
+Always open `@/openspec/AGENTS.md` when the request:
+
+- Mentions planning or proposals (words like proposal, spec, change, plan)
+- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
+- Sounds ambiguous and you need the authoritative spec before coding
+
+Use `@/openspec/AGENTS.md` to learn:
+
+- How to create and apply change proposals
+- Spec format and conventions
+- Project structure and guidelines
+
+Keep this managed block so 'openspec update' can refresh the instructions.
+
+<!-- OPENSPEC:END -->
+
 # AGENTS.md
 
-## Project Overview
+This guide is for agentic contributors working anywhere in the Soundscape monorepo.
+Keep it handy whenever you run commands, edit code, or make architectural decisions.
 
-**Soundscape** is a music discovery application that integrates with Last.fm to provide listening history, top artists, and music recommendations. It consists of a SolidJS web application and a browser extension built with WXT, sharing code through a Turborepo monorepo architecture.
+## Quick Reference
 
-### Core Philosophy
+- Node.js 18+ and pnpm 9.15.4 are required; run `pnpm install` after every lockfile change.
+- Turborepo drives orchestration; prefer `pnpm --filter <package> <script>` for targeted work.
+- Shared packages live under `packages/`; apps are under `apps/`; scripts sit in `scripts/`.
+- Keep UI monochrome (black/white/grays) and respect the shared Tailwind preset.
 
-- **Simplicity First**: Keep code minimal, readable, and maintainable
-- **Hyper-Minimal UI**: Pure monochrome design (black/white/grays) with zero decoration
-- **Type Safety**: Full TypeScript throughout with strict type checking
-- **Shared Code**: Maximize code reuse between web and extension
+## Planning + Task Tracking (OpenSpec × Beads)
 
-## Technology Stack
+- OpenSpec captures capability-level changes; Beads (`bd` CLI) tracks day-to-day tasks. Every net-new feature still needs an approved OpenSpec change, and its execution should live under a bead tree.
+- Before coding, check both queues: `openspec list`/`openspec list --specs` for specs and `bd ready` for unblocked tasks. Share the bead ID (e.g., `bd-a3f8.2`) in the chat so agents know what they are working on.
+- When creating a change, scaffold `openspec/changes/<id>/` **and** create a matching bead via `bd create "<title>" -p <priority>`. Add the bead ID near the top of `proposal.md` and `tasks.md` for traceability.
+- Mirror `tasks.md` items as bead subtasks using `bd create` + `bd dep add <child> <parent>`; keep the ordering the same so `bd ready` matches the OpenSpec checklist. Update both the markdown checklist and bead statuses as you finish work.
+- Agents should prefer beads over ad-hoc TODO lists for multi-step work. Use the `beads-task-agent` (see Task tool) to inspect or update the bead graph when you need structured planning inside the repo.
+- Close beads only after the associated spec delta ships (or is archived). When archiving an OpenSpec change, ensure the parent bead (and subtasks) are marked complete so future agents see the work as done.
 
-### Monorepo & Build
+## Build, Dev, and Tooling Commands
 
-- **Turborepo**: Build orchestration and caching
-- **pnpm**: Package management (v8.12.0+)
-- **Node.js**: v18+
-- **TypeScript**: v5.3.0+ with strict mode
+- Run everything: `pnpm dev` (server, web, extension) and `pnpm build` for production bundles.
+- Targeted dev servers: `pnpm dev:server`, `pnpm dev:web`, `pnpm dev:extension`.
+- Workspace lint: `pnpm lint`; workspace type safety: `pnpm type-check`; cleanup: `pnpm clean`.
+- API schema refresh: `pnpm api:generate` (remote) or `pnpm api:generate:local` for local mocks.
+- Database tasks: `pnpm db:generate`, `pnpm db:push`, `pnpm db:studio` from repo root.
+- Shared packages build with tsup: `pnpm --filter @soundscape/{types,utils,ui} build`.
+- Server bundle: `pnpm --filter @soundscape/server build`; start locally via `pnpm dev:server` or `pnpm --filter @soundscape/server start`.
+- Web app build: `pnpm --filter @soundscape/web build`; preview via `pnpm --filter @soundscape/web preview`.
+- Extension build targets: `pnpm --filter wxt-react-starter build` plus `build:firefox` or `build:safari`; zip with `pnpm --filter wxt-react-starter zip`.
+- Prisma within packages/db: `pnpm --filter @soundscape/db db:generate|db:push|db:studio`.
+- Utility scripts run with tsx, e.g. `pnpm tsx scripts/scrape-rym-genres.ts`.
+- Always run commands from repo root unless a package README says otherwise.
 
-### Web App (`apps/web`)
+## Package Cheat Sheet
 
-- **Framework**: SolidJS (fine-grained reactivity)
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS with custom monochrome preset
-- **Data Fetching**: SolidJS `createResource` primitives
-- **API Integration**: Last.fm API via shared utils
+- `@soundscape/web`: Solid + Vite; scripts `dev`, `build`, `preview`, `type-check`, `start`.
+- `wxt-react-starter`: React extension; scripts `dev[:browser]`, `build[:browser]`, `zip[:browser]`, `lint`, `type-check`.
+- `@soundscape/server`: tsx-powered backend; scripts `dev`, `build`, `start`, plus Prisma helpers re-exported at root.
+- `@soundscape/types`, `@soundscape/utils`, `@soundscape/ui`: tsup builds with `build`, watch via `dev`, lint via `lint`, strict `type-check`.
+- `@soundscape/api`: tRPC router only; run `pnpm --filter @soundscape/api type-check` after API edits.
+- `@soundscape/db`: Prisma schema owner with `db:generate`, `db:push`, `db:studio`; ensure `DATABASE_URL` is set.
+- `@soundscape/api-client`: Orval outputs; rerun `pnpm api:generate` whenever API contracts change.
 
-### Browser Extension (`apps/extension`)
+## Testing and Single-Test Workflow
 
-- **Framework**: React (WXT requirement)
-- **Build Tool**: WXT (Web Extension Toolkit)
-- **Styling**: Tailwind CSS (same preset as web)
-- **Target Browsers**: Chrome, Firefox, Safari
+- No automated unit tests ship yet; add Vitest per package when you introduce specs.
+- Preferred pattern: add a `test` script (e.g. `"test": "vitest"`) and run `pnpm --filter <package> test`.
+- To execute one spec file once Vitest is installed, use `pnpm --filter <package> vitest run path/to/file.test.ts`.
+- For focused case names, append `--runInBand --relatedTests path/to/file.ts` or `--testNamePattern "<name>"`.
+- Until formal tests exist, validate logic via `pnpm type-check`, manual flows (web + extension), and targeted tsx scripts.
+- Capture manual QA steps in PR descriptions so others can reproduce.
 
-### Shared Packages
+## Formatting and Imports
 
-- **`@soundscape/types`**: Shared TypeScript types (Last.fm responses, domain models)
-- **`@soundscape/utils`**: Shared utilities (Last.fm API client, data grouping)
-- **`@soundscape/ui`**: Tailwind preset and shared utilities
+- Prettier is enforced with `semi: true`, single quotes, 2-space indent, 80-char width; run `pnpm prettier --write` if needed.
+- Order imports: external deps, workspace packages (`@soundscape/*`), relative paths; keep blank line between groups.
+- Prefer named exports everywhere; default exports are only acceptable for Solid or React components.
+- Keep files in kebab-case; components in PascalCase; util functions in camelCase; constants in UPPER_SNAKE_CASE.
 
-## Design System
+## Type Safety and Naming
 
-### Monochrome Palette
+- Never use `any`; lean on interfaces for object shapes and `type` aliases for unions as in .cursorrules.
+- All function parameters and return values need explicit typing; enable strict null checks when adding tsconfig entries.
+- Optional data uses optional chaining and nullish coalescing instead of manual truthy checks.
+- Derive literal unions from source data (`as const`) when the UI relies on string enums.
+- Use descriptive prop names; avoid abbreviations that hide meaning.
 
-```javascript
-colors: {
-  bg: {
-    DEFAULT: '#ffffff',
-    subtle: '#fafafa',
-    muted: '#f5f5f5',
-  },
-  fg: {
-    DEFAULT: '#000000',
-    muted: '#737373',
-    subtle: '#a3a3a3',
-  },
-  border: {
-    DEFAULT: '#e5e5e5',
-    hover: '#d4d4d4',
-  },
-  accent: {
-    DEFAULT: '#000000',
-    hover: '#262626',
-  },
-}
-```
+## SolidJS (apps/web)
 
-### Typography Scale
+- Do not destructure props; read them directly (`props.value`) and wrap derived data in getters.
+- Local state uses `createSignal`; expensive derivations use `createMemo`; async data uses `createResource`.
+- Prefer Solid control-flow primitives (`<Show>`, `<Switch>`, `<For>`) instead of ternaries or `Array.map` rendering.
+- Keep components small (<150 lines); split nested views into subcomponents under `src/components`.
+- Compose resource factories in `src/lib` so UI files stay declarative.
 
-- **xs**: 11px (0.6875rem)
-- **sm**: 13px (0.8125rem)
-- **base**: 14px (0.875rem)
+## React (apps/extension)
 
-### Design Principles
+- Use functional components with hooks; keep state minimal since WXT popup lifetimes are short.
+- Prefer `useState` + `useEffect` pairs over class-like patterns; memoize expensive work with `useMemo` only when necessary.
+- Share logic with web app via utilities in `packages/utils` and types in `packages/types`.
+- React files should also honor the monochrome design system and Tailwind preset.
 
-- No shadows, no gradients, no colored accents
-- Minimal spacing (use `p-2`, `gap-2` over larger values)
-- Subtle borders (`border-border`)
-- Compact layouts with high information density
-- `+` / `−` indicators for expand/collapse states
+## Styling
 
-## Project Structure
+- Tailwind is the styling mechanism; no inline styles or arbitrary colors unless tokens are missing.
+- Use design tokens such as `bg-bg`, `bg-subtle`, `fg-muted`, `border-border`, and `accent`.
+- Palette stays monochrome: backgrounds (`bg`/`bg-subtle`/`bg-muted`), foregrounds (`fg`/`fg-muted`/`fg-subtle`), crisp borders, black accents, and typography xs 11px, sm 13px, base 14px; rely on subtle border shifts, no gradients/shadows, and +/- indicators for collapsible cues.
+- Example: `class='flex items-center gap-2 p-2 border border-border text-fg'`.
+- Prefer minimal spacing (`p-2`, `gap-2`), zero shadows, and +/- indicators for collapsible elements.
+- Extract repeated combos into `@layer components` inside `apps/web/src/styles/globals.css`.
+- Keep layouts mobile-first and only add responsive prefixes when behavior changes.
 
-```
-soundscape/
-├── apps/
-│   ├── extension/              # Browser extension (WXT + React)
-│   │   ├── entrypoints/
-│   │   │   ├── popup/          # Extension popup UI
-│   │   │   ├── background.ts   # Service worker
-│   │   │   └── content.ts      # Content script
-│   │   ├── wxt.config.ts
-│   │   └── tailwind.config.js  # Uses shared preset
-│   └── web/                    # Web app (SolidJS + Vite)
-│       ├── src/
-│       │   ├── components/     # SolidJS components
-│       │   ├── lib/            # Resource factories
-│       │   └── styles/         # Global CSS
-│       ├── index.html
-│       ├── vite.config.ts
-│       └── tailwind.config.js  # Uses shared preset
-├── packages/
-│   ├── types/                  # Shared TypeScript types
-│   │   └── src/
-│   │       ├── lastfm.ts       # Last.fm API types
-│   │       └── index.ts
-│   ├── utils/                  # Shared utilities
-│   │   └── src/
-│   │       ├── lastfm.ts       # API client functions
-│   │       ├── recent-grouping.ts  # Data transformations
-│   │       └── index.ts
-│   └── ui/                     # Shared UI utilities
-│       ├── src/
-│       │   └── lib/utils.ts
-│       └── tailwind.preset.js  # Shared design tokens
-├── turbo.json                  # Turborepo config
-├── pnpm-workspace.yaml         # Workspace definition
-└── tsconfig.json               # Root TS config
-```
+## Data, APIs, and Shared Utilities
 
-## Development Guidelines
+- All Last.fm work flows through `@soundscape/utils`; set API keys once during app bootstrap.
+- tRPC client helpers live at `apps/web/src/lib/trpc.ts` and `apps/extension/lib/trpc.ts`; reuse them instead of raw fetch calls.
+- Shared schemas/types belong in `packages/types`; keep them the single source of truth for server and clients.
+- When adding data transforms, place them in `packages/utils` (or `utils/src`) so apps stay lean.
+- Cache-heavy helpers belong in `packages/utils/src/cache.ts` instead of duplicating memoization in UI code.
 
-### Code Style
+## Error Handling
 
-1. **Functional & Declarative**: Prefer functions over classes, composition over inheritance
-2. **Type Everything**: Use explicit types, avoid `any`
-3. **Named Exports**: Use named exports, not default exports (except for components)
-4. **Async/Await**: Prefer `async/await` over raw promises
-5. **Early Returns**: Return early to reduce nesting
+- Validate input early and throw descriptive errors (e.g., `throw new Error("Username is required")`).
+- Catch API failures where recovery is possible; otherwise let errors bubble to resource boundaries.
+- Never swallow errors with empty `catch`; always log with context before rethrowing.
+- Use HTTP status-aware messages when dealing with fetch responses (`response.statusText`).
+- Favor `Result`-style objects only when callers truly branch on success/failure.
 
-### SolidJS Best Practices
+## File Organization
 
-```typescript
-// ✅ Good: Use createSignal for local state
-const [count, setCount] = createSignal(0);
+- Keep Solid components under `apps/web/src/components` and React popup pieces under `apps/extension/entrypoints/popup`.
+- Resource factories stay in `apps/web/src/lib`; shared hooks live beside them.
+- Shared helpers default to `packages/utils/src`; keep files under 200 lines and co-locate tests once they exist.
+- Place Prisma schema edits in `packages/db/prisma/schema.prisma` and rerun `pnpm db:generate`.
+- When adding assets, prefer `apps/extension/public` or `apps/web/public` to avoid bundler surprises.
 
-// ✅ Good: Use createMemo for derived values
-const doubled = createMemo(() => count() * 2);
+## Git and Review
 
-// ✅ Good: Use createResource for async data
-const [data] = createResource(userId, fetchUser);
+- Follow conventional commits (`feat:`, `fix:`, `docs:`, etc.) and describe the why, not only the what.
+- Never commit generated files (dist outputs, .wxt builds); rely on build pipelines.
+- Before pushing, run at least `pnpm lint`, `pnpm type-check`, and the relevant package build.
+- Document manual testing steps plus environment variables in PR descriptions.
 
-// ❌ Bad: Don't destructure props (breaks reactivity)
-const Component = ({ value }) => {
-  /* ... */
-};
+## Cursor / Agent Rules
 
-// ✅ Good: Access props directly
-const Component = (props) => {
-  return <div>{props.value}</div>;
-};
+- Mirror .cursorrules: prioritize simplicity, strict TypeScript, and small focused components.
+- Interfaces beat types for objects; reserve `type` for unions or primitives.
+- Keep naming consistent: files kebab-case, components PascalCase, functions camelCase, constants UPPER_SNAKE.
+- Solid reactivity rules: no prop destructuring, prefer getters, and only memoize expensive work.
+- Use Solid control flow components instead of ternaries or `map` for rendering loops.
+- Tailwind tokens only; compose utilities inline or via @layer components.
 
-// ✅ Good: Use getters for derived props
-const Component = (props) => {
-  const doubled = () => props.value * 2;
-  return <div>{doubled()}</div>;
-};
-```
+## API Surface and Exports
 
-### Component Patterns
-
-```typescript
-// Component structure (SolidJS)
-import { Component, createSignal, Show, For } from 'solid-js';
-import type { SomeType } from '@soundscape/types';
-
-interface MyComponentProps {
-  items: SomeType[];
-  onItemClick?: (item: SomeType) => void;
-}
-
-const MyComponent: Component<MyComponentProps> = (props) => {
-  const [isExpanded, setIsExpanded] = createSignal(false);
-
-  return (
-    <div class='p-2 border-b border-border'>
-      <Show when={props.items.length > 0}>
-        <For each={props.items}>
-          {(item) => (
-            <div onClick={() => props.onItemClick?.(item)}>{item.name}</div>
-          )}
-        </For>
-      </Show>
-    </div>
-  );
-};
-
-export default MyComponent;
-```
-
-### Styling Guidelines
-
-```typescript
-// ✅ Good: Use Tailwind utility classes
-<div class='flex items-center gap-2 p-2 border-b border-border hover:bg-bg-subtle'>
-
-// ✅ Good: Use design system colors
-<div class='text-fg-muted bg-bg-subtle'>
-
-// ❌ Bad: Don't use arbitrary values unless absolutely necessary
-<div class='text-[#333333] p-[13px]'>
-
-// ✅ Good: Compose utility classes, use @layer components for reusable patterns
-// In globals.css:
-@layer components {
-  .btn {
-    @apply px-3 py-1.5 text-sm font-medium transition-colors rounded;
-  }
-}
-```
-
-### Data Fetching (SolidJS)
-
-```typescript
-// ✅ Good: Create resource factories
-export function createRecentTracksResource(username: () => string) {
-  const [page, setPage] = createSignal(1);
-
-  const [data] = createResource(
-    () => ({ username: username(), page: page() }),
-    async ({ username, page }) => {
-      return await fetchRecentTracks(username, page);
-    }
-  );
-
-  return {
-    tracks: () => data()?.recenttracks.track || [],
-    isLoading: () => data.loading,
-    error: () => data.error,
-    loadMore: () => setPage((p) => p + 1),
-  };
-}
-```
-
-### Last.fm API Integration
-
-```typescript
-// All API calls go through @soundscape/utils
-import {
-  fetchRecentTracks,
-  fetchTopArtists,
-  setLastFMApiKey,
-} from '@soundscape/utils';
-
-// Set API key once at app initialization
-setLastFMApiKey(import.meta.env.VITE_LASTFM_API_KEY);
-
-// Use API functions
-const response = await fetchRecentTracks('username', 1, 50);
-```
-
-### Error Handling
-
-```typescript
-// ✅ Good: Descriptive errors with context
-if (!username?.trim()) {
-  throw new Error('Username is required');
-}
-
-// ✅ Good: Handle API errors gracefully
-try {
-  const data = await fetchRecentTracks(username);
-  return data;
-} catch (error) {
-  console.error('Failed to fetch tracks:', error);
-  throw error; // Let the UI handle display
-}
-
-// ❌ Bad: Silent failures
-try {
-  await doSomething();
-} catch (e) {
-  // nothing
-}
-```
-
-## Common Patterns
-
-### Expandable Lists
-
-```typescript
-const [expandedItems, setExpandedItems] = createSignal<Set<string>>(new Set());
-
-const toggle = (key: string) => {
-  setExpandedItems((prev) => {
-    const next = new Set(prev);
-    if (next.has(key)) {
-      next.delete(key);
-    } else {
-      next.add(key);
-    }
-    return next;
-  });
-};
-
-const isExpanded = (key: string) => expandedItems().has(key);
-```
-
-### Relative Time Formatting
-
-```typescript
-const formatDate = (timestamp: string) => {
-  const date = new Date(parseInt(timestamp) * 1000);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
-  return `${Math.floor(diffMins / 1440)}d ago`;
-};
-```
+- Add new endpoints to `packages/api/src/router.ts` and expose them through the shared client before consuming them.
+- Update `packages/api-client` when regenerating Orval outputs; rerun `pnpm api:generate`.
+- When exposing new public helpers, update `packages/utils/src/index.ts` plus `packages/types/src/index.ts`.
+- Keep barrel files alphabetical to reduce merge conflicts.
 
 ## Environment Variables
 
-### Web App (`.env.local`)
+- Web app expects `VITE_LASTFM_API_KEY`, `VITE_API_URL`, and `VITE_WS_URL` in `apps/web/.env.local`.
+- Extension expects `VITE_API_URL` and `VITE_WS_URL` in `apps/extension/.env`.
+- Database uses `packages/db/.env` with `DATABASE_URL`; regenerate Prisma client whenever the schema changes.
 
-```bash
-VITE_LASTFM_API_KEY=your_api_key_here
-```
+## Final Reminders
 
-### Extension
-
-- Store sensitive data in browser storage APIs
-- Use WXT's built-in storage helpers
-
-## Build & Deploy
-
-### Development
-
-```bash
-# Start all apps
-pnpm dev
-
-# Start specific app
-pnpm --filter @soundscape/web dev
-pnpm --filter @soundscape/extension dev
-```
-
-### Building
-
-```bash
-# Build all
-pnpm build
-
-# Build specific target
-pnpm --filter @soundscape/web build
-pnpm --filter @soundscape/extension build:firefox
-```
-
-### Type Checking
-
-```bash
-# Check all packages
-pnpm type-check
-
-# Check specific package
-pnpm --filter @soundscape/types type-check
-```
-
-## Testing Strategy
-
-- **Unit Tests**: For utility functions and data transformations
-- **Component Tests**: For complex UI logic
-- **Integration Tests**: For API integrations
-- **Manual Testing**: Use Playwright MCP for UI verification
-
-## Adding New Features
-
-### 1. Define Types First
-
-```typescript
-// packages/types/src/lastfm.ts
-export interface NewFeatureType {
-  id: string;
-  name: string;
-}
-```
-
-### 2. Add Utility Functions
-
-```typescript
-// packages/utils/src/feature.ts
-export async function fetchNewFeature(id: string): Promise<NewFeatureType> {
-  // Implementation
-}
-```
-
-### 3. Create SolidJS Resource (Web)
-
-```typescript
-// apps/web/src/lib/feature-resource.ts
-export function createFeatureResource(id: () => string) {
-  const [data] = createResource(id, fetchNewFeature);
-  return {
-    /* ... */
-  };
-}
-```
-
-### 4. Build UI Components
-
-```typescript
-// apps/web/src/components/FeatureView.tsx
-const FeatureView: Component = () => {
-  // Implementation
-};
-```
-
-## Troubleshooting
-
-### Type Errors in Apps
-
-```bash
-# Rebuild shared packages
-pnpm --filter @soundscape/types build
-pnpm --filter @soundscape/utils build
-```
-
-### Tailwind Not Applying
-
-- Check that component paths are in `tailwind.config.js` content array
-- Verify preset is imported correctly
-- Restart dev server after tailwind config changes
-
-### SolidJS Reactivity Issues
-
-- Don't destructure props
-- Call signals as functions: `count()` not `count`
-- Use `createMemo` for derived values, not computed variables
-
-## Resources
-
-- [SolidJS Documentation](https://www.solidjs.com/docs/latest)
-- [WXT Documentation](https://wxt.dev/)
-- [Turborepo Documentation](https://turbo.build/repo/docs)
-- [Last.fm API Documentation](https://www.last.fm/api)
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
-
-## Maintenance Notes
-
-- **Keep It Simple**: Resist over-engineering
-- **Minimize Dependencies**: Only add packages when truly needed
-- **Document Patterns**: Update this file when establishing new patterns
-- **Type Safety**: Never use `any` without a very good reason
-- **Performance**: SolidJS is fast by default, don't optimize prematurely
+- Favor early returns, descriptive helpers, and composition over inheritance everywhere.
+- Share code via packages, not relative imports between apps.
+- Keep AGENTS, README, and env docs in sync whenever tooling changes.
+- When uncertain, read existing components before inventing a new pattern.
