@@ -293,7 +293,8 @@ const App: Component = () => {
                 }}
                 class="flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg w-3 h-3"
                 style={{ transform: `rotate(${getThemeRotation()})` }}
-                title={`Theme: ${theme()}`}
+                aria-label="Switch theme"
+                title="Switch theme: light, dark, or system"
               >
                 <span class="theme-icon" />
               </button>
@@ -305,7 +306,8 @@ const App: Component = () => {
                     setShowColorThemeDropdown(!showColorThemeDropdown());
                   }}
                   class="flex items-center justify-center flex-shrink-0 text-xs text-fg-subtle hover:text-fg transition-colors"
-                  title="Color Theme"
+                  aria-label="Choose accent color theme"
+                  title="Choose accent color theme"
                 >
                   <span
                     class="w-2 h-2 rounded-full"

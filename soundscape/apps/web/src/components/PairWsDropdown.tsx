@@ -1,5 +1,4 @@
 import { Component, Show, createSignal, onMount, onCleanup } from 'solid-js';
-import WebSocketExample from './WebSocketExample';
 import {
   menubarOnline,
   connected,
@@ -46,7 +45,7 @@ const PairWsDropdown: Component = () => {
       <button
         onClick={() => setOpen(!open())}
         class="btn-secondary text-xs h-8 py-0 inline-flex items-center justify-center"
-        title="Pairing token and WebSocket debug"
+        title="Pairing token and connection status"
       >
         Pair / WS
       </button>
@@ -56,12 +55,12 @@ const PairWsDropdown: Component = () => {
           <div class="flex flex-col gap-3 p-3">
             {/* Pairing token */}
             <div class="flex flex-col gap-1.5">
-              <div class="text-xs font-medium text-fg">Pairing Token</div>
-              <Show when={maskedToken()}>
-                <div class="text-xs text-fg-muted">
-                  Active: <span class="font-mono text-fg">{maskedToken()}</span>
-                </div>
-              </Show>
+              <div class="flex items-center gap-2">
+                <div class="text-xs font-medium text-fg">Pairing Token</div>
+                <Show when={maskedToken()}>
+                  <span class="text-xs text-fg-muted">Active: <span class="font-mono text-fg">{maskedToken()}</span></span>
+                </Show>
+              </div>
               <div class="flex gap-2">
                 <input
                   type="text"
@@ -82,7 +81,7 @@ const PairWsDropdown: Component = () => {
               <div class="flex items-center gap-1.5 text-xs">
                 <Show when={menubarOnline()}>
                   <span class="w-2 h-2 rounded-full bg-green-500" />
-                  <span class="text-green-600 dark:text-green-400">Menu bar: connected</span>
+                  <span class="text-fg-muted">Menu bar: connected</span>
                 </Show>
                 <Show when={!menubarOnline()}>
                   <span class="w-2 h-2 rounded-full bg-red-500" />
@@ -101,14 +100,7 @@ const PairWsDropdown: Component = () => {
               </div>
             </div>
 
-            {/* Debug divider */}
-            <div class="flex items-center gap-2">
-              <div class="flex-1 border-t border-border" />
-              <span class="text-xs text-fg-subtle">debug</span>
-              <div class="flex-1 border-t border-border" />
-            </div>
 
-            <WebSocketExample />
           </div>
         </div>
       </Show>
