@@ -1,4 +1,4 @@
-import RYMGenreData from '../../public/static/rym-genres.json';
+const RYM_GENRE_DATA_URL = '/static/rym-genres.json';
 interface Genre {
   name: string;
   description: string;
@@ -39,9 +39,15 @@ export function flattenGenres(genres: Genre[], parentPath: string = ''): Flatten
 }
 
 /**
- * Loads and flattens genres from the RYM genres JSON file.
+ * Loads and flattens genres served from the public assets directory.
  */
-export function loadFlattenedGenres(): FlattenedGenre[] {
-  return flattenGenres(RYMGenreData.genres);
+export async function loadFlattenedGenres(): Promise<FlattenedGenre[]> {
+  const response = await fetch(RYM_GENRE_DATA_URL);
+  if (!response.ok) {
+    throw new Error(`Unable to load RYM genres: ${response.statusText}`);
+  }
+
+  const data = (await response.json()) as { genres: Genre[] };
+  return flattenGenres(data.genres);
 }
 
