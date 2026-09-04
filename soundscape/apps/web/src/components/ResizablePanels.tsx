@@ -51,7 +51,7 @@ const ResizablePanels: Component<ResizablePanelsProps> = (props) => {
   });
 
   return (
-    <div ref={containerRef} class='flex overflow-scroll flex-1 h-full'>
+    <div ref={containerRef} class='flex overflow-hidden flex-1 h-full'>
       {/* Left Panel */}
       <div
         class='overflow-hidden border-r border-border'
