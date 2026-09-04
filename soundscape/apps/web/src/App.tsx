@@ -18,7 +18,6 @@ import TopTrackList from './components/TopTrackList';
 import TopAlbumList from './components/TopAlbumList';
 import SiteViewer from './components/SiteViewer';
 import ResizablePanels from './components/ResizablePanels';
-import ResizableBottom from './components/ResizableBottom';
 import EveryNoiseViewer from './components/EveryNoiseViewer';
 import PairWsDropdown from './components/PairWsDropdown';
 import NewsletterPanel from './components/NewsletterPanel';
@@ -45,14 +44,15 @@ import {
   type RecentAlbum,
   type RecentArtist,
 } from '@soundscape/types';
-import {
-  groupTracksByAlbum,
-  groupTracksByArtist,
-} from '@soundscape/utils';
+import { groupTracksByAlbum, groupTracksByArtist } from '@soundscape/utils';
 import { useSearchState } from './lib/use-search-state';
 import { useNav } from './lib/use-nav';
 import { useTheme } from './lib/use-theme';
-import { menubarOnline, connected, requestScrapeRefresh } from './lib/scrape-bridge';
+import {
+  menubarOnline,
+  connected,
+  requestScrapeRefresh,
+} from './lib/scrape-bridge';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -86,8 +86,8 @@ const App: Component = () => {
   const nav = useNav();
 
   const [bottomTab, setBottomTab] = createSignal<
-    'newsletters' | 'sites' | 'rym-charts' | 'bandcamp'
-  >('newsletters');
+    'history' | 'newsletters' | 'sites' | 'rym-charts' | 'bandcamp'
+  >('history');
 
   const { theme, toggleTheme, colorTheme, setColorTheme } = useTheme();
 
@@ -164,7 +164,11 @@ const App: Component = () => {
   };
 
   const handleAlbumResolveClick = (album: RecentAlbum) => {
-    nav.navigateToItem({ artist: album.artist, album: album.name, itemKind: 'album' });
+    nav.navigateToItem({
+      artist: album.artist,
+      album: album.name,
+      itemKind: 'album',
+    });
   };
 
   const handleArtistResolveClick = (artist: RecentArtist) => {
@@ -268,11 +272,15 @@ const App: Component = () => {
           <div class="flex flex-1 gap-2 justify-end items-center w-full">
             <div class="flex items-center gap-3">
               <div class="flex items-center gap-2">
-                <span class={`w-2 h-2 rounded-full ${menubarOnline() ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span
+                  class={`w-2 h-2 rounded-full ${menubarOnline() ? 'bg-green-500' : 'bg-red-500'}`}
+                />
                 <span class="text-xs text-fg-muted">Menu bar</span>
               </div>
               <div class="flex items-center gap-2">
-                <span class={`w-2 h-2 rounded-full ${connected() ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span
+                  class={`w-2 h-2 rounded-full ${connected() ? 'bg-green-500' : 'bg-red-500'}`}
+                />
                 <span class="text-xs text-fg-muted">WS</span>
               </div>
             </div>
@@ -361,287 +369,28 @@ const App: Component = () => {
             </div>
           </div>
         </div>
-
       </div>
 
       <Breadcrumbs onRefresh={requestScrapeRefresh} />
 
       <Show when={appLayoutModel().showMainLayout}>
-        <ResizableBottom
-          initialBottomHeight={300}
-          minBottomHeight={150}
-          maxBottomHeight={600}
-          topPanel={
-            <ResizablePanels
-              initialLeftWidth={70}
-              minLeftWidth={30}
-              maxLeftWidth={80}
-              leftPanel={
-                <div class="flex flex-col h-full">
-                  {/* Sticky Header */}
-                  <div class="flex-shrink-0 bg-bg">
-                    {/* Tabs */}
-                    <div class="flex border-b border-border">
-                      <For each={tabs}>
-                        {(tab) => (
-                          <button
-                            onClick={() => updateState({ view: tab.id })}
-                            class={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                              currentView() === tab.id
-                                ? 'border-accent'
-                                : 'border-transparent text-fg-muted hover:text-fg'
-                            }`}
-                          >
-                            {tab.label}
-                          </button>
-                        )}
-                      </For>
-                    </div>
-
-                    {/* View type selector for recent */}
-                    <Show when={currentView() === 'recent'}>
-                      <div class="flex gap-1 p-2 border-b border-border">
-                        <For
-                          each={
-                            [
-                              { id: 'tracks', label: 'Tracks' },
-                              { id: 'albums', label: 'Albums' },
-                              { id: 'artists', label: 'Artists' },
-                            ] as { id: RecentViewType; label: string }[]
-                          }
-                        >
-                          {(view) => (
-                            <button
-                              onClick={() => updateState({ subview: view.id })}
-                              class={`px-2 py-1 text-xs whitespace-nowrap ${
-                                recentViewType() === view.id
-                                  ? 'bg-accent text-bg'
-                                  : 'text-fg-muted hover:text-fg'
-                              }`}
-                            >
-                              {view.label}
-                            </button>
-                          )}
-                        </For>
-                      </div>
-                    </Show>
-
-                    {/* Subview selector for top */}
-                    <Show when={currentView() === 'top'}>
-                      <div class="flex gap-1 p-2 border-b border-border">
-                        <For
-                          each={
-                            [
-                              { id: 'artists', label: 'Artists' },
-                              { id: 'tracks', label: 'Tracks' },
-                              { id: 'albums', label: 'Albums' },
-                            ] as { id: TopViewType; label: string }[]
-                          }
-                        >
-                          {(view) => (
-                            <button
-                              onClick={() =>
-                                updateState({ topSubview: view.id })
-                              }
-                              class={`px-2 py-1 text-xs whitespace-nowrap ${
-                                topViewType() === view.id
-                                  ? 'bg-accent text-bg'
-                                  : 'text-fg-muted hover:text-fg'
-                              }`}
-                            >
-                              {view.label}
-                            </button>
-                          )}
-                        </For>
-                      </div>
-                    </Show>
-
-                    {/* Period selector for top */}
-                    <Show when={currentView() === 'top'}>
-                      <div class="flex overflow-x-auto gap-1 items-center p-2 border-b border-border">
-                        <For
-                          each={Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]}
-                        >
-                          {(p) => (
-                            <button
-                              onClick={() => updateState({ period: p })}
-                              class={`px-2 py-1 text-xs whitespace-nowrap ${
-                                period() === p
-                                  ? 'bg-accent text-bg'
-                                  : 'text-fg-muted hover:text-fg'
-                              }`}
-                            >
-                              {TIME_PERIOD_LABELS[p]}
-                            </button>
-                          )}
-                        </For>
-                        <Show
-                          when={
-                            topArtists.isLoading() ||
-                            topTracks.isLoading() ||
-                            topAlbums.isLoading()
-                          }
-                        >
-                          <div class="ml-1 text-xs animate-spin text-fg-muted">
-                            ◐
-                          </div>
-                        </Show>
-                      </div>
-                    </Show>
-                  </div>
-
-                  {/* Content */}
-                  <div class="overflow-y-auto flex-1">
-                    <Show when={appLayoutModel().showLibraryEmptyState}>
-                      <div class="flex justify-center items-center h-full">
-                        <div class="text-xs text-center text-fg-muted">
-                          Enter a username to load Last.fm data
-                        </div>
-                      </div>
-                    </Show>
-
-                    <Show when={!appLayoutModel().showLibraryEmptyState}>
-                      <Switch>
-                        <Match when={currentView() === 'recent'}>
-                          <div>
-                            <Switch>
-                              <Match when={recentViewType() === 'tracks'}>
-                                <TrackList
-                                  tracks={recentTracks.tracks()}
-                                  isLoading={recentTracks.isLoading()}
-                                  error={recentTracks.error()}
-                                  onTrackClick={handleTrackResolveClick}
-                                />
-                              </Match>
-                              <Match when={recentViewType() === 'albums'}>
-                                <AlbumList
-                                  albums={recentAlbums()}
-                                  tracks={recentTracks.tracks()}
-                                  isLoading={recentTracks.isLoading()}
-                                  error={recentTracks.error()}
-                                  onAlbumClick={handleAlbumResolveClick}
-                                />
-                              </Match>
-                              <Match when={recentViewType() === 'artists'}>
-                                <RecentArtistList
-                                  artists={recentArtists()}
-                                  tracks={recentTracks.tracks()}
-                                  isLoading={recentTracks.isLoading()}
-                                  error={recentTracks.error()}
-                                  onArtistRowClick={handleArtistResolveClick}
-                                />
-                              </Match>
-                            </Switch>
-                            <Show
-                              when={
-                                recentViewType() === 'tracks' &&
-                                !recentTracks.isLoading() &&
-                                parseInt(
-                                  recentTracks.currentPage().toString()
-                                ) < parseInt(recentTracks.totalPages())
-                              }
-                            >
-                              <div class="p-4 text-center border-t border-border">
-                                <button
-                                  onClick={() => recentTracks.loadMore()}
-                                  class="text-xs btn"
-                                >
-                                  Load More
-                                </button>
-                              </div>
-                            </Show>
-                          </div>
-                        </Match>
-
-                        <Match when={currentView() === 'top'}>
-                          <div class="p-2">
-                            <Switch>
-                              <Match when={topViewType() === 'artists'}>
-                                <ArtistList
-                                  artists={topArtists.artists()}
-                                  isLoading={topArtists.isLoading()}
-                                  error={topArtists.error()}
-                                  onArtistClick={handleArtistClick}
-                                  showPlaycount={true}
-                                />
-                              </Match>
-                              <Match when={topViewType() === 'tracks'}>
-                                <TopTrackList
-                                  tracks={topTracks.tracks()}
-                                  isLoading={topTracks.isLoading()}
-                                  error={topTracks.error()}
-                                  onTrackClick={(track) =>
-                                    nav.navigateToItem({
-                                      artist: track.artist.name,
-                                      itemKind: 'artist',
-                                    })
-                                  }
-                                />
-                              </Match>
-                              <Match when={topViewType() === 'albums'}>
-                                <TopAlbumList
-                                  albums={topAlbums.albums()}
-                                  isLoading={topAlbums.isLoading()}
-                                  error={topAlbums.error()}
-                                  onAlbumClick={(album) =>
-                                    nav.navigateToItem({
-                                      artist: album.artist.name,
-                                      album: album.name,
-                                      itemKind: 'album',
-                                    })
-                                  }
-                                />
-                              </Match>
-                            </Switch>
-                          </div>
-                        </Match>
-                      </Switch>
-                    </Show>
-                  </div>
-                </div>
-              }
-              rightPanel={
-                <div class="flex flex-col h-full overflow-y-auto">
-                  {/* LastFM: Similar section */}
-                  <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
-                    <h2 class="text-xs font-medium text-fg-muted">LastFM: Similar</h2>
-                    <Show when={rightPanelModel().showSimilarArtists}>
-                      <div class="flex-shrink-0">
-                        <EveryNoiseViewer
-                          genre={everyNoiseGenre.genre()}
-                          isLoading={everyNoiseGenre.isLoading()}
-                          artistName={selectedArtist()}
-                        />
-                      </div>
-                    </Show>
-                  </div>
-                  <div class="flex-shrink-0">
-                    <Show
-                      when={selectedArtist()}
-                      fallback={
-                        <div class="py-8 text-xs text-center text-fg-muted">
-                          {rightPanelModel().emptyMessage}
-                        </div>
-                      }
-                    >
-                      <ArtistList
-                        artists={similarArtists.artists()}
-                        isLoading={similarArtists.isLoading()}
-                        error={similarArtists.error()}
-                        onArtistClick={handleArtistClick}
-                        showMatch={true}
-                      />
-                    </Show>
-                  </div>
-
-                  <ScrapeSections />
-                </div>
-              }
-            />
-          }
-          bottomPanel={
+        <ResizablePanels
+          initialLeftWidth={70}
+          minLeftWidth={30}
+          maxLeftWidth={80}
+          leftPanel={
             <div class="flex flex-col h-full">
-              <div class="flex flex-shrink-0 gap-1 p-2 border-b bg-bg border-border">
+              <div class="relative z-10 flex flex-shrink-0 gap-1 p-2 border-b bg-bg border-border">
+                <button
+                  onClick={() => setBottomTab('history')}
+                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                    bottomTab() === 'history'
+                      ? 'bg-accent text-bg'
+                      : 'text-fg-muted hover:text-fg'
+                  }`}
+                >
+                  Listening History
+                </button>
                 <button
                   onClick={() => setBottomTab('newsletters')}
                   class={`px-2 py-1 text-xs whitespace-nowrap ${
@@ -683,8 +432,238 @@ const App: Component = () => {
                   Bandcamp
                 </button>
               </div>
-              <div class="overflow-y-auto flex-1 min-h-0">
+              <div class="overflow-hidden flex-1 min-h-0">
                 <Switch>
+                  <Match when={bottomTab() === 'history'}>
+                    <div class="flex flex-col h-full">
+                      {/* Sticky Header */}
+                      <div class="flex-shrink-0 bg-bg">
+                        {/* Tabs */}
+                        <div class="flex border-b border-border">
+                          <For each={tabs}>
+                            {(tab) => (
+                              <button
+                                onClick={() => updateState({ view: tab.id })}
+                                class={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                                  currentView() === tab.id
+                                    ? 'border-accent'
+                                    : 'border-transparent text-fg-muted hover:text-fg'
+                                }`}
+                              >
+                                {tab.label}
+                              </button>
+                            )}
+                          </For>
+                        </div>
+
+                        {/* View type selector for recent */}
+                        <Show when={currentView() === 'recent'}>
+                          <div class="flex gap-1 p-2 border-b border-border">
+                            <For
+                              each={
+                                [
+                                  { id: 'tracks', label: 'Tracks' },
+                                  { id: 'albums', label: 'Albums' },
+                                  { id: 'artists', label: 'Artists' },
+                                ] as { id: RecentViewType; label: string }[]
+                              }
+                            >
+                              {(view) => (
+                                <button
+                                  onClick={() =>
+                                    updateState({ subview: view.id })
+                                  }
+                                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                                    recentViewType() === view.id
+                                      ? 'bg-accent text-bg'
+                                      : 'text-fg-muted hover:text-fg'
+                                  }`}
+                                >
+                                  {view.label}
+                                </button>
+                              )}
+                            </For>
+                          </div>
+                        </Show>
+
+                        {/* Subview selector for top */}
+                        <Show when={currentView() === 'top'}>
+                          <div class="flex gap-1 p-2 border-b border-border">
+                            <For
+                              each={
+                                [
+                                  { id: 'artists', label: 'Artists' },
+                                  { id: 'tracks', label: 'Tracks' },
+                                  { id: 'albums', label: 'Albums' },
+                                ] as { id: TopViewType; label: string }[]
+                              }
+                            >
+                              {(view) => (
+                                <button
+                                  onClick={() =>
+                                    updateState({ topSubview: view.id })
+                                  }
+                                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                                    topViewType() === view.id
+                                      ? 'bg-accent text-bg'
+                                      : 'text-fg-muted hover:text-fg'
+                                  }`}
+                                >
+                                  {view.label}
+                                </button>
+                              )}
+                            </For>
+                          </div>
+                        </Show>
+
+                        {/* Period selector for top */}
+                        <Show when={currentView() === 'top'}>
+                          <div class="flex overflow-x-auto gap-1 items-center p-2 border-b border-border">
+                            <For
+                              each={
+                                Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]
+                              }
+                            >
+                              {(p) => (
+                                <button
+                                  onClick={() => updateState({ period: p })}
+                                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                                    period() === p
+                                      ? 'bg-accent text-bg'
+                                      : 'text-fg-muted hover:text-fg'
+                                  }`}
+                                >
+                                  {TIME_PERIOD_LABELS[p]}
+                                </button>
+                              )}
+                            </For>
+                            <Show
+                              when={
+                                topArtists.isLoading() ||
+                                topTracks.isLoading() ||
+                                topAlbums.isLoading()
+                              }
+                            >
+                              <div class="ml-1 text-xs animate-spin text-fg-muted">
+                                ◐
+                              </div>
+                            </Show>
+                          </div>
+                        </Show>
+                      </div>
+
+                      {/* Content */}
+                      <div class="overflow-y-auto flex-1">
+                        <Show when={appLayoutModel().showLibraryEmptyState}>
+                          <div class="flex justify-center items-center h-full">
+                            <div class="text-xs text-center text-fg-muted">
+                              Enter a username to load Last.fm data
+                            </div>
+                          </div>
+                        </Show>
+
+                        <Show when={!appLayoutModel().showLibraryEmptyState}>
+                          <Switch>
+                            <Match when={currentView() === 'recent'}>
+                              <div>
+                                <Switch>
+                                  <Match when={recentViewType() === 'tracks'}>
+                                    <TrackList
+                                      tracks={recentTracks.tracks()}
+                                      isLoading={recentTracks.isLoading()}
+                                      error={recentTracks.error()}
+                                      onTrackClick={handleTrackResolveClick}
+                                    />
+                                  </Match>
+                                  <Match when={recentViewType() === 'albums'}>
+                                    <AlbumList
+                                      albums={recentAlbums()}
+                                      tracks={recentTracks.tracks()}
+                                      isLoading={recentTracks.isLoading()}
+                                      error={recentTracks.error()}
+                                      onAlbumClick={handleAlbumResolveClick}
+                                    />
+                                  </Match>
+                                  <Match when={recentViewType() === 'artists'}>
+                                    <RecentArtistList
+                                      artists={recentArtists()}
+                                      tracks={recentTracks.tracks()}
+                                      isLoading={recentTracks.isLoading()}
+                                      error={recentTracks.error()}
+                                      onArtistRowClick={
+                                        handleArtistResolveClick
+                                      }
+                                    />
+                                  </Match>
+                                </Switch>
+                                <Show
+                                  when={
+                                    recentViewType() === 'tracks' &&
+                                    !recentTracks.isLoading() &&
+                                    parseInt(
+                                      recentTracks.currentPage().toString()
+                                    ) < parseInt(recentTracks.totalPages())
+                                  }
+                                >
+                                  <div class="p-4 text-center border-t border-border">
+                                    <button
+                                      onClick={() => recentTracks.loadMore()}
+                                      class="text-xs btn"
+                                    >
+                                      Load More
+                                    </button>
+                                  </div>
+                                </Show>
+                              </div>
+                            </Match>
+
+                            <Match when={currentView() === 'top'}>
+                              <div class="p-2">
+                                <Switch>
+                                  <Match when={topViewType() === 'artists'}>
+                                    <ArtistList
+                                      artists={topArtists.artists()}
+                                      isLoading={topArtists.isLoading()}
+                                      error={topArtists.error()}
+                                      onArtistClick={handleArtistClick}
+                                      showPlaycount={true}
+                                    />
+                                  </Match>
+                                  <Match when={topViewType() === 'tracks'}>
+                                    <TopTrackList
+                                      tracks={topTracks.tracks()}
+                                      isLoading={topTracks.isLoading()}
+                                      error={topTracks.error()}
+                                      onTrackClick={(track) =>
+                                        nav.navigateToItem({
+                                          artist: track.artist.name,
+                                          itemKind: 'artist',
+                                        })
+                                      }
+                                    />
+                                  </Match>
+                                  <Match when={topViewType() === 'albums'}>
+                                    <TopAlbumList
+                                      albums={topAlbums.albums()}
+                                      isLoading={topAlbums.isLoading()}
+                                      error={topAlbums.error()}
+                                      onAlbumClick={(album) =>
+                                        nav.navigateToItem({
+                                          artist: album.artist.name,
+                                          album: album.name,
+                                          itemKind: 'album',
+                                        })
+                                      }
+                                    />
+                                  </Match>
+                                </Switch>
+                              </div>
+                            </Match>
+                          </Switch>
+                        </Show>
+                      </div>
+                    </div>
+                  </Match>
                   <Match when={bottomTab() === 'newsletters'}>
                     <NewsletterPanel />
                   </Match>
@@ -702,6 +681,45 @@ const App: Component = () => {
                   </Match>
                 </Switch>
               </div>
+            </div>
+          }
+          rightPanel={
+            <div class="flex flex-col h-full overflow-y-auto">
+              {/* LastFM: Similar section */}
+              <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
+                <h2 class="text-xs font-medium text-fg-muted">
+                  LastFM: Similar
+                </h2>
+                <Show when={rightPanelModel().showSimilarArtists}>
+                  <div class="flex-shrink-0">
+                    <EveryNoiseViewer
+                      genre={everyNoiseGenre.genre()}
+                      isLoading={everyNoiseGenre.isLoading()}
+                      artistName={selectedArtist()}
+                    />
+                  </div>
+                </Show>
+              </div>
+              <div class="flex-shrink-0">
+                <Show
+                  when={selectedArtist()}
+                  fallback={
+                    <div class="py-8 text-xs text-center text-fg-muted">
+                      {rightPanelModel().emptyMessage}
+                    </div>
+                  }
+                >
+                  <ArtistList
+                    artists={similarArtists.artists()}
+                    isLoading={similarArtists.isLoading()}
+                    error={similarArtists.error()}
+                    onArtistClick={handleArtistClick}
+                    showMatch={true}
+                  />
+                </Show>
+              </div>
+
+              <ScrapeSections />
             </div>
           }
         />
