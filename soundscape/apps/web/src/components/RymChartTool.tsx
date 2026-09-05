@@ -110,7 +110,7 @@ const RymChartTool: Component = () => {
               <div class="flex gap-1">
                 <button
                   onClick={() => setRYMTimeRange('year')}
-                  class={`flex-1 px-2 py-1 text-xs ${
+                  class={`panel-control flex-1 ${
                     rymTimeRange() === 'year'
                       ? 'bg-accent text-bg'
                       : 'text-fg-muted hover:text-fg border border-border'
@@ -120,7 +120,7 @@ const RymChartTool: Component = () => {
                 </button>
                 <button
                   onClick={() => setRYMTimeRange('decade')}
-                  class={`flex-1 px-2 py-1 text-xs ${
+                  class={`panel-control flex-1 ${
                     rymTimeRange() === 'decade'
                       ? 'bg-accent text-bg'
                       : 'text-fg-muted hover:text-fg border border-border'
@@ -130,7 +130,7 @@ const RymChartTool: Component = () => {
                 </button>
                 <button
                   onClick={() => setRYMTimeRange('all-time')}
-                  class={`flex-1 px-2 py-1 text-xs whitespace-nowrap ${
+                  class={`panel-control flex-1 ${
                     rymTimeRange() === 'all-time'
                       ? 'bg-accent text-bg'
                       : 'text-fg-muted hover:text-fg border border-border'
@@ -161,7 +161,7 @@ const RymChartTool: Component = () => {
                 <select
                   value={rymYear()}
                   onChange={(e) => setRYMYear(parseInt(e.currentTarget.value))}
-                  class="w-full text-xs input"
+                  class="w-full input panel-control"
                 >
                   <For each={rymYears}>
                     {(year) => (
@@ -178,13 +178,13 @@ const RymChartTool: Component = () => {
             <button
               onClick={() => scrapeRym(getRYMChartUrl())}
               disabled={chartScrapeDisabled()}
-              class="flex-1 py-1.5 text-xs btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+              class="panel-control flex-1 btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Scrape charts
             </button>
             <button
               onClick={() => window.open(getRYMChartUrl(), '_blank', 'noopener')}
-              class="flex-1 py-1.5 text-xs btn-secondary"
+              class="panel-control flex-1 btn-secondary"
             >
               Open in RateYourMusic ↗
             </button>
@@ -204,12 +204,12 @@ const RymChartTool: Component = () => {
               value={rymUrl()}
               onInput={(e) => setRymUrl(e.currentTarget.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !rymScrapeDisabled()) scrapeRym(rymUrl()); }}
-              class="flex-1 input text-xs"
+              class="flex-1 input panel-control"
             />
             <button
               onClick={() => scrapeRym(rymUrl())}
               disabled={rymScrapeDisabled()}
-              class="btn-primary text-xs px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              class="panel-control btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Scrape
             </button>

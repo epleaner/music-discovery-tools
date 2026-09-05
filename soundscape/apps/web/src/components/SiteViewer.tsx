@@ -66,13 +66,13 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
   };
 
   return (
-    <div class='border-t border-border bg-bg flex flex-col h-full'>
+    <div class='border-t border-border bg-bg flex flex-col h-full text-xs'>
       {/* Tabs */}
-      <div class='flex border-b border-border overflow-x-auto flex-shrink-0'>
+      <div class='panel-tab-row overflow-x-auto'>
         <For each={props.sites}>
           {(site, index) => (
             <div
-              class={`flex items-center gap-2 px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                class={`panel-tab flex items-center gap-2 font-medium border-b-2 transition-colors ${
                 activeTab() === index()
                   ? 'border-accent'
                   : 'border-transparent text-fg-muted hover:text-fg'
@@ -93,7 +93,7 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
         </For>
         <button
           onClick={addNewTab}
-          class='px-4 py-2 text-sm font-medium text-fg-muted hover:text-fg transition-colors border-b-2 border-transparent'
+          class='panel-tab font-medium text-fg-muted hover:text-fg transition-colors border-b-2 border-transparent'
           title='Add new tab'>
           +
         </button>
@@ -157,7 +157,7 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                   </div>
                   <button
                     onClick={() => startEditing(index())}
-                    class='btn-secondary'>
+                    class='panel-control btn-secondary'>
                     Configure Tab
                   </button>
                 </div>
@@ -181,7 +181,7 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                   />
                   <button
                     onClick={() => startEditing(index())}
-                    class='absolute top-2 right-2 px-2 py-1 text-xs bg-bg border border-border hover:bg-bg-subtle transition-colors'
+                    class='panel-control absolute top-2 right-2 bg-bg border border-border hover:bg-bg-subtle transition-colors'
                     title='Edit tab'>
                     Edit
                   </button>

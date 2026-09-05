@@ -94,12 +94,12 @@ const BandcampUrlTool: Component = () => {
               value={bcUrl()}
               onInput={(e) => setBcUrl(e.currentTarget.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !bcScrapeDisabled()) scrapeBandcampUrl(bcUrl()); }}
-              class="flex-1 input text-xs"
+              class="flex-1 input panel-control"
             />
             <button
               onClick={() => scrapeBandcampUrl(bcUrl())}
               disabled={bcScrapeDisabled()}
-              class="btn-primary text-xs px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              class="panel-control btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Scrape
             </button>

@@ -549,6 +549,18 @@
     @apply focus:outline-none focus:ring-1 focus:ring-accent;
     @apply transition-shadow;
   }
+.panel-tab-row {
+  @apply flex items-center gap-1 border-b border-border;
+}
+
+.panel-tab {
+  @apply h-6 px-2 py-1 text-xs leading-4 whitespace-nowrap;
+}
+
+.panel-control {
+  @apply h-6 text-xs leading-4;
+}
+
 
   .link {
     @apply text-fg-muted hover:text-fg transition-colors;

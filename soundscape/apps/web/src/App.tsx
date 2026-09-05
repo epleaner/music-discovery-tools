@@ -380,10 +380,10 @@ const App: Component = () => {
           maxLeftWidth={80}
           leftPanel={
             <div class="flex flex-col h-full">
-              <div class="relative z-10 flex flex-shrink-0 gap-1 p-2 border-b bg-bg border-border">
+              <div class="relative z-10 flex flex-shrink-0 p-2 panel-tab-row bg-bg">
                 <button
                   onClick={() => setBottomTab('history')}
-                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                  class={`panel-tab ${
                     bottomTab() === 'history'
                       ? 'bg-accent text-bg'
                       : 'text-fg-muted hover:text-fg'
@@ -393,7 +393,7 @@ const App: Component = () => {
                 </button>
                 <button
                   onClick={() => setBottomTab('newsletters')}
-                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                  class={`panel-tab ${
                     bottomTab() === 'newsletters'
                       ? 'bg-accent text-bg'
                       : 'text-fg-muted hover:text-fg'
@@ -403,7 +403,7 @@ const App: Component = () => {
                 </button>
                 <button
                   onClick={() => setBottomTab('sites')}
-                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                  class={`panel-tab ${
                     bottomTab() === 'sites'
                       ? 'bg-accent text-bg'
                       : 'text-fg-muted hover:text-fg'
@@ -413,7 +413,7 @@ const App: Component = () => {
                 </button>
                 <button
                   onClick={() => setBottomTab('rym-charts')}
-                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                  class={`panel-tab ${
                     bottomTab() === 'rym-charts'
                       ? 'bg-accent text-bg'
                       : 'text-fg-muted hover:text-fg'
@@ -423,7 +423,7 @@ const App: Component = () => {
                 </button>
                 <button
                   onClick={() => setBottomTab('bandcamp')}
-                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                  class={`panel-tab ${
                     bottomTab() === 'bandcamp'
                       ? 'bg-accent text-bg'
                       : 'text-fg-muted hover:text-fg'
@@ -442,12 +442,12 @@ const App: Component = () => {
                       {/* Sticky Header */}
                       <div class="flex-shrink-0 bg-bg">
                         {/* Tabs */}
-                        <div class="flex border-b border-border">
+                        <div class="panel-tab-row">
                           <For each={tabs}>
                             {(tab) => (
                               <button
                                 onClick={() => updateState({ view: tab.id })}
-                                class={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                                class={`panel-tab font-medium border-b-2 transition-colors ${
                                   currentView() === tab.id
                                     ? 'border-accent'
                                     : 'border-transparent text-fg-muted hover:text-fg'
