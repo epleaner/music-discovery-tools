@@ -1,4 +1,12 @@
-import { Component, For, createMemo, Show, createSignal } from 'solid-js';
+import {
+  Component,
+  For,
+  createEffect,
+  createMemo,
+  createResource,
+  Show,
+  createSignal,
+} from 'solid-js';
 import { Combobox, useListCollection } from '@ark-ui/solid/combobox';
 import { useFilter } from '@ark-ui/solid/locale';
 import { Portal } from 'solid-js/web';
@@ -48,9 +56,9 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
   const [inputValue, setInputValue] = createSignal('');
   const filterFn = useFilter({ sensitivity: 'base' });
 
-  // Transform flattened genres to include type (top-level genre) for grouping
+  const [flattenedGenres] = createResource(loadFlattenedGenres);
   const initialItems = createMemo(() => {
-    const flattened = loadFlattenedGenres();
+    const flattened = flattenedGenres() ?? [];
     return flattened.map((genre: FlattenedGenre): GenreItem => {
       // Extract top-level genre from path (first part before ">")
       const topLevel = genre.path.split(' > ')[0];
@@ -64,10 +72,14 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
     });
   });
 
-  const { collection, filter } = useListCollection({
+  const { collection, filter, set } = useListCollection({
     initialItems: initialItems(),
     filter: filterFn().contains,
     groupBy: (item) => item.type,
+  });
+
+  createEffect(() => {
+    set(initialItems());
   });
 
   // Create a flattened list for virtualization that includes group labels and items

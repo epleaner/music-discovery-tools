@@ -433,8 +433,11 @@ const App: Component = () => {
                 </button>
               </div>
               <div class="overflow-hidden flex-1 min-h-0">
-                <Switch>
-                  <Match when={bottomTab() === 'history'}>
+                <div
+                  style={{
+                    display:
+                      bottomTab() === 'history' ? 'block' : 'none',
+                  }}>
                     <div class="flex flex-col h-full">
                       {/* Sticky Header */}
                       <div class="flex-shrink-0 bg-bg">
@@ -663,7 +666,8 @@ const App: Component = () => {
                         </Show>
                       </div>
                     </div>
-                  </Match>
+                </div>
+                <Switch>
                   <Match when={bottomTab() === 'newsletters'}>
                     <NewsletterPanel />
                   </Match>
