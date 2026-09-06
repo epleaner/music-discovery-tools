@@ -1,5 +1,6 @@
 import { Component, Show, For, createResource } from 'solid-js';
 import { trpc } from '../lib/trpc.js';
+import Chip from './Chip';
 import BandcampPlayer from './BandcampPlayer.js';
 import { bcArtUrl } from '../lib/bandcamp-slug.js';
 
@@ -91,9 +92,7 @@ const BandcampAlbumView: Component<BandcampAlbumViewProps> = (props) => {
               <div class="flex flex-wrap gap-1 mb-3">
                 <For each={data().keywords}>
                   {(tag) => (
-                    <span class="control-size px-1.5 rounded bg-bg-subtle text-fg-muted">
-                      {tag}
-                    </span>
+                      <Chip variant="subtle">{tag}</Chip>
                   )}
                 </For>
               </div>

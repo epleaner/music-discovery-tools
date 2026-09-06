@@ -18,6 +18,9 @@ import {
   loadFlattenedGenres,
   type FlattenedGenre,
 } from '../lib/flatten-genres';
+import Button from './Button';
+import Chip from './Chip';
+import ControlGroup from './ControlGroup';
 import { inputClassName } from './Input';
 
 interface GenreSelectProps {
@@ -249,72 +252,74 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
       scrollToIndexFn={handleScrollToIndexFn}
       positioning={{ sameWidth: true }}
     >
-      <div class="control-group">
+      <ControlGroup>
         <div class="flex items-center gap-1">
           <Combobox.Label class="block text-xs text-fg-muted">
             Genre
           </Combobox.Label>
-          <button
+          <Button
             type="button"
             onClick={handleShuffle}
-            class="control-icon text-fg-muted hover:text-fg"
+            variant="icon"
+            class="text-fg-muted hover:text-fg"
             title="Shuffle genres"
           >
             ↻
-          </button>
+          </Button>
         </div>
         <Combobox.Control class="relative flex items-center min-h-6">
-        <div
-          ref={pillsContainerRef}
-          class="flex flex-wrap items-center gap-1 flex-1 control-surface ring-1 ring-inset ring-border"
-          onClick={() => {
-            triggerRef?.click();
-          }}
-        >
-          <For each={selectedItems()}>
-            {(item) => (
-              <div class="control-size flex items-center gap-1 px-2 bg-bg-subtle border border-border rounded">
-                <span class="text-fg">{item.label}</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemovePill(item.value);
-                  }}
-                  class="control-size px-1 text-fg-muted hover:text-fg ml-1"
-                  aria-label={`Remove ${item.label}`}
-                >
-                  ×
-                </button>
-              </div>
-            )}
-          </For>
-          <Combobox.Trigger
-            class="control-size flex-1 min-w-[120px] p-0 m-0 flex items-center"
-            ref={triggerRef}
+          <div
+            ref={pillsContainerRef}
+            class="flex flex-wrap items-center gap-1 flex-1 control-surface ring-1 ring-inset ring-border"
+            onClick={() => {
+              triggerRef?.click();
+            }}
           >
-            <Combobox.Input
-              placeholder={props.value.length === 0 ? 'Search genre...' : ''}
-              class={`${inputClassName} w-full flex-1 bg-transparent border-0 outline-none min-w-[120px] p-0 m-0`}
-              onKeyDown={handleInputKeyDown}
-              onFocus={() => {
-                triggerRef?.click();
-              }}
-            />
-          </Combobox.Trigger>
-        </div>
-        <Combobox.ClearTrigger
-          class="control-size absolute right-0 text-fg-muted hover:text-fg px-2"
-          onClick={() => {
-            props.onValueChange([]);
-            setInputValue('');
-            filter('');
-          }}
-        >
-          🅧
-        </Combobox.ClearTrigger>
-      </Combobox.Control>
-      </div>
+            <For each={selectedItems()}>
+              {(item) => (
+                <Chip variant="subtle" class="gap-1 px-2 border border-border">
+                  <span class="text-fg">{item.label}</span>
+                  <Button
+                    type="button"
+                    variant="control"
+                    onClick={(e: MouseEvent) => {
+                      e.stopPropagation();
+                      handleRemovePill(item.value);
+                    }}
+                    class="px-1 text-fg-muted hover:text-fg ml-1"
+                    aria-label={`Remove ${item.label}`}
+                  >
+                    ×
+                  </Button>
+                </Chip>
+              )}
+            </For>
+            <Combobox.Trigger
+              class="control-size flex-1 min-w-[120px] p-0 m-0 flex items-center"
+              ref={triggerRef}
+            >
+              <Combobox.Input
+                placeholder={props.value.length === 0 ? 'Search genre...' : ''}
+                class={`${inputClassName} w-full flex-1 bg-transparent border-0 outline-none min-w-[120px] p-0 m-0`}
+                onKeyDown={handleInputKeyDown}
+                onFocus={() => {
+                  triggerRef?.click();
+                }}
+              />
+            </Combobox.Trigger>
+          </div>
+          <Combobox.ClearTrigger
+            class="control-size absolute right-0 text-fg-muted hover:text-fg px-2"
+            onClick={() => {
+              props.onValueChange([]);
+              setInputValue('');
+              filter('');
+            }}
+          >
+            🅧
+          </Combobox.ClearTrigger>
+        </Combobox.Control>
+      </ControlGroup>
       <Portal>
         <Combobox.Positioner>
           <Combobox.Content

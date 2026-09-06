@@ -4,6 +4,8 @@ import { trpc } from '../lib/trpc';
 import { requestScrape, onResultReady, onScrapeError, menubarOnline } from '../lib/scrape-bridge';
 import BandcampResults from './BandcampResults';
 import Input from './Input';
+import Button from './Button';
+import ControlGroup from './ControlGroup';
 import CacheAge from './CacheAge';
 
 const TOKEN_KEY = 'scrape_pairing_token';
@@ -86,7 +88,7 @@ const BandcampUrlTool: Component = () => {
   return (
     <div class="flex gap-3 p-3 h-full text-xs">
       <div class="flex flex-col gap-3 w-64 flex-shrink-0 overflow-y-auto">
-        <div class="control-group">
+        <ControlGroup>
           <div class="font-medium text-fg">URL</div>
           <div class="flex gap-2">
             <Input
@@ -97,15 +99,16 @@ const BandcampUrlTool: Component = () => {
               onKeyDown={(e) => { if (e.key === 'Enter' && !bcScrapeDisabled()) scrapeBandcampUrl(bcUrl()); }}
               class="flex-1"
             />
-            <button
+            <Button
               onClick={() => scrapeBandcampUrl(bcUrl())}
               disabled={bcScrapeDisabled()}
-              class="panel-control px-2 btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+              variant="primary"
+              class="px-2 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Scrape
-            </button>
+            </Button>
           </div>
-        </div>
+        </ControlGroup>
       </div>
 
       <div class="flex-1 min-w-0 overflow-y-auto">

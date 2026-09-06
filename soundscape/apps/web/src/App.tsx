@@ -25,6 +25,8 @@ import ScrapeSections from './components/ScrapeSections';
 import RymChartTool from './components/RymChartTool';
 import BandcampUrlTool from './components/BandcampUrlTool';
 import Breadcrumbs from './components/Breadcrumbs';
+import Button from './components/Button';
+import PanelTab from './components/PanelTab';
 import { buildSimilarPanelModel } from './lib/app-right-panel';
 import { buildAppLayoutModel } from './lib/app-layout';
 import {
@@ -294,26 +296,28 @@ const App: Component = () => {
                 setShowColorThemeDropdown(!showColorThemeDropdown())
               }
             >
-              <button
-                onClick={(e) => {
+              <Button
+                onClick={(e: MouseEvent) => {
                   e.stopPropagation();
                   toggleTheme();
                 }}
-                class="control-icon flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg"
+                variant="icon"
+                class="flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg"
                 style={{ transform: `rotate(${getThemeRotation()})` }}
                 aria-label={`Switch theme (currently ${theme()})`}
                 title={`Switch theme (currently ${theme()})`}
               >
                 <span class="theme-icon w-3 h-3" />
-              </button>
+              </Button>
 
               <div class="relative">
-                <button
-                  onClick={(e) => {
+                <Button
+                  onClick={(e: MouseEvent) => {
                     e.stopPropagation();
                     setShowColorThemeDropdown(!showColorThemeDropdown());
                   }}
-                  class="control-icon flex items-center justify-center flex-shrink-0 text-fg-muted hover:text-fg transition-colors"
+                  variant="icon"
+                  class="flex items-center justify-center flex-shrink-0 text-fg-muted hover:text-fg transition-colors"
                   aria-label="Choose accent color theme"
                   title="Choose accent color theme"
                 >
@@ -323,13 +327,13 @@ const App: Component = () => {
                       'background-color': getThemeColor(colorTheme()),
                     }}
                   ></span>
-                </button>
+                </Button>
 
                 <Show when={showColorThemeDropdown()}>
                   <div class="absolute right-0 top-full mt-1 bg-bg border border-border rounded z-50 min-w-[120px]">
                     <For each={colorThemes}>
                       {(item) => (
-                        <button
+                        <Button
                           onClick={() => {
                             setColorTheme(
                               item.value as
@@ -348,7 +352,8 @@ const App: Component = () => {
                             );
                             setShowColorThemeDropdown(false);
                           }}
-                          class="control-size px-3 text-left hover:bg-bg-muted transition-colors flex items-center gap-2"
+                          variant="control"
+                          class="px-3 text-left hover:bg-bg-muted transition-colors flex items-center gap-2"
                           classList={{
                             'bg-bg-muted': colorTheme() === item.value,
                           }}
@@ -360,13 +365,13 @@ const App: Component = () => {
                             }}
                           ></span>
                           <span>{item.label}</span>
-                        </button>
+                        </Button>
                       )}
                     </For>
                   </div>
                 </Show>
               </div>
-            </div>
+              </div>
           </div>
         </div>
       </div>
@@ -381,56 +386,36 @@ const App: Component = () => {
           leftPanel={
             <div class="flex flex-col h-full">
               <div class="relative z-10 flex flex-shrink-0 p-2 panel-tab-row bg-bg">
-                <button
+                <PanelTab
                   onClick={() => setBottomTab('history')}
-                  class={`panel-tab ${
-                    bottomTab() === 'history'
-                      ? 'bg-accent text-bg'
-                      : 'text-fg-muted hover:text-fg'
-                  }`}
+                  active={bottomTab() === 'history'}
                 >
                   Listening History
-                </button>
-                <button
+                </PanelTab>
+                <PanelTab
                   onClick={() => setBottomTab('newsletters')}
-                  class={`panel-tab ${
-                    bottomTab() === 'newsletters'
-                      ? 'bg-accent text-bg'
-                      : 'text-fg-muted hover:text-fg'
-                  }`}
+                  active={bottomTab() === 'newsletters'}
                 >
                   Newsletters
-                </button>
-                <button
+                </PanelTab>
+                <PanelTab
                   onClick={() => setBottomTab('sites')}
-                  class={`panel-tab ${
-                    bottomTab() === 'sites'
-                      ? 'bg-accent text-bg'
-                      : 'text-fg-muted hover:text-fg'
-                  }`}
+                  active={bottomTab() === 'sites'}
                 >
                   Sites
-                </button>
-                <button
+                </PanelTab>
+                <PanelTab
                   onClick={() => setBottomTab('rym-charts')}
-                  class={`panel-tab ${
-                    bottomTab() === 'rym-charts'
-                      ? 'bg-accent text-bg'
-                      : 'text-fg-muted hover:text-fg'
-                  }`}
+                  active={bottomTab() === 'rym-charts'}
                 >
                   RYM Charts
-                </button>
-                <button
+                </PanelTab>
+                <PanelTab
                   onClick={() => setBottomTab('bandcamp')}
-                  class={`panel-tab ${
-                    bottomTab() === 'bandcamp'
-                      ? 'bg-accent text-bg'
-                      : 'text-fg-muted hover:text-fg'
-                  }`}
+                  active={bottomTab() === 'bandcamp'}
                 >
                   Bandcamp
-                </button>
+                </PanelTab>
               </div>
               <div class="overflow-hidden flex-1 min-h-0">
                 <div
@@ -445,16 +430,13 @@ const App: Component = () => {
                         <div class="panel-tab-row">
                           <For each={tabs}>
                             {(tab) => (
-                              <button
+                              <PanelTab
                                 onClick={() => updateState({ view: tab.id })}
-                                class={`panel-tab font-medium border-b-2 transition-colors ${
-                                  currentView() === tab.id
-                                    ? 'border-accent'
-                                    : 'border-transparent text-fg-muted hover:text-fg'
-                                }`}
+                                active={currentView() === tab.id}
+                                underline
                               >
                                 {tab.label}
-                              </button>
+                              </PanelTab>
                             )}
                           </For>
                         </div>
@@ -472,18 +454,14 @@ const App: Component = () => {
                               }
                             >
                               {(view) => (
-                                <button
+                                <PanelTab
                                   onClick={() =>
                                     updateState({ subview: view.id })
                                   }
-                                  class={`control-size px-2 whitespace-nowrap ${
-                                    recentViewType() === view.id
-                                      ? 'bg-accent text-bg'
-                                      : 'text-fg-muted hover:text-fg'
-                                  }`}
+                                  active={recentViewType() === view.id}
                                 >
                                   {view.label}
-                                </button>
+                                </PanelTab>
                               )}
                             </For>
                           </div>
@@ -502,18 +480,14 @@ const App: Component = () => {
                               }
                             >
                               {(view) => (
-                                <button
+                                <PanelTab
                                   onClick={() =>
                                     updateState({ topSubview: view.id })
                                   }
-                                  class={`control-size px-2 whitespace-nowrap ${
-                                    topViewType() === view.id
-                                      ? 'bg-accent text-bg'
-                                      : 'text-fg-muted hover:text-fg'
-                                  }`}
+                                  active={topViewType() === view.id}
                                 >
                                   {view.label}
-                                </button>
+                                </PanelTab>
                               )}
                             </For>
                           </div>
@@ -528,16 +502,12 @@ const App: Component = () => {
                               }
                             >
                               {(p) => (
-                                <button
+                                <PanelTab
                                   onClick={() => updateState({ period: p })}
-                                  class={`control-size px-2 whitespace-nowrap ${
-                                    period() === p
-                                      ? 'bg-accent text-bg'
-                                      : 'text-fg-muted hover:text-fg'
-                                  }`}
+                                  active={period() === p}
                                 >
                                   {TIME_PERIOD_LABELS[p]}
-                                </button>
+                                </PanelTab>
                               )}
                             </For>
                             <Show
@@ -609,12 +579,12 @@ const App: Component = () => {
                                   }
                                 >
                                   <div class="p-4 text-center border-t border-border">
-                                    <button
+                                    <Button
                                       onClick={() => recentTracks.loadMore()}
                                       class="text-xs btn"
                                     >
                                       Load More
-                                    </button>
+                                    </Button>
                                   </div>
                                 </Show>
                               </div>

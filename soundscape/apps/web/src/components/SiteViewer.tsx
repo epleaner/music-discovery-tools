@@ -1,4 +1,6 @@
 import { Component, createSignal, For, Show } from 'solid-js';
+import Button from './Button';
+import ControlGroup from './ControlGroup';
 import Input from './Input';
 
 interface Site {
@@ -78,26 +80,33 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                   ? 'border-accent'
                   : 'border-transparent text-fg-muted hover:text-fg'
               }`}>
-              <button
+              <Button
                 onClick={() => setActiveTab(index())}
-                class='flex-1 text-left'>
+                class="flex-1 text-left"
+              >
                 {site.name}
-              </button>
-              <button
-                onClick={(e) => removeTab(index(), e)}
-                class='text-xs hover:text-fg transition-colors'
-                title='Close tab'>
+              </Button>
+              <Button
+                onClick={(e: MouseEvent) => removeTab(index(), e)}
+                variant="icon"
+                class="hover:text-fg transition-colors"
+                title="Close tab"
+                aria-label={`Close ${site.name}`}
+              >
                 ×
-              </button>
+              </Button>
             </div>
           )}
         </For>
-        <button
+        <Button
           onClick={addNewTab}
-          class='panel-tab font-medium text-fg-muted hover:text-fg transition-colors border-b-2 border-transparent'
-          title='Add new tab'>
+          variant="tab"
+          class="font-medium text-fg-muted hover:text-fg transition-colors border-b-2 border-transparent"
+          title="Add new tab"
+          aria-label="Add new tab"
+        >
           +
-        </button>
+        </Button>
       </div>
 
       {/* Content - All tabs stay mounted, visibility toggled with CSS */}
@@ -112,7 +121,7 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                   display: editingTab() === index() ? 'flex' : 'none',
                 }}>
                 <div class='w-full max-w-md space-y-4'>
-                  <div class='control-group'>
+                  <ControlGroup>
                     <label class='block text-xs text-fg-muted'>
                       Tab Name
                     </label>
@@ -124,8 +133,8 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                       class='w-full'
                       autofocus={editingTab() === index()}
                     />
-                  </div>
-                  <div class='control-group'>
+                  </ControlGroup>
+                  <ControlGroup>
                     <label class='block text-xs text-fg-muted'>URL</label>
                     <Input
                       type='url'
@@ -134,14 +143,14 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                       placeholder='https://example.com'
                       class='w-full'
                     />
-                  </div>
+                  </ControlGroup>
                   <div class='flex gap-2'>
-                    <button onClick={saveEdit} class='btn-primary'>
+                    <Button onClick={saveEdit} variant='primary'>
                       Save
-                    </button>
-                    <button onClick={cancelEdit} class='btn-secondary'>
+                    </Button>
+                    <Button onClick={cancelEdit} variant='secondary'>
                       Cancel
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -156,11 +165,13 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                   <div class='text-xs text-center text-fg-muted'>
                     No URL configured for this tab
                   </div>
-                  <button
+                  <Button
                     onClick={() => startEditing(index())}
-                    class='panel-control btn-secondary'>
+                    variant="secondary"
+                    class="px-2"
+                  >
                     Configure Tab
-                  </button>
+                  </Button>
                 </div>
               </Show>
 
@@ -180,12 +191,14 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                     title={site.name}
                     sandbox='allow-same-origin allow-scripts allow-popups allow-forms'
                   />
-                  <button
+                  <Button
                     onClick={() => startEditing(index())}
-                    class='panel-control px-2.5 absolute top-2 right-2 bg-bg border border-border hover:bg-bg-subtle transition-colors'
-                    title='Edit tab'>
+                    variant="secondary"
+                    class="px-2.5 absolute top-2 right-2 bg-bg border border-border hover:bg-bg-subtle transition-colors"
+                    title="Edit tab"
+                  >
                     Edit
-                  </button>
+                  </Button>
                 </div>
               </Show>
             </>

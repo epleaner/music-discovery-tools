@@ -1,4 +1,5 @@
 import { Component, createSignal } from 'solid-js';
+import Button from './Button';
 import Input from './Input';
 
 interface UsernameInputProps {
@@ -28,9 +29,9 @@ const UsernameInput: Component<UsernameInputProps> = (props) => {
         placeholder="Last.fm username"
         class="flex-1"
       />
-      <button type="submit" class="btn-secondary">
+      <Button type="submit" variant="secondary">
         Load
-      </button>
+      </Button>
     </form>
   );
 };

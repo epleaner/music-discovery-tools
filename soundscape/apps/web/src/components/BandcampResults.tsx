@@ -1,6 +1,8 @@
 import { Component, Show, For } from 'solid-js';
 import type { BandcampRelease, BandcampAlbumDetail } from '@soundscape/types';
 import BandcampPlayer from './BandcampPlayer';
+import Button from './Button';
+import Chip from './Chip';
 
 interface BandcampResultsProps {
   releases: BandcampRelease[];
@@ -24,20 +26,22 @@ const BandcampResults: Component<BandcampResultsProps> = (props) => {
 
       <div class="flex flex-wrap gap-2">
         <Show when={props.showExploreLabel}>
-          <button
+          <Button
             onClick={() => props.onExploreLabel?.()}
-            class="btn-secondary text-xs px-3 py-1"
+            variant="secondary"
+            class="text-xs px-3 py-1"
           >
             Explore label: {props.currentLabel?.name} →
-          </button>
+          </Button>
         </Show>
         <Show when={props.showRelated}>
-          <button
+          <Button
             onClick={() => props.onRelated?.()}
-            class="btn-secondary text-xs px-3 py-1"
+            variant="secondary"
+            class="text-xs px-3 py-1"
           >
             Related →
-          </button>
+          </Button>
         </Show>
         <Show when={props.album}>
           <a
@@ -69,19 +73,15 @@ const BandcampResults: Component<BandcampResultsProps> = (props) => {
                   {props.album!.releaseDate!.replace(/ \d{2}:\d{2}:\d{2}.*/, '')}
                 </div>
               </Show>
-              <Show when={props.album!.tags && props.album!.tags!.length > 0}>
-                <div class="flex flex-wrap gap-1 mt-1">
-                  <For each={props.album!.tags}>
-                    {(tag) => (
-                      <span class="control-size px-1.5 rounded bg-bg-muted text-fg-subtle">
-                        {tag}
-                      </span>
-                    )}
-                  </For>
+            <Show when={props.album!.tags && props.album!.tags!.length > 0}>
+              <div class="flex flex-wrap gap-1 mt-1">
+                <For each={props.album!.tags}>
+                  {(tag) => <Chip>{tag}</Chip>}
+                </For>
+              </div>
+            </Show>
                 </div>
-              </Show>
             </div>
-          </div>
           <BandcampPlayer
             tracks={props.album!.tracks.map((t, i) => ({
               name: t.name,

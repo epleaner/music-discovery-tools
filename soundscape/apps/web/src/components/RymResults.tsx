@@ -1,4 +1,5 @@
 import { Component, Show, For } from 'solid-js';
+import Chip from './Chip';
 import type { RymEntry, RymAlbumDetail } from '@soundscape/types';
 
 interface RymResultsProps {
@@ -53,11 +54,7 @@ const RymResults: Component<RymResultsProps> = (props) => {
           <Show when={props.album!.genres && props.album!.genres!.length > 0}>
             <div class="flex flex-wrap gap-1">
               <For each={props.album!.genres}>
-                {(genre) => (
-                  <span class="control-size px-1.5 rounded bg-bg-muted text-fg-subtle">
-                    {genre}
-                  </span>
-                )}
+                {(genre) => <Chip>{genre}</Chip>}
               </For>
             </div>
           </Show>

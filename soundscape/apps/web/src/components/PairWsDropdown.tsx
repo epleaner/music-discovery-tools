@@ -1,4 +1,6 @@
 import { Component, Show, createSignal, onMount, onCleanup } from 'solid-js';
+import Button from './Button';
+import ControlGroup from './ControlGroup';
 import Input from './Input';
 import {
   menubarOnline,
@@ -42,19 +44,20 @@ const PairWsDropdown: Component = () => {
 
   return (
     <div class="relative flex-shrink-0" ref={containerRef}>
-      <button
+      <Button
         onClick={() => setOpen(!open())}
-        class="btn-secondary inline-flex items-center justify-center"
+        variant="secondary"
+        class="inline-flex items-center justify-center"
         title="Pairing token and connection status"
       >
         Pair / WS
-      </button>
+      </Button>
 
       <Show when={open()}>
         <div class="absolute right-0 z-30 mt-1 w-72 border border-border bg-bg shadow-lg">
           <div class="flex flex-col gap-3 p-3">
-            {/* Pairing token */}
-            <div class="control-group">
+            <ControlGroup>
+              {/* Pairing token */}
               <div class="flex items-center gap-2">
                 <div class="text-xs font-medium text-fg">Pairing Token</div>
                 <Show when={maskedToken()}>
@@ -70,11 +73,11 @@ const PairWsDropdown: Component = () => {
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
                   class="flex-1"
                 />
-                <button onClick={handleSave} class="btn-primary text-xs px-2 py-1">
+                <Button onClick={handleSave} variant="primary" class="px-2">
                   Save
-                </button>
+                </Button>
               </div>
-            </div>
+            </ControlGroup>
 
             {/* Connection status */}
             <div class="flex flex-col gap-1">
