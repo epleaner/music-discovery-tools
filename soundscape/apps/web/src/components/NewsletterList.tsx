@@ -219,9 +219,6 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
 const NewsletterList: Component<NewsletterListProps> = (props) => {
   return (
     <div class="flex flex-col h-full">
-      <div class="px-2 py-1.5 text-[10px] tracking-[0.24em] uppercase border-b border-border text-fg-muted">
-        Newsletters
-      </div>
 
       <Show when={props.error}>
         <div class="p-2 text-xs border-b border-border text-fg-muted">
