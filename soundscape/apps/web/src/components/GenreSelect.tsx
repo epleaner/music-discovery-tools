@@ -257,7 +257,7 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
           <button
             type="button"
             onClick={handleShuffle}
-            class="control-size text-fg-muted hover:text-fg px-1"
+            class="control-icon text-fg-muted hover:text-fg"
             title="Shuffle genres"
           >
             ↻
@@ -266,7 +266,7 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
         <Combobox.Control class="relative flex items-center min-h-6">
         <div
           ref={pillsContainerRef}
-          class="flex flex-wrap items-center gap-1 flex-1 min-h-6 px-2 ring-1 ring-inset ring-border bg-bg"
+          class="flex flex-wrap items-center gap-1 flex-1 control-surface ring-1 ring-inset ring-border"
           onClick={() => {
             triggerRef?.click();
           }}

@@ -153,7 +153,7 @@ const RymChartTool: Component = () => {
                       const randomIndex = Math.floor(Math.random() * rymYears.length);
                       setRYMYear(rymYears[randomIndex]);
                     }}
-                    class="control-size text-fg-muted hover:text-fg px-1"
+                    class="control-icon text-fg-muted hover:text-fg"
                     title="Shuffle year/decade"
                   >
                     ↻

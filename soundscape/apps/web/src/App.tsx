@@ -288,7 +288,7 @@ const App: Component = () => {
             <PairWsDropdown />
 
             <div
-              class="flex items-center gap-2.5 border border-border btn cursor-pointer"
+              class="control-size flex items-center gap-1 px-1.5 border border-border cursor-pointer hover:bg-bg-muted"
               ref={colorThemeContainerRef}
               onClick={() =>
                 setShowColorThemeDropdown(!showColorThemeDropdown())
@@ -299,12 +299,12 @@ const App: Component = () => {
                   e.stopPropagation();
                   toggleTheme();
                 }}
-                class="control-size flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg w-6"
+                class="control-icon flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg"
                 style={{ transform: `rotate(${getThemeRotation()})` }}
                 aria-label={`Switch theme (currently ${theme()})`}
                 title={`Switch theme (currently ${theme()})`}
               >
-                <span class="theme-icon" />
+                <span class="theme-icon w-3 h-3" />
               </button>
 
               <div class="relative">
@@ -313,7 +313,7 @@ const App: Component = () => {
                     e.stopPropagation();
                     setShowColorThemeDropdown(!showColorThemeDropdown());
                   }}
-                  class="control-size flex items-center justify-center flex-shrink-0 text-fg-subtle hover:text-fg transition-colors w-6"
+                  class="control-icon flex items-center justify-center flex-shrink-0 text-fg-muted hover:text-fg transition-colors"
                   aria-label="Choose accent color theme"
                   title="Choose accent color theme"
                 >

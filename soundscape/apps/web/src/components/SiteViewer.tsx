@@ -182,7 +182,7 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                   />
                   <button
                     onClick={() => startEditing(index())}
-                    class='panel-control absolute top-2 right-2 bg-bg border border-border hover:bg-bg-subtle transition-colors'
+                    class='panel-control px-2.5 absolute top-2 right-2 bg-bg border border-border hover:bg-bg-subtle transition-colors'
                     title='Edit tab'>
                     Edit
                   </button>
