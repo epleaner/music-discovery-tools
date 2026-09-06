@@ -1,4 +1,5 @@
 import { Component, createSignal, For, Show } from 'solid-js';
+import Input from './Input';
 
 interface Site {
   id: string;
@@ -115,23 +116,23 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                     <label class='block mb-1 text-xs text-fg-muted'>
                       Tab Name
                     </label>
-                    <input
+                    <Input
                       type='text'
                       value={editName()}
                       onInput={(e) => setEditName(e.currentTarget.value)}
                       placeholder='Enter tab name...'
-                      class='w-full input'
+                      class='w-full'
                       autofocus={editingTab() === index()}
                     />
                   </div>
                   <div>
                     <label class='block mb-1 text-xs text-fg-muted'>URL</label>
-                    <input
+                    <Input
                       type='url'
                       value={editUrl()}
                       onInput={(e) => setEditUrl(e.currentTarget.value)}
                       placeholder='https://example.com'
-                      class='w-full input'
+                      class='w-full'
                     />
                   </div>
                   <div class='flex gap-2'>

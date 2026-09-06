@@ -18,6 +18,7 @@ import {
   loadFlattenedGenres,
   type FlattenedGenre,
 } from '../lib/flatten-genres';
+import { inputClassName } from './Input';
 
 interface GenreSelectProps {
   value: string[];
@@ -293,7 +294,7 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
           >
             <Combobox.Input
               placeholder={props.value.length === 0 ? 'Search genre...' : ''}
-              class="w-full flex-1 text-xs bg-transparent border-0 outline-none min-w-[120px] p-0 m-0"
+              class={`${inputClassName} w-full flex-1 bg-transparent border-0 outline-none min-w-[120px] p-0 m-0`}
               onKeyDown={handleInputKeyDown}
               onFocus={() => {
                 triggerRef?.click();

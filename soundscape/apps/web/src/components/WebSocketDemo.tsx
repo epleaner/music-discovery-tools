@@ -1,5 +1,6 @@
 import { Component, Show, For, createSignal } from 'solid-js';
 import { createWebSocket } from '../lib/websocket';
+import Input from './Input';
 import { trpc } from '../lib/trpc';
 
 const WebSocketDemo: Component = () => {
@@ -76,13 +77,13 @@ const WebSocketDemo: Component = () => {
           Send message to extension
         </label>
         <div class='flex gap-2'>
-          <input
+          <Input
             type='text'
             value={testMessage()}
             onInput={(e) => setTestMessage(e.currentTarget.value)}
             onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
             placeholder='Type a message...'
-            class='flex-1 text-xs input'
+            class='flex-1'
           />
           <button
             onClick={sendMessage}

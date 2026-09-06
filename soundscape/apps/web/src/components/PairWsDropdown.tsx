@@ -1,4 +1,5 @@
 import { Component, Show, createSignal, onMount, onCleanup } from 'solid-js';
+import Input from './Input';
 import {
   menubarOnline,
   connected,
@@ -61,13 +62,13 @@ const PairWsDropdown: Component = () => {
                 </Show>
               </div>
               <div class="flex gap-2">
-                <input
+                <Input
                   type="text"
                   placeholder="Enter pairing token…"
                   value={tokenInput()}
                   onInput={(e) => setTokenInput(e.currentTarget.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
-                  class="flex-1 input text-xs"
+                  class="flex-1"
                 />
                 <button onClick={handleSave} class="btn-primary text-xs px-2 py-1">
                   Save

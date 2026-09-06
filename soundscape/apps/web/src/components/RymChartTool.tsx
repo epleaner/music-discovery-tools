@@ -3,6 +3,7 @@ import type { RymEntry, RymAlbumDetail } from '@soundscape/types';
 import { normalizeCharacters } from '@soundscape/utils';
 import { trpc } from '../lib/trpc';
 import { requestScrape, onResultReady, onScrapeError, menubarOnline } from '../lib/scrape-bridge';
+import Input from './Input';
 import GenreSelect from './GenreSelect';
 import RymResults from './RymResults';
 import CacheAge from './CacheAge';
@@ -198,13 +199,13 @@ const RymChartTool: Component = () => {
 
         <div class="flex flex-col gap-1.5">
           <div class="flex gap-2">
-            <input
+            <Input
               type="url"
               placeholder="https://rateyourmusic.com/list/..."
               value={rymUrl()}
               onInput={(e) => setRymUrl(e.currentTarget.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !rymScrapeDisabled()) scrapeRym(rymUrl()); }}
-              class="flex-1 input panel-control"
+              class="flex-1"
             />
             <button
               onClick={() => scrapeRym(rymUrl())}

@@ -1,4 +1,5 @@
 import { Component, createSignal } from 'solid-js';
+import Input from './Input';
 
 interface UsernameInputProps {
   onSubmit: (username: string) => void;
@@ -20,12 +21,12 @@ const UsernameInput: Component<UsernameInputProps> = (props) => {
 
   return (
     <form onSubmit={handleSubmit} class="flex gap-2">
-      <input
+      <Input
         type="text"
         value={localUsername()}
         onInput={(e) => setLocalUsername(e.currentTarget.value)}
         placeholder="Last.fm username"
-        class="flex-1 input"
+        class="flex-1"
       />
       <button type="submit" class="btn-secondary">
         Load

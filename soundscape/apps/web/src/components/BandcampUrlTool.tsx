@@ -3,6 +3,7 @@ import type { BandcampRelease, BandcampAlbumDetail } from '@soundscape/types';
 import { trpc } from '../lib/trpc';
 import { requestScrape, onResultReady, onScrapeError, menubarOnline } from '../lib/scrape-bridge';
 import BandcampResults from './BandcampResults';
+import Input from './Input';
 import CacheAge from './CacheAge';
 
 const TOKEN_KEY = 'scrape_pairing_token';
@@ -88,13 +89,13 @@ const BandcampUrlTool: Component = () => {
         <div class="flex flex-col gap-1.5">
           <div class="font-medium text-fg">URL</div>
           <div class="flex gap-2">
-            <input
+            <Input
               type="url"
               placeholder="https://bandcamp.com/tag/<tag>"
               value={bcUrl()}
               onInput={(e) => setBcUrl(e.currentTarget.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !bcScrapeDisabled()) scrapeBandcampUrl(bcUrl()); }}
-              class="flex-1 input panel-control"
+              class="flex-1"
             />
             <button
               onClick={() => scrapeBandcampUrl(bcUrl())}
