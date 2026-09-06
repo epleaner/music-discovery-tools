@@ -1,6 +1,7 @@
 import { Component, For, Show, createSignal } from 'solid-js';
 import { useNav } from '../lib/use-nav';
 import type { NavView } from '../lib/nav-store';
+import Button from './Button';
 
 interface BreadcrumbsProps {
   onRefresh?: () => void;
@@ -35,21 +36,23 @@ const Breadcrumbs: Component<BreadcrumbsProps> = (props) => {
             </span>
           }
         >
-          <button
+          <Button
             onClick={() => nav.goTo(item.index)}
-            class="text-fg-muted hover:text-fg max-w-[220px] truncate"
+            variant="link"
+            class="max-w-[220px] truncate"
           >
             {item.view.label}
-          </button>
+          </Button>
         </Show>
         <Show when={isCurrent() && nav.current().restore.type === 'item' && props.onRefresh}>
-          <button
+          <Button
             onClick={() => props.onRefresh?.()}
+            variant="link"
             title="Refresh"
-            class="text-fg-subtle hover:text-fg"
+            aria-label="Refresh"
           >
             &#8635;
-          </button>
+          </Button>
         </Show>
       </>
     );
@@ -57,22 +60,24 @@ const Breadcrumbs: Component<BreadcrumbsProps> = (props) => {
 
   return (
     <div class="flex overflow-hidden gap-1.5 items-center px-3 py-1.5 text-xs border-b border-border bg-bg">
-      <button
+      <Button
         onClick={() => nav.home()}
+        variant="link"
         title="Home"
-        class="text-fg-muted hover:text-fg"
+        aria-label="Home"
       >
         &#8962;
-      </button>
+      </Button>
       <Show when={isCollapsed()}>
         <span class="text-fg-subtle">&rsaquo;</span>
-        <button
+        <Button
           onClick={() => setShowAll(true)}
+          variant="link"
           title="Show full trail"
-          class="text-fg-muted hover:text-fg"
+          aria-label="Show full trail"
         >
           &hellip;
-        </button>
+        </Button>
       </Show>
       <For each={visibleTrail()}>{(item) => <Crumb {...item} />}</For>
     </div>

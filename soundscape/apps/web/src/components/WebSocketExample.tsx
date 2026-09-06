@@ -1,4 +1,7 @@
 import { Component, For, Show } from 'solid-js';
+import Button from './Button';
+import EmptyState from './EmptyState';
+import StatusIndicator from './StatusIndicator';
 import { useWebSocket, useWebSocketListener } from '../lib/use-websocket';
 
 /**
@@ -31,44 +34,38 @@ const WebSocketExample: Component = () => {
   return (
     <div class='p-4 space-y-4'>
       {/* Connection Status */}
-      <div class='flex gap-2 items-center'>
-        <div
-          class={`w-2 h-2 rounded-full ${
-            isConnected() ? 'bg-green-500' : 'bg-red-500'
-          }`}
-        />
-        <span class='text-xs text-fg-muted'>
-          {isConnected() ? 'Connected' : 'Disconnected'}
-        </span>
-      </div>
+      <StatusIndicator
+        status={isConnected() ? 'online' : 'offline'}
+        label={isConnected() ? 'Connected' : 'Disconnected'}
+        class="gap-2 text-xs text-fg-muted"
+      />
 
       {/* Send Messages */}
       <div class='flex gap-2'>
-        <button onClick={sendTestMessage} class='text-xs btn-primary'>
+        <Button onClick={sendTestMessage} variant="primary">
           Send Test Message
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => sendArtistSelection('Radiohead')}
-          class='text-xs btn-secondary'>
+          variant="secondary"
+        >
           Send Artist Selection
-        </button>
+        </Button>
       </div>
 
       {/* Message History */}
       <div class='space-y-2'>
         <div class='flex gap-2 justify-between items-center'>
           <h3 class='text-xs font-medium'>Messages ({messages().length})</h3>
-          <button
-            onClick={clearMessages}
-            class='text-xs text-fg-muted hover:text-fg'>
+          <Button onClick={clearMessages} variant="link" class="text-xs">
             Clear
-          </button>
+          </Button>
         </div>
 
         <Show
           when={messages().length > 0}
           fallback={
-            <div class='text-xs text-fg-muted'>No messages received yet</div>
+            <EmptyState>No messages received yet</EmptyState>
           }>
           <div class='space-y-1'>
             <For each={messages()}>

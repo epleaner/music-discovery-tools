@@ -2,6 +2,8 @@ import { Component, Show, For, createResource } from 'solid-js';
 import { trpc } from '../lib/trpc.js';
 import Chip from './Chip';
 import BandcampPlayer from './BandcampPlayer.js';
+import ExternalLink from './ExternalLink';
+import EmptyState from './EmptyState';
 import { bcArtUrl } from '../lib/bandcamp-slug.js';
 
 interface BandcampAlbumViewProps {
@@ -30,20 +32,18 @@ const BandcampAlbumView: Component<BandcampAlbumViewProps> = (props) => {
   return (
     <div class="p-4 text-xs overflow-y-auto h-full">
       <Show when={album.loading}>
-        <div class="text-fg-muted">Loading...</div>
+        <EmptyState>Loading...</EmptyState>
       </Show>
 
       <Show when={!album.loading && (album.error || !album())}>
         <div class="text-fg-muted">
           <div class="mb-2">Album not found.</div>
-          <a
+          <ExternalLink
             href={props.albumUrl}
-            target="_blank"
-            rel="noopener noreferrer"
             class="text-fg underline hover:text-fg-muted break-all"
           >
             {props.albumUrl}
-          </a>
+          </ExternalLink>
         </div>
       </Show>
 
@@ -72,14 +72,12 @@ const BandcampAlbumView: Component<BandcampAlbumViewProps> = (props) => {
                   <div class="text-fg-muted">{data().label!.name}</div>
                 </Show>
                 <div class="mt-1">
-                  <a
+                  <ExternalLink
                     href={props.albumUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     class="text-fg-muted underline hover:text-fg"
                   >
                     Buy on Bandcamp
-                  </a>
+                  </ExternalLink>
                 </div>
               </div>
             </div>

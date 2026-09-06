@@ -5,6 +5,8 @@ import {
   getCached,
   getAlbumCacheKey,
 } from '@soundscape/utils';
+import EmptyState from './EmptyState';
+import InfoButton from './InfoButton';
 
 interface TopAlbumListProps {
   albums: TopAlbum[];
@@ -64,18 +66,17 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
   return (
     <div>
       <Show when={props.isLoading}>
-        <div class='p-4 text-xs text-center text-fg-muted'>Loading...</div>
+        <EmptyState class='p-4 text-center'>Loading...</EmptyState>
       </Show>
-
       <Show when={props.error}>
-        <div class='p-4 text-xs text-center text-fg-muted'>
+        <EmptyState class='p-4 text-center'>
           Error: {props.error?.toString()}
-        </div>
+        </EmptyState>
       </Show>
 
       <Show
         when={!props.isLoading && !props.error && props.albums.length === 0}>
-        <div class='p-4 text-xs text-center text-fg-muted'>No albums found</div>
+        <EmptyState class="p-4 text-center">No albums found</EmptyState>
       </Show>
 
       <Show when={!props.isLoading && !props.error && props.albums.length > 0}>
@@ -119,12 +120,11 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
                   </Show>
                 </div>
                 <Show when={isLoading() || !info()}>
-                  <button
-                    onClick={(e) => handleInfoClick(album, e)}
-                    class='px-1 text-xs text-fg-subtle hover:text-fg'
-                    title='Fetch album info'>
-                    {isLoading() ? '◐' : 'ⓘ'}
-                  </button>
+                  <InfoButton
+                    loading={isLoading()}
+                    label="album"
+                    onClick={(e: MouseEvent) => handleInfoClick(album, e)}
+                  />
                 </Show>
                 <div class='flex-shrink-0 text-fg-subtle'>
                   {album.playcount} plays

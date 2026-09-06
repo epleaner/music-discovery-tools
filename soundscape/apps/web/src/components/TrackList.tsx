@@ -5,6 +5,9 @@ import {
   getCached,
   getTrackCacheKey,
 } from '@soundscape/utils';
+import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
+import InfoButton from './InfoButton';
 
 interface TrackListProps {
   tracks: Track[];
@@ -84,13 +87,13 @@ const TrackList: Component<TrackListProps> = (props) => {
   return (
     <div class='space-y-px'>
       <Show when={props.error}>
-        <div class='p-2 text-xs bg-bg-muted border border-border'>
+        <ErrorMessage class="p-2 bg-bg-muted border border-border">
           {props.error?.message}
-        </div>
+        </ErrorMessage>
       </Show>
 
       <Show when={props.isLoading && props.tracks.length === 0}>
-        <div class='py-8 text-xs text-center text-fg-muted'>Loading...</div>
+        <EmptyState class="py-8 text-center">Loading...</EmptyState>
       </Show>
 
       <For each={props.tracks}>
@@ -144,12 +147,11 @@ const TrackList: Component<TrackListProps> = (props) => {
                 {formatDate(track)}
               </div>
               <Show when={isLoading() || !info()}>
-                <button
-                  onClick={(e) => handleInfoClick(track, e)}
-                  class='text-xs text-fg-subtle hover:text-fg px-1'
-                  title='Fetch track info'>
-                  {isLoading() ? '◐' : 'ⓘ'}
-                </button>
+                <InfoButton
+                  loading={isLoading()}
+                  label="track"
+                  onClick={(e: MouseEvent) => handleInfoClick(track, e)}
+                />
               </Show>
             </div>
           );
@@ -158,7 +160,7 @@ const TrackList: Component<TrackListProps> = (props) => {
 
       <Show
         when={props.tracks.length === 0 && !props.isLoading && !props.error}>
-        <div class='py-8 text-xs text-center text-fg-muted'>No tracks</div>
+        <EmptyState class="py-8 text-center">No tracks</EmptyState>
       </Show>
     </div>
   );

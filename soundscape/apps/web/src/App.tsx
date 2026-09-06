@@ -27,6 +27,8 @@ import BandcampUrlTool from './components/BandcampUrlTool';
 import Breadcrumbs from './components/Breadcrumbs';
 import Button from './components/Button';
 import PanelTab from './components/PanelTab';
+import StatusIndicator from './components/StatusIndicator';
+import EmptyState from './components/EmptyState';
 import { buildSimilarPanelModel } from './lib/app-right-panel';
 import { buildAppLayoutModel } from './lib/app-layout';
 import {
@@ -273,18 +275,16 @@ const App: Component = () => {
 
           <div class="flex flex-1 gap-2 justify-end items-center w-full">
             <div class="flex items-center gap-3">
-              <div class="flex items-center gap-2">
-                <span
-                  class={`w-2 h-2 rounded-full ${menubarOnline() ? 'bg-green-500' : 'bg-red-500'}`}
-                />
-                <span class="text-xs text-fg-muted">Menu bar</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span
-                  class={`w-2 h-2 rounded-full ${connected() ? 'bg-green-500' : 'bg-red-500'}`}
-                />
-                <span class="text-xs text-fg-muted">WS</span>
-              </div>
+              <StatusIndicator
+                status={menubarOnline() ? 'online' : 'offline'}
+                label="Menu bar"
+                class="gap-2 text-xs text-fg-muted"
+              />
+              <StatusIndicator
+                status={connected() ? 'online' : 'offline'}
+                label="WS"
+                class="gap-2 text-xs text-fg-muted"
+              />
             </div>
 
             <PairWsDropdown />
@@ -529,9 +529,9 @@ const App: Component = () => {
                       <div class="overflow-y-auto flex-1">
                         <Show when={appLayoutModel().showLibraryEmptyState}>
                           <div class="flex justify-center items-center h-full">
-                            <div class="text-xs text-center text-fg-muted">
+                            <EmptyState class="text-center">
                               Enter a username to load Last.fm data
-                            </div>
+                            </EmptyState>
                           </div>
                         </Show>
 
@@ -678,9 +678,9 @@ const App: Component = () => {
                 <Show
                   when={selectedArtist()}
                   fallback={
-                    <div class="py-8 text-xs text-center text-fg-muted">
+                    <EmptyState class="py-8 text-center">
                       {rightPanelModel().emptyMessage}
-                    </div>
+                    </EmptyState>
                   }
                 >
                   <ArtistList

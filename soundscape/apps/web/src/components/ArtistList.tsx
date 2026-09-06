@@ -11,6 +11,10 @@ import {
   getCached,
   getArtistCacheKey,
 } from '@soundscape/utils';
+import EmptyState from './EmptyState';
+import ExternalLink from './ExternalLink';
+import ErrorMessage from './ErrorMessage';
+import InfoButton from './InfoButton';
 
 interface ArtistListProps {
   artists: Artist[] | SimilarArtist[];
@@ -85,13 +89,13 @@ const ArtistList: Component<ArtistListProps> = (props) => {
   return (
     <>
       <Show when={props.error}>
-        <div class='p-2 text-xs border-b bg-bg-muted border-border'>
+        <ErrorMessage class='p-2 border-b bg-bg-muted border-border'>
           {props.error?.message}
-        </div>
+        </ErrorMessage>
       </Show>
 
       <Show when={props.isLoading && props.artists.length === 0}>
-        <div class='py-8 text-xs text-center text-fg-muted'>Loading...</div>
+        <EmptyState class='py-8 text-center'>Loading...</EmptyState>
       </Show>
 
       <Show when={props.artists.length > 0}>
@@ -116,15 +120,14 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                     <div class='flex-1 min-w-0'>
                       <div class='flex gap-2 items-center'>
                         <div class='text-sm truncate'>{artist.name}</div>
-                        <a
+                        <ExternalLink
                           href={getRYMSearchUrl(artist.name)}
-                          target='_blank'
-                          rel='noopener noreferrer'
                           onClick={(e) => e.stopPropagation()}
                           class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
-                          title='View on RateYourMusic'>
-                          rym
-                        </a>
+                          title='View on RateYourMusic'
+                        >
+                          RYM
+                        </ExternalLink>
                       </div>
                       <div class='flex gap-1 items-center text-xs text-fg-muted'>
                         <Show
@@ -161,12 +164,11 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                       </div>
                     </div>
                     <Show when={isLoading() || !info()}>
-                      <button
-                        onClick={(e) => handleInfoClick(artist.name, e)}
-                        class='px-1 text-xs text-fg-subtle hover:text-fg'
-                        title='Fetch artist info'>
-                        {isLoading() ? '◐' : 'ⓘ'}
-                      </button>
+                      <InfoButton
+                        loading={isLoading()}
+                        label="artist"
+                        onClick={(e: MouseEvent) => handleInfoClick(artist.name, e)}
+                      />
                     </Show>
                   </div>
                 </div>
@@ -178,7 +180,7 @@ const ArtistList: Component<ArtistListProps> = (props) => {
 
       <Show
         when={props.artists.length === 0 && !props.isLoading && !props.error}>
-        <div class='py-8 text-xs text-center text-fg-muted'>No artists</div>
+        <EmptyState class="py-8 text-center">No artists</EmptyState>
       </Show>
     </>
   );

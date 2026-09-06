@@ -1,6 +1,7 @@
 import { Component, Show, createSignal, onMount, onCleanup } from 'solid-js';
 import Button from './Button';
 import ControlGroup from './ControlGroup';
+import StatusIndicator from './StatusIndicator';
 import Input from './Input';
 import {
   menubarOnline,
@@ -81,28 +82,17 @@ const PairWsDropdown: Component = () => {
 
             {/* Connection status */}
             <div class="flex flex-col gap-1">
-              <div class="flex items-center gap-1.5 text-xs">
-                <Show when={menubarOnline()}>
-                  <span class="w-2 h-2 rounded-full bg-green-500" />
-                  <span class="text-fg-muted">Menu bar: connected</span>
-                </Show>
-                <Show when={!menubarOnline()}>
-                  <span class="w-2 h-2 rounded-full bg-red-500" />
-                  <span class="text-fg-muted">Menu bar: offline</span>
-                </Show>
-              </div>
-              <div class="flex items-center gap-1.5 text-xs">
-                <Show when={connected()}>
-                  <span class="w-2 h-2 rounded-full bg-green-500" />
-                  <span class="text-fg-muted">Bridge WS: connected</span>
-                </Show>
-                <Show when={!connected()}>
-                  <span class="w-2 h-2 rounded-full bg-fg-subtle" />
-                  <span class="text-fg-muted">Bridge WS: disconnected</span>
-                </Show>
-              </div>
+              <StatusIndicator
+                status={menubarOnline() ? 'online' : 'offline'}
+                label={menubarOnline() ? 'Menu bar: connected' : 'Menu bar: offline'}
+                class="gap-1.5 text-xs text-fg-muted"
+              />
+              <StatusIndicator
+                status={connected() ? 'online' : 'neutral'}
+                label={connected() ? 'Bridge WS: connected' : 'Bridge WS: disconnected'}
+                class="gap-1.5 text-xs text-fg-muted"
+              />
             </div>
-
 
           </div>
         </div>

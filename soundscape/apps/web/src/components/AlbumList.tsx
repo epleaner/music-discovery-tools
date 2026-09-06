@@ -5,6 +5,9 @@ import {
   getCached,
   getAlbumCacheKey,
 } from '@soundscape/utils';
+import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
+import InfoButton from './InfoButton';
 
 interface AlbumListProps {
   albums: RecentAlbum[];
@@ -83,13 +86,13 @@ const AlbumList: Component<AlbumListProps> = (props) => {
   return (
     <div>
       <Show when={props.error}>
-        <div class='p-2 mb-2 text-xs bg-bg-muted border border-border'>
+        <ErrorMessage class='p-2 mb-2 bg-bg-muted border border-border'>
           {props.error?.message}
-        </div>
+        </ErrorMessage>
       </Show>
 
       <Show when={props.isLoading && props.albums.length === 0}>
-        <div class='py-8 text-xs text-center text-fg-muted'>Loading...</div>
+        <EmptyState class='py-8 text-center'>Loading...</EmptyState>
       </Show>
 
       <div class='grid grid-cols-2 gap-px bg-border'>
@@ -149,12 +152,11 @@ const AlbumList: Component<AlbumListProps> = (props) => {
                       {formatDate(album)}
                     </div>
                     <Show when={isLoading() || !info()}>
-                      <button
-                        onClick={(e) => handleInfoClick(album, e)}
-                        class='text-xs text-fg-subtle hover:text-fg px-1'
-                        title='Fetch album info'>
-                        {isLoading() ? '◐' : 'ⓘ'}
-                      </button>
+                      <InfoButton
+                        loading={isLoading()}
+                        label="album"
+                        onClick={(e: MouseEvent) => handleInfoClick(album, e)}
+                      />
                     </Show>
                   </div>
                 </div>
@@ -166,7 +168,7 @@ const AlbumList: Component<AlbumListProps> = (props) => {
 
       <Show
         when={props.albums.length === 0 && !props.isLoading && !props.error}>
-        <div class='py-8 text-xs text-center text-fg-muted'>No albums</div>
+        <EmptyState class="py-8 text-center">No albums</EmptyState>
       </Show>
     </div>
   );

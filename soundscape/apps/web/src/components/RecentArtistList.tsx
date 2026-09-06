@@ -10,6 +10,9 @@ import {
   getCached,
   getArtistCacheKey,
 } from '@soundscape/utils';
+import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
+import InfoButton from './InfoButton';
 
 interface RecentArtistListProps {
   artists: RecentArtist[];
@@ -72,13 +75,13 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
   return (
     <div>
       <Show when={props.error}>
-        <div class='p-2 mb-2 text-xs bg-bg-muted border border-border'>
+        <ErrorMessage class='p-2 mb-2 bg-bg-muted border border-border'>
           {props.error?.message}
-        </div>
+        </ErrorMessage>
       </Show>
 
       <Show when={props.isLoading && props.artists.length === 0}>
-        <div class='py-8 text-xs text-center text-fg-muted'>Loading...</div>
+        <EmptyState class='py-8 text-center'>Loading...</EmptyState>
       </Show>
 
       <div class='grid grid-cols-2 gap-px bg-border'>
@@ -134,12 +137,11 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                     </div>
                   </div>
                   <Show when={isLoading() || !info()}>
-                    <button
-                      onClick={(e) => handleInfoClick(artist.name, e)}
-                      class='text-xs text-fg-subtle hover:text-fg px-1'
-                      title='Fetch artist info'>
-                      {isLoading() ? '◐' : 'ⓘ'}
-                    </button>
+                    <InfoButton
+                      loading={isLoading()}
+                      label="artist"
+                      onClick={(e: MouseEvent) => handleInfoClick(artist.name, e)}
+                    />
                   </Show>
                 </div>
               </div>
@@ -150,7 +152,7 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
 
       <Show
         when={props.artists.length === 0 && !props.isLoading && !props.error}>
-        <div class='py-8 text-xs text-center text-fg-muted'>No artists</div>
+        <EmptyState class="py-8 text-center">No artists</EmptyState>
       </Show>
     </div>
   );

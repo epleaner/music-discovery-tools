@@ -5,6 +5,8 @@ import {
   getCached,
   getTrackCacheKey,
 } from '@soundscape/utils';
+import EmptyState from './EmptyState';
+import InfoButton from './InfoButton';
 
 interface TopTrackListProps {
   tracks: TopTrack[];
@@ -64,18 +66,17 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
   return (
     <div>
       <Show when={props.isLoading}>
-        <div class='p-4 text-xs text-center text-fg-muted'>Loading...</div>
+        <EmptyState class='p-4 text-center'>Loading...</EmptyState>
       </Show>
-
       <Show when={props.error}>
-        <div class='p-4 text-xs text-center text-fg-muted'>
+        <EmptyState class='p-4 text-center'>
           Error: {props.error?.toString()}
-        </div>
+        </EmptyState>
       </Show>
 
       <Show
         when={!props.isLoading && !props.error && props.tracks.length === 0}>
-        <div class='p-4 text-xs text-center text-fg-muted'>No tracks found</div>
+        <EmptyState class="p-4 text-center">No tracks found</EmptyState>
       </Show>
 
       <Show when={!props.isLoading && !props.error && props.tracks.length > 0}>
@@ -124,12 +125,11 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
                   {track.playcount} plays
                 </div>
                 <Show when={isLoading() || !info()}>
-                  <button
-                    onClick={(e) => handleInfoClick(track, e)}
-                    class='text-xs text-fg-subtle hover:text-fg px-1'
-                    title='Fetch track info'>
-                    {isLoading() ? '◐' : 'ⓘ'}
-                  </button>
+                  <InfoButton
+                    loading={isLoading()}
+                    label="track"
+                    onClick={(e: MouseEvent) => handleInfoClick(track, e)}
+                  />
                 </Show>
               </div>
             );

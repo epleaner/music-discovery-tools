@@ -1,6 +1,12 @@
 import { splitProps, type Component, type JSX } from 'solid-js';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'control' | 'icon' | 'tab';
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'control'
+  | 'icon'
+  | 'tab'
+  | 'link';
 
 export interface ButtonProps
   extends JSX.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -13,6 +19,7 @@ const variantClassName: Record<ButtonVariant, string> = {
   control: 'panel-control',
   icon: 'control-icon',
   tab: 'panel-tab',
+  link: 'text-fg-muted hover:text-fg transition-colors',
 };
 
 const Button: Component<ButtonProps> = (props) => {

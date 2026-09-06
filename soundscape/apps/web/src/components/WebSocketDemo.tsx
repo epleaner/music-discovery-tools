@@ -1,6 +1,9 @@
 import { Component, Show, For, createSignal } from 'solid-js';
 import { createWebSocket } from '../lib/websocket';
 import Input from './Input';
+import Button from './Button';
+import EmptyState from './EmptyState';
+import StatusIndicator from './StatusIndicator';
 import { trpc } from '../lib/trpc';
 
 const WebSocketDemo: Component = () => {
@@ -59,16 +62,11 @@ const WebSocketDemo: Component = () => {
         <h3 class='text-sm font-medium'>Real-Time Communication Demo</h3>
 
         {/* Connection Status */}
-        <div class='flex items-center gap-2'>
-          <div
-            class={`w-2 h-2 rounded-full ${
-              isConnected() ? 'bg-green-600' : 'bg-red-600'
-            }`}
-          />
-          <span class='text-xs text-fg-muted'>
-            WebSocket: {isConnected() ? 'Connected' : 'Disconnected'}
-          </span>
-        </div>
+        <StatusIndicator
+          status={isConnected() ? 'online' : 'offline'}
+          label={`WebSocket: ${isConnected() ? 'Connected' : 'Disconnected'}`}
+          class="gap-2 text-xs text-fg-muted"
+        />
       </div>
 
       {/* Send Message */}
@@ -85,12 +83,14 @@ const WebSocketDemo: Component = () => {
             placeholder='Type a message...'
             class='flex-1'
           />
-          <button
+          <Button
             onClick={sendMessage}
             disabled={!isConnected()}
-            class='px-3 py-1 text-xs btn-primary'>
+            variant="primary"
+            class="px-3"
+          >
             Send
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -98,12 +98,12 @@ const WebSocketDemo: Component = () => {
       <div class='space-y-2'>
         <label class='block text-xs text-fg-muted'>Test tRPC API</label>
         <div class='flex gap-2'>
-          <button onClick={testTRPC} class='px-3 py-1 text-xs btn-secondary'>
+          <Button onClick={testTRPC} variant="secondary" class="px-3">
             Health Check
-          </button>
-          <button onClick={testEcho} class='px-3 py-1 text-xs btn-secondary'>
+          </Button>
+          <Button onClick={testEcho} variant="secondary" class="px-3">
             Echo
-          </button>
+          </Button>
         </div>
         <Show when={apiResponse()}>
           <pre class='p-2 text-xs bg-bg border border-border overflow-auto max-h-32'>
@@ -121,7 +121,7 @@ const WebSocketDemo: Component = () => {
           <Show
             when={messages().length > 0}
             fallback={
-              <div class='text-xs text-fg-subtle'>No messages yet</div>
+              <EmptyState>No messages yet</EmptyState>
             }>
             <For each={messages()}>
               {(msg) => (

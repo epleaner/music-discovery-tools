@@ -1,6 +1,7 @@
 import { Component, createSignal, For, Show } from 'solid-js';
 import Button from './Button';
 import ControlGroup from './ControlGroup';
+import EmptyState from './EmptyState';
 import Input from './Input';
 
 interface Site {
@@ -162,9 +163,7 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                   style={{
                     display: activeTab() === index() ? 'flex' : 'none',
                   }}>
-                  <div class='text-xs text-center text-fg-muted'>
-                    No URL configured for this tab
-                  </div>
+                  <EmptyState>No URL configured for this tab</EmptyState>
                   <Button
                     onClick={() => startEditing(index())}
                     variant="secondary"

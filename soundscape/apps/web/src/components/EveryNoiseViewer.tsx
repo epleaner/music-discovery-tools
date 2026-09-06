@@ -1,4 +1,6 @@
 import { Component, Show } from 'solid-js';
+import Button from './Button';
+import ExternalLink from './ExternalLink';
 import type { EveryNoiseGenre } from '@soundscape/types';
 
 interface EveryNoiseViewerProps {
@@ -20,13 +22,12 @@ const EveryNoiseViewer: Component<EveryNoiseViewerProps> = (props) => {
         <Show when={props.genre && !props.isLoading}>
           <div class='text-xs'>{props.genre!.genre}</div>
         </Show>
-        <a
+        <ExternalLink
           href='https://everynoise.com'
-          target='_blank'
-          rel='noopener noreferrer'
-          class='text-xs link'>
+          class='text-xs link'
+        >
           Every Noise at Once
-        </a>
+        </ExternalLink>
 
         <Show when={props.isLoading}>
           <div class='text-xs text-fg-muted animate-spin'>✸</div>
@@ -38,12 +39,13 @@ const EveryNoiseViewer: Component<EveryNoiseViewerProps> = (props) => {
         </Show>
       </div>
       <Show when={props.genre && !props.isLoading}>
-        <button
+        <Button
           onClick={handleOpenGenre}
+          variant="link"
           class='text-xs link pr-2'
           title='Open genre map in new tab'>
           Genre Map →
-        </button>
+        </Button>
       </Show>
     </div>
   );

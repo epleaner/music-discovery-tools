@@ -3,6 +3,7 @@ import type { BandcampRelease, BandcampAlbumDetail } from '@soundscape/types';
 import BandcampPlayer from './BandcampPlayer';
 import Button from './Button';
 import Chip from './Chip';
+import ExternalLink from './ExternalLink';
 
 interface BandcampResultsProps {
   releases: BandcampRelease[];
@@ -44,14 +45,12 @@ const BandcampResults: Component<BandcampResultsProps> = (props) => {
           </Button>
         </Show>
         <Show when={props.album}>
-          <a
+          <ExternalLink
             href={props.album!.url}
-            target="_blank"
-            rel="noopener noreferrer"
             class="btn-secondary text-xs px-3 py-1"
           >
             Buy / open on Bandcamp ↗
-          </a>
+          </ExternalLink>
         </Show>
       </div>
 
@@ -103,10 +102,8 @@ const BandcampResults: Component<BandcampResultsProps> = (props) => {
         <div class="grid grid-cols-2 gap-3">
           <For each={props.releases}>
             {(release) => (
-              <a
+              <ExternalLink
                 href={release.url}
-                target="_blank"
-                rel="noopener noreferrer"
                 class="flex flex-col gap-1.5 rounded-md border border-border p-2 hover:bg-bg-muted transition-colors"
               >
                 <Show when={release.imageUrl}>
@@ -120,7 +117,7 @@ const BandcampResults: Component<BandcampResultsProps> = (props) => {
                 <Show when={release.artist}>
                   <div class="text-fg-muted">{release.artist}</div>
                 </Show>
-              </a>
+              </ExternalLink>
             )}
           </For>
         </div>

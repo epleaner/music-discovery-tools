@@ -6,6 +6,10 @@ import {
   formatNewsletterLinkLabel,
   type NewsletterLinkModel,
 } from './newsletter-panel-model.js';
+import Button from './Button';
+import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
+import ExternalLink from './ExternalLink';
 
 export interface NewsletterListProps {
   newsletters: NewsletterSummary[];
@@ -41,13 +45,14 @@ const NewsletterModal: Component<NewsletterModalProps> = (props) => {
             </div>
             <div class="mt-1 text-sm font-medium">{props.title}</div>
           </div>
-          <button
+          <Button
             type="button"
             onClick={props.onClose}
-            class="px-2 py-1 text-xs border border-border text-fg-muted hover:text-fg"
+            variant="secondary"
+            class="px-2"
           >
             Close
-          </button>
+          </Button>
         </div>
 
         <div class="overflow-y-auto px-4 py-3">
@@ -87,14 +92,9 @@ const NewsletterModal: Component<NewsletterModalProps> = (props) => {
               <div class="space-y-1 text-xs">
                 <For each={props.links}>
                   {(link) => (
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      class="block truncate text-fg-muted hover:text-fg"
-                    >
+                    <ExternalLink href={link.url} class="block truncate text-fg-muted hover:text-fg">
                       {link.label}
-                    </a>
+                    </ExternalLink>
                   )}
                 </For>
               </div>
@@ -157,24 +157,28 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
         <Show when={props.newsletter.summary}>
           <div class="mt-1 text-xs leading-5 text-fg-muted">
             <p class="line-clamp-3 inline">{props.newsletter.summary}</p>
-            <button
+            <Button
               type="button"
               onClick={() => setShowModal(true)}
-              class="ml-1 inline text-xs text-fg-muted hover:text-fg"
+              variant="link"
+              class="ml-1 inline text-xs"
+              aria-label="Open newsletter details"
             >
               +
-            </button>
+            </Button>
           </div>
         </Show>
 
         <Show when={!props.newsletter.summary}>
-          <button
+          <Button
             type="button"
             onClick={() => setShowModal(true)}
-            class="mt-2 text-[10px] tracking-[0.18em] text-fg-muted hover:text-fg"
+            variant="link"
+            class="mt-2 text-[10px] tracking-[0.18em]"
+            aria-label="Open newsletter details"
           >
             +
-          </button>
+          </Button>
         </Show>
 
         <Show when={links().length > 0}>
@@ -185,14 +189,9 @@ const ExpandableNewsletterRow: Component<ExpandableNewsletterRowProps> = (
             <div class="space-y-1 text-xs">
               <For each={links()}>
                 {(link) => (
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    class="block truncate text-fg-muted hover:text-fg"
-                  >
+                  <ExternalLink href={link.url} class="block truncate text-fg-muted hover:text-fg">
                     {link.label}
-                  </a>
+                  </ExternalLink>
                 )}
               </For>
             </div>
@@ -221,15 +220,13 @@ const NewsletterList: Component<NewsletterListProps> = (props) => {
     <div class="flex flex-col h-full">
 
       <Show when={props.error}>
-        <div class="p-2 text-xs border-b border-border text-fg-muted">
+        <ErrorMessage class="p-2 border-b border-border">
           {props.error?.message}
-        </div>
+        </ErrorMessage>
       </Show>
 
       <Show when={props.isLoading && props.newsletters.length === 0}>
-        <div class="px-3 py-8 text-xs text-center text-fg-muted">
-          Loading newsletters…
-        </div>
+        <EmptyState class="px-3 py-8 text-center">Loading newsletters…</EmptyState>
       </Show>
 
       <Show
@@ -237,12 +234,12 @@ const NewsletterList: Component<NewsletterListProps> = (props) => {
           !props.isLoading && props.newsletters.length === 0 && !props.error
         }
       >
-        <div class="px-3 py-8 text-xs text-center text-fg-muted">
+        <EmptyState class="px-3 py-8 text-center">
           <div>No newsletters yet.</div>
           <div class="mt-1">
             Run the local ingest worker to populate this panel.
           </div>
-        </div>
+        </EmptyState>
       </Show>
 
       <div class="overflow-y-auto flex-1">
