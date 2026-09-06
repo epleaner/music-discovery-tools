@@ -288,7 +288,7 @@ const App: Component = () => {
             <PairWsDropdown />
 
             <div
-              class="flex items-center gap-2.5 border border-border btn cursor-pointer h-8 py-0"
+              class="flex items-center gap-2.5 border border-border btn cursor-pointer"
               ref={colorThemeContainerRef}
               onClick={() =>
                 setShowColorThemeDropdown(!showColorThemeDropdown())
@@ -299,7 +299,7 @@ const App: Component = () => {
                   e.stopPropagation();
                   toggleTheme();
                 }}
-                class="flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg w-3 h-3"
+                class="control-size flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg w-6"
                 style={{ transform: `rotate(${getThemeRotation()})` }}
                 aria-label={`Switch theme (currently ${theme()})`}
                 title={`Switch theme (currently ${theme()})`}
@@ -313,7 +313,7 @@ const App: Component = () => {
                     e.stopPropagation();
                     setShowColorThemeDropdown(!showColorThemeDropdown());
                   }}
-                  class="flex items-center justify-center flex-shrink-0 text-xs text-fg-subtle hover:text-fg transition-colors"
+                  class="control-size flex items-center justify-center flex-shrink-0 text-fg-subtle hover:text-fg transition-colors w-6"
                   aria-label="Choose accent color theme"
                   title="Choose accent color theme"
                 >
@@ -348,7 +348,7 @@ const App: Component = () => {
                             );
                             setShowColorThemeDropdown(false);
                           }}
-                          class="w-full px-3 py-2 text-xs text-left hover:bg-bg-muted transition-colors flex items-center gap-2"
+                          class="control-size px-3 text-left hover:bg-bg-muted transition-colors flex items-center gap-2"
                           classList={{
                             'bg-bg-muted': colorTheme() === item.value,
                           }}
@@ -476,7 +476,7 @@ const App: Component = () => {
                                   onClick={() =>
                                     updateState({ subview: view.id })
                                   }
-                                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                                  class={`control-size px-2 whitespace-nowrap ${
                                     recentViewType() === view.id
                                       ? 'bg-accent text-bg'
                                       : 'text-fg-muted hover:text-fg'
@@ -506,7 +506,7 @@ const App: Component = () => {
                                   onClick={() =>
                                     updateState({ topSubview: view.id })
                                   }
-                                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                                  class={`control-size px-2 whitespace-nowrap ${
                                     topViewType() === view.id
                                       ? 'bg-accent text-bg'
                                       : 'text-fg-muted hover:text-fg'
@@ -530,7 +530,7 @@ const App: Component = () => {
                               {(p) => (
                                 <button
                                   onClick={() => updateState({ period: p })}
-                                  class={`px-2 py-1 text-xs whitespace-nowrap ${
+                                  class={`control-size px-2 whitespace-nowrap ${
                                     period() === p
                                       ? 'bg-accent text-bg'
                                       : 'text-fg-muted hover:text-fg'

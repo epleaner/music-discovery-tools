@@ -531,6 +531,13 @@
   .control-size {
     @apply h-6 text-xs leading-4;
   }
+  button {
+    @apply control-size;
+  }
+
+  .control-group {
+    @apply flex flex-col gap-1.5;
+  }
 
   .btn {
     @apply control-size px-2.5 py-1 font-medium transition-colors;
@@ -539,7 +546,7 @@
   }
 
   .btn-primary {
-    @apply control-size bg-accent text-bg;
+    @apply control-size px-2.5 bg-accent text-bg;
     @apply hover:bg-accent-hover;
   }
 

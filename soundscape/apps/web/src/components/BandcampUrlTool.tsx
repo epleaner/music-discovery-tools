@@ -86,7 +86,7 @@ const BandcampUrlTool: Component = () => {
   return (
     <div class="flex gap-3 p-3 h-full text-xs">
       <div class="flex flex-col gap-3 w-64 flex-shrink-0 overflow-y-auto">
-        <div class="flex flex-col gap-1.5">
+        <div class="control-group">
           <div class="font-medium text-fg">URL</div>
           <div class="flex gap-2">
             <Input
@@ -100,7 +100,7 @@ const BandcampUrlTool: Component = () => {
             <button
               onClick={() => scrapeBandcampUrl(bcUrl())}
               disabled={bcScrapeDisabled()}
-              class="panel-control btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+              class="panel-control px-2 btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Scrape
             </button>

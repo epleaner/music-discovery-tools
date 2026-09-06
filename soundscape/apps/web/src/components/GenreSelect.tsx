@@ -249,20 +249,21 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
       scrollToIndexFn={handleScrollToIndexFn}
       positioning={{ sameWidth: true }}
     >
-      <div class="flex items-center gap-1 mb-1">
-        <Combobox.Label class="block text-xs text-fg-muted">
-          Genre
-        </Combobox.Label>
-        <button
-          type="button"
-          onClick={handleShuffle}
-          class="control-size text-fg-muted hover:text-fg px-1"
-          title="Shuffle genres"
-        >
-          ↻
-        </button>
-      </div>
-      <Combobox.Control class="relative flex items-center min-h-6">
+      <div class="control-group">
+        <div class="flex items-center gap-1">
+          <Combobox.Label class="block text-xs text-fg-muted">
+            Genre
+          </Combobox.Label>
+          <button
+            type="button"
+            onClick={handleShuffle}
+            class="control-size text-fg-muted hover:text-fg px-1"
+            title="Shuffle genres"
+          >
+            ↻
+          </button>
+        </div>
+        <Combobox.Control class="relative flex items-center min-h-6">
         <div
           ref={pillsContainerRef}
           class="flex flex-wrap items-center gap-1 flex-1 min-h-6 px-2 ring-1 ring-inset ring-border bg-bg"
@@ -313,6 +314,7 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
           🅧
         </Combobox.ClearTrigger>
       </Combobox.Control>
+      </div>
       <Portal>
         <Combobox.Positioner>
           <Combobox.Content

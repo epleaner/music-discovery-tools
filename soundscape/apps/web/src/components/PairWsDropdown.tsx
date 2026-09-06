@@ -54,7 +54,7 @@ const PairWsDropdown: Component = () => {
         <div class="absolute right-0 z-30 mt-1 w-72 border border-border bg-bg shadow-lg">
           <div class="flex flex-col gap-3 p-3">
             {/* Pairing token */}
-            <div class="flex flex-col gap-1.5">
+            <div class="control-group">
               <div class="flex items-center gap-2">
                 <div class="text-xs font-medium text-fg">Pairing Token</div>
                 <Show when={maskedToken()}>

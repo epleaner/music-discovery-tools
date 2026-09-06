@@ -112,8 +112,8 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                   display: editingTab() === index() ? 'flex' : 'none',
                 }}>
                 <div class='w-full max-w-md space-y-4'>
-                  <div>
-                    <label class='block mb-1 text-xs text-fg-muted'>
+                  <div class='control-group'>
+                    <label class='block text-xs text-fg-muted'>
                       Tab Name
                     </label>
                     <Input
@@ -125,8 +125,8 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                       autofocus={editingTab() === index()}
                     />
                   </div>
-                  <div>
-                    <label class='block mb-1 text-xs text-fg-muted'>URL</label>
+                  <div class='control-group'>
+                    <label class='block text-xs text-fg-muted'>URL</label>
                     <Input
                       type='url'
                       value={editUrl()}
@@ -136,10 +136,10 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
                     />
                   </div>
                   <div class='flex gap-2'>
-                    <button onClick={saveEdit} class='flex-1 btn-primary'>
+                    <button onClick={saveEdit} class='btn-primary'>
                       Save
                     </button>
-                    <button onClick={cancelEdit} class='flex-1 btn-secondary'>
+                    <button onClick={cancelEdit} class='btn-secondary'>
                       Cancel
                     </button>
                   </div>

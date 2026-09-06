@@ -106,12 +106,12 @@ const RymChartTool: Component = () => {
         <div class="flex flex-col gap-3">
           <GenreSelect value={rymSearchTerm()} onValueChange={setRYMSearchTerm} />
           <div class="flex flex-col gap-2">
-            <div>
-              <label class="block mb-1 text-xs text-fg-muted">Range</label>
+            <div class="control-group">
+              <label class="block text-xs text-fg-muted">Range</label>
               <div class="flex gap-1">
                 <button
                   onClick={() => setRYMTimeRange('year')}
-                  class={`panel-control flex-1 ${
+                  class={`panel-control px-2 ${
                     rymTimeRange() === 'year'
                       ? 'bg-accent text-bg'
                       : 'text-fg-muted hover:text-fg border border-border'
@@ -121,7 +121,7 @@ const RymChartTool: Component = () => {
                 </button>
                 <button
                   onClick={() => setRYMTimeRange('decade')}
-                  class={`panel-control flex-1 ${
+                  class={`panel-control px-2 ${
                     rymTimeRange() === 'decade'
                       ? 'bg-accent text-bg'
                       : 'text-fg-muted hover:text-fg border border-border'
@@ -131,7 +131,7 @@ const RymChartTool: Component = () => {
                 </button>
                 <button
                   onClick={() => setRYMTimeRange('all-time')}
-                  class={`panel-control flex-1 ${
+                  class={`panel-control px-2 ${
                     rymTimeRange() === 'all-time'
                       ? 'bg-accent text-bg'
                       : 'text-fg-muted hover:text-fg border border-border'
@@ -142,8 +142,8 @@ const RymChartTool: Component = () => {
               </div>
             </div>
             <Show when={rymTimeRange() !== 'all-time'}>
-              <div>
-                <div class="flex items-center gap-1 mb-1">
+              <div class="control-group">
+                <div class="flex items-center gap-1">
                   <label class="block text-xs text-fg-muted">
                     {rymTimeRange() === 'year' ? 'Year' : 'Decade'}
                   </label>
@@ -179,13 +179,13 @@ const RymChartTool: Component = () => {
             <button
               onClick={() => scrapeRym(getRYMChartUrl())}
               disabled={chartScrapeDisabled()}
-              class="panel-control flex-1 btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+              class="panel-control px-2 btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Scrape charts
             </button>
             <button
               onClick={() => window.open(getRYMChartUrl(), '_blank', 'noopener')}
-              class="panel-control flex-1 btn-secondary"
+              class="panel-control px-2 btn-secondary"
             >
               Open in RateYourMusic ↗
             </button>
@@ -197,7 +197,7 @@ const RymChartTool: Component = () => {
           </div>
         </div>
 
-        <div class="flex flex-col gap-1.5">
+        <div class="control-group">
           <div class="flex gap-2">
             <Input
               type="url"
@@ -210,7 +210,7 @@ const RymChartTool: Component = () => {
             <button
               onClick={() => scrapeRym(rymUrl())}
               disabled={rymScrapeDisabled()}
-              class="panel-control btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+              class="panel-control px-2 btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Scrape
             </button>
