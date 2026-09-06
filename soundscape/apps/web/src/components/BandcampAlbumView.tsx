@@ -53,7 +53,7 @@ const BandcampAlbumView: Component<BandcampAlbumViewProps> = (props) => {
             <div class="flex gap-3 mb-3">
               <Show when={data().imageUrl}>
                 <img
-                  src={bcArtUrl(data().imageUrl!, '_10')}
+                  src={bcArtUrl(data().imageUrl, '_10') ?? undefined}
                   alt={data().name}
                   class="w-24 h-24 object-cover rounded shrink-0"
                 />

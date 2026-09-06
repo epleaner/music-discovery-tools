@@ -13,8 +13,7 @@ const ResizableBottom: Component<ResizableBottomProps> = (props) => {
     props.initialBottomHeight || 300
   );
   const [isDragging, setIsDragging] = createSignal(false);
-  // @ts-ignore - ref will be assigned by SolidJS
-  let containerRef: HTMLDivElement;
+  let containerRef: HTMLDivElement | undefined;
 
   const handleMouseDown = (e: MouseEvent) => {
     e.preventDefault();

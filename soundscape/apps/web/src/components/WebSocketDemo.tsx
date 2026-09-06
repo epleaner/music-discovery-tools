@@ -1,36 +1,19 @@
 import { Component, Show, For, createSignal } from 'solid-js';
-import { createWebSocket } from '../lib/websocket';
+import { useWebSocket } from '../lib/use-websocket';
 import Input from './Input';
 import Button from './Button';
 import EmptyState from './EmptyState';
 import StatusIndicator from './StatusIndicator';
 import { trpc } from '../lib/trpc';
-
 const WebSocketDemo: Component = () => {
-  const ws = createWebSocket();
+  const { isConnected, messages, send } = useWebSocket();
   const [testMessage, setTestMessage] = createSignal('');
-  const [messages, setMessages] = createSignal<any[]>([]);
   const [apiResponse, setApiResponse] = createSignal<string>('');
-
-  // Track messages
-  const lastMessage = ws.lastMessage;
-  const isConnected = ws.isConnected;
-
-  // Add incoming messages to list
-  const addMessage = (msg: any) => {
-    setMessages((prev) => [msg, ...prev].slice(0, 10)); // Keep last 10
-  };
-
-  // Watch for new messages
-  const unwatchedLastMessage = lastMessage();
-  if (unwatchedLastMessage) {
-    addMessage(unwatchedLastMessage);
-  }
 
   const sendMessage = () => {
     const msg = testMessage().trim();
     if (msg) {
-      ws.send({
+      send({
         type: 'test_message',
         data: { content: msg },
       });
@@ -115,7 +98,7 @@ const WebSocketDemo: Component = () => {
       {/* Messages */}
       <div class='space-y-2'>
         <label class='block text-xs text-fg-muted'>
-          Recent messages ({messages().length})
+          Recent messages ({Math.min(messages().length, 10)})
         </label>
         <div class='space-y-1 max-h-48 overflow-auto'>
           <Show
@@ -123,7 +106,7 @@ const WebSocketDemo: Component = () => {
             fallback={
               <EmptyState>No messages yet</EmptyState>
             }>
-            <For each={messages()}>
+            <For each={messages().slice(-10).reverse()}>
               {(msg) => (
                 <div class='p-2 text-xs border border-border bg-bg'>
                   <div class='font-medium'>
