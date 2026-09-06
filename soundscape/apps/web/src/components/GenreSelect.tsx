@@ -256,23 +256,23 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
         <button
           type="button"
           onClick={handleShuffle}
-          class="text-xs text-fg-muted hover:text-fg px-1"
+          class="control-size text-fg-muted hover:text-fg px-1"
           title="Shuffle genres"
         >
           ↻
         </button>
       </div>
-      <Combobox.Control class="relative flex items-center min-h-[32px]">
+      <Combobox.Control class="relative flex items-center min-h-6">
         <div
           ref={pillsContainerRef}
-          class="flex flex-wrap items-center gap-1 flex-1 px-2 py-1.5 border border-border bg-bg min-h-[32px]"
+          class="flex flex-wrap items-center gap-1 flex-1 min-h-6 px-2 ring-1 ring-inset ring-border bg-bg"
           onClick={() => {
             triggerRef?.click();
           }}
         >
           <For each={selectedItems()}>
             {(item) => (
-              <div class="flex items-center gap-1 px-2 py-0.5 bg-bg-subtle border border-border rounded text-xs">
+              <div class="control-size flex items-center gap-1 px-2 bg-bg-subtle border border-border rounded">
                 <span class="text-fg">{item.label}</span>
                 <button
                   type="button"
@@ -280,7 +280,7 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
                     e.stopPropagation();
                     handleRemovePill(item.value);
                   }}
-                  class="text-fg-muted hover:text-fg ml-1"
+                  class="control-size px-1 text-fg-muted hover:text-fg ml-1"
                   aria-label={`Remove ${item.label}`}
                 >
                   ×
@@ -289,7 +289,7 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
             )}
           </For>
           <Combobox.Trigger
-            class="flex-1 min-w-[120px] p-0 m-0 flex items-center"
+            class="control-size flex-1 min-w-[120px] p-0 m-0 flex items-center"
             ref={triggerRef}
           >
             <Combobox.Input
@@ -303,7 +303,7 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
           </Combobox.Trigger>
         </div>
         <Combobox.ClearTrigger
-          class="absolute right-0 text-fg-muted hover:text-fg px-2"
+          class="control-size absolute right-0 text-fg-muted hover:text-fg px-2"
           onClick={() => {
             props.onValueChange([]);
             setInputValue('');

@@ -153,7 +153,7 @@ const RymChartTool: Component = () => {
                       const randomIndex = Math.floor(Math.random() * rymYears.length);
                       setRYMYear(rymYears[randomIndex]);
                     }}
-                    class="text-xs text-fg-muted hover:text-fg px-1"
+                    class="control-size text-fg-muted hover:text-fg px-1"
                     title="Shuffle year/decade"
                   >
                     ↻
@@ -162,7 +162,7 @@ const RymChartTool: Component = () => {
                 <select
                   value={rymYear()}
                   onChange={(e) => setRYMYear(parseInt(e.currentTarget.value))}
-                  class="w-full input panel-control"
+                  class="w-full input"
                 >
                   <For each={rymYears}>
                     {(year) => (

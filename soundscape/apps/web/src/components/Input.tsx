@@ -1,6 +1,6 @@
 import { splitProps, type Component, type JSX } from 'solid-js';
 
-export const inputClassName = 'input panel-control';
+export const inputClassName = 'input';
 
 export interface InputProps extends JSX.InputHTMLAttributes<HTMLInputElement> {}
 

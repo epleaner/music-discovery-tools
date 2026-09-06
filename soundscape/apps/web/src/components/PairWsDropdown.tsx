@@ -44,7 +44,7 @@ const PairWsDropdown: Component = () => {
     <div class="relative flex-shrink-0" ref={containerRef}>
       <button
         onClick={() => setOpen(!open())}
-        class="btn-secondary text-xs h-8 py-0 inline-flex items-center justify-center"
+        class="btn-secondary inline-flex items-center justify-center"
         title="Pairing token and connection status"
       >
         Pair / WS

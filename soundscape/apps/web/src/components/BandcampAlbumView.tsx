@@ -91,7 +91,7 @@ const BandcampAlbumView: Component<BandcampAlbumViewProps> = (props) => {
               <div class="flex flex-wrap gap-1 mb-3">
                 <For each={data().keywords}>
                   {(tag) => (
-                    <span class="px-1.5 py-0.5 rounded bg-bg-subtle text-fg-muted text-[10px]">
+                    <span class="control-size px-1.5 rounded bg-bg-subtle text-fg-muted">
                       {tag}
                     </span>
                   )}

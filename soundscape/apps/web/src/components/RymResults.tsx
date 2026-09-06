@@ -54,7 +54,7 @@ const RymResults: Component<RymResultsProps> = (props) => {
             <div class="flex flex-wrap gap-1">
               <For each={props.album!.genres}>
                 {(genre) => (
-                  <span class="px-1.5 py-0.5 rounded bg-bg-muted text-fg-subtle text-xs">
+                  <span class="control-size px-1.5 rounded bg-bg-muted text-fg-subtle">
                     {genre}
                   </span>
                 )}
