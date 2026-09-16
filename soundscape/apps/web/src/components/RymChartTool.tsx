@@ -1,8 +1,14 @@
-import { Component, For, Show, createSignal, createMemo, onMount, onCleanup } from 'solid-js';
-import type { RymEntry, RymAlbumDetail } from '@soundscape/types';
+import {
+  Component,
+  For,
+  Show,
+  createSignal,
+  createMemo,
+  onCleanup,
+} from 'solid-js';
+import type { RymEntry, RymAlbumDetail, ScrapeJob } from '@soundscape/types';
 import { normalizeCharacters } from '@soundscape/utils';
-import { trpc } from '../lib/trpc';
-import { requestScrape, onResultReady, onScrapeError, menubarOnline } from '../lib/scrape-bridge';
+import { startScrapeJob, getPairingToken } from '../lib/scrape-jobs';
 import Input from './Input';
 import GenreSelect from './GenreSelect';
 import Button from './Button';
@@ -11,20 +17,23 @@ import ControlGroup from './ControlGroup';
 import RymResults from './RymResults';
 import CacheAge from './CacheAge';
 
-const TOKEN_KEY = 'scrape_pairing_token';
-
 const RymChartTool: Component = () => {
   const [rymUrl, setRymUrl] = createSignal('');
   const [rymStatus, setRymStatus] = createSignal<string | null>(null);
   const [rymReqId, setRymReqId] = createSignal<string | null>(null);
   const [entries, setEntries] = createSignal<RymEntry[]>([]);
   const [rymAlbum, setRymAlbum] = createSignal<RymAlbumDetail | null>(null);
-  const [rymFetchedAt, setRymFetchedAt] = createSignal<string | null>(null);
+  const [rymFetchedAt, setRymFetchedAt] = createSignal<string | Date | null>(
+    null
+  );
   const [lastScrapedUrl, setLastScrapedUrl] = createSignal<string | null>(null);
+  let cancelScrape = () => {};
 
   const [rymSearchTerm, setRYMSearchTerm] = createSignal<string[]>([]);
   const [rymYear, setRYMYear] = createSignal(2025);
-  const [rymTimeRange, setRYMTimeRange] = createSignal<'year' | 'decade' | 'all-time'>('year');
+  const [rymTimeRange, setRYMTimeRange] = createSignal<
+    'year' | 'decade' | 'all-time'
+  >('year');
 
   const currentYear = new Date().getFullYear();
   const rymYears = Array.from(
@@ -41,8 +50,7 @@ const RymChartTool: Component = () => {
       .replace(/[^a-z0-9-]/g, '');
 
   const getRYMChartUrl = createMemo(() => {
-    const genres = rymSearchTerm();
-    const genreSlug = genres.map(formatGenreForURL).join(',');
+    const genreSlug = rymSearchTerm().map(formatGenreForURL).join(',');
     const encodedGenreSlug = encodeURIComponent(genreSlug);
     const range = rymTimeRange();
     const period =
@@ -54,91 +62,83 @@ const RymChartTool: Component = () => {
     return `https://rateyourmusic.com/charts/top/album/${period}/ge:${encodedGenreSlug}/`;
   });
 
-  const hasToken = () => !!localStorage.getItem(TOKEN_KEY);
-
-  const scrapeRym = (url: string, force = false) => {
-    if (!hasToken() || !menubarOnline()) {
-      setRymStatus('Connect the menu bar & set a token to scrape RYM.');
+  const applyJob = (job: ScrapeJob) => {
+    setRymReqId(job.requestId);
+    if (job.status === 'queued') {
+      setRymStatus('Queued for your Mac…');
       return;
     }
-    setEntries([]);
-    setRymAlbum(null);
-    setRymStatus('Scraping on your Mac…');
-    setLastScrapedUrl(url);
-    const id = requestScrape({ source: 'rym', url, force });
-    setRymReqId(id);
+    if (job.status === 'running') {
+      setRymStatus('Scraping on your Mac…');
+      return;
+    }
+    if (job.status === 'error') {
+      setRymStatus(`Error: ${job.error ?? 'unknown'}`);
+      return;
+    }
+    if (job.status === 'expired') {
+      setRymStatus('Expired before the local agent completed it.');
+      return;
+    }
+    if (job.data?.kind !== 'rym') {
+      setRymStatus('The agent returned an unexpected result.');
+      return;
+    }
+    setEntries(job.data.entries);
+    setRymAlbum(job.data.album ?? null);
+    setRymFetchedAt(job.fetchedAt);
+    setRymStatus(null);
   };
 
-  onMount(() => {
-    const removeResult = onResultReady(async (requestId) => {
-      if (requestId !== rymReqId()) return;
-      const result = await (trpc.scrape.getResult as any).query({ requestId });
-      if (!result) {
-        setRymStatus('No result found.');
-        return;
-      }
-      if (result.status === 'error') {
-        setRymStatus(`Error: ${result.error ?? 'unknown'}`);
-        return;
-      }
-      if (result.data?.kind === 'rym') {
-        setEntries(result.data.entries as RymEntry[]);
-        setRymAlbum((result.data as any).album ?? null);
-        setRymFetchedAt((result as any).fetchedAt ?? null);
-        setRymStatus(null);
-      }
-    });
+  const scrapeRym = (url: string, force = false) => {
+    if (!getPairingToken()) {
+      setRymStatus('Set a pairing token to scrape RYM.');
+      return;
+    }
+    cancelScrape();
+    setEntries([]);
+    setRymAlbum(null);
+    setRymStatus('Queueing scrape…');
+    setLastScrapedUrl(url);
+    cancelScrape = startScrapeJob(
+      { source: 'rym', url, force },
+      applyJob,
+      (message) => setRymStatus(`Error: ${message}`)
+    );
+  };
 
-    const removeError = onScrapeError((requestId, message) => {
-      if (requestId === rymReqId()) setRymStatus(`Error: ${message}`);
-    });
+  onCleanup(() => cancelScrape());
 
-    onCleanup(() => {
-      removeResult();
-      removeError();
-    });
-  });
-
-  const rymScrapeDisabled = () => !hasToken() || !menubarOnline() || !rymUrl().trim();
-  const chartScrapeDisabled = () => !hasToken() || !menubarOnline();
+  const rymScrapeDisabled = () => !getPairingToken() || !rymUrl().trim();
+  const chartScrapeDisabled = () => !getPairingToken();
 
   return (
     <div class="flex gap-3 p-3 h-full text-xs">
       <div class="flex flex-col gap-3 w-64 flex-shrink-0 overflow-y-auto">
-        {/* Chart builder */}
         <div class="flex flex-col gap-3">
-          <GenreSelect value={rymSearchTerm()} onValueChange={setRYMSearchTerm} />
+          <GenreSelect
+            value={rymSearchTerm()}
+            onValueChange={setRYMSearchTerm}
+          />
           <div class="flex flex-col gap-2">
             <ControlGroup>
               <label class="block text-xs text-fg-muted">Range</label>
               <div class="flex gap-1">
                 <Button
                   onClick={() => setRYMTimeRange('year')}
-                  class={`px-2 ${
-                    rymTimeRange() === 'year'
-                      ? 'bg-accent text-bg'
-                      : 'text-fg-muted hover:text-fg border border-border'
-                  }`}
+                  class={`px-2 ${rymTimeRange() === 'year' ? 'bg-accent text-bg' : 'text-fg-muted hover:text-fg border border-border'}`}
                 >
                   Year
                 </Button>
                 <Button
                   onClick={() => setRYMTimeRange('decade')}
-                  class={`px-2 ${
-                    rymTimeRange() === 'decade'
-                      ? 'bg-accent text-bg'
-                      : 'text-fg-muted hover:text-fg border border-border'
-                  }`}
+                  class={`px-2 ${rymTimeRange() === 'decade' ? 'bg-accent text-bg' : 'text-fg-muted hover:text-fg border border-border'}`}
                 >
                   Decade
                 </Button>
                 <Button
                   onClick={() => setRYMTimeRange('all-time')}
-                  class={`px-2 ${
-                    rymTimeRange() === 'all-time'
-                      ? 'bg-accent text-bg'
-                      : 'text-fg-muted hover:text-fg border border-border'
-                  }`}
+                  class={`px-2 ${rymTimeRange() === 'all-time' ? 'bg-accent text-bg' : 'text-fg-muted hover:text-fg border border-border'}`}
                 >
                   All Time
                 </Button>
@@ -152,10 +152,11 @@ const RymChartTool: Component = () => {
                   </label>
                   <Button
                     type="button"
-                    onClick={() => {
-                      const randomIndex = Math.floor(Math.random() * rymYears.length);
-                      setRYMYear(rymYears[randomIndex]);
-                    }}
+                    onClick={() =>
+                      setRYMYear(
+                        rymYears[Math.floor(Math.random() * rymYears.length)]
+                      )
+                    }
                     variant="icon"
                     class="text-fg-muted hover:text-fg"
                     title="Shuffle year/decade"
@@ -171,7 +172,9 @@ const RymChartTool: Component = () => {
                   <For each={rymYears}>
                     {(year) => (
                       <option value={year}>
-                        {rymTimeRange() === 'decade' ? `${Math.floor(year / 10) * 10}s` : year}
+                        {rymTimeRange() === 'decade'
+                          ? `${Math.floor(year / 10) * 10}s`
+                          : year}
                       </option>
                     )}
                   </For>
@@ -189,7 +192,9 @@ const RymChartTool: Component = () => {
               Scrape charts
             </Button>
             <Button
-              onClick={() => window.open(getRYMChartUrl(), '_blank', 'noopener')}
+              onClick={() =>
+                window.open(getRYMChartUrl(), '_blank', 'noopener')
+              }
               variant="secondary"
               class="px-2"
             >
@@ -202,7 +207,6 @@ const RymChartTool: Component = () => {
             <div class="flex-1 border-t border-border" />
           </div>
         </div>
-
         <ControlGroup>
           <div class="flex gap-2">
             <Input
@@ -210,7 +214,10 @@ const RymChartTool: Component = () => {
               placeholder="https://rateyourmusic.com/list/..."
               value={rymUrl()}
               onInput={(e) => setRymUrl(e.currentTarget.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !rymScrapeDisabled()) scrapeRym(rymUrl()); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !rymScrapeDisabled())
+                  scrapeRym(rymUrl());
+              }}
               class="flex-1"
             />
             <Button
@@ -224,7 +231,6 @@ const RymChartTool: Component = () => {
           </div>
         </ControlGroup>
       </div>
-
       <div class="flex-1 min-w-0 overflow-y-auto">
         <div class="flex justify-end mb-1">
           <CacheAge

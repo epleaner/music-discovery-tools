@@ -1,9 +1,16 @@
 export type ScrapeSource = 'rym' | 'bandcamp';
-export type ClientType = 'web' | 'menubar';
+export type ScrapeMode = 'label' | 'related' | 'resolve';
+export type ClientType = 'agent';
 
 export interface RymEntry {
-  artist: string; album: string; date?: string; path?: string;
-  genres?: string[]; avgRating?: number; ratings?: number; wants?: number;
+  artist: string;
+  album: string;
+  date?: string;
+  path?: string;
+  genres?: string[];
+  avgRating?: number;
+  ratings?: number;
+  wants?: number;
 }
 export interface RymAlbumDetail {
   title: string;
@@ -16,7 +23,11 @@ export interface RymAlbumDetail {
   ratings?: number;
   tracks?: string[];
 }
-export type RymScrapeData = { kind: 'rym'; entries: RymEntry[]; album?: RymAlbumDetail };
+export type RymScrapeData = {
+  kind: 'rym';
+  entries: RymEntry[];
+  album?: RymAlbumDetail;
+};
 
 export interface BandcampRelease {
   title: string;
@@ -27,8 +38,8 @@ export interface BandcampRelease {
 export interface BandcampTrack {
   name: string;
   position?: number;
-  duration?: number;   // seconds
-  streamUrl?: string;  // token-signed mp3-128 (ephemeral)
+  duration?: number;
+  streamUrl?: string;
 }
 export interface BandcampAlbumDetail {
   title: string;
@@ -43,26 +54,56 @@ export type BandcampScrapeData = {
   kind: 'bandcamp';
   releases: BandcampRelease[];
   label?: { name: string; url: string };
-  album?: BandcampAlbumDetail;   // populated when scraping a single album/track page
+  album?: BandcampAlbumDetail;
 };
-
 export type ScrapeData = RymScrapeData | BandcampScrapeData;
 
-export type ScrapeStatus = 'pending' | 'done' | 'error';
+export type ScrapeStatus = 'queued' | 'running' | 'done' | 'error' | 'expired';
+export type ScrapeQuery = {
+  artist: string;
+  album?: string;
+  kind: 'album' | 'artist';
+};
 
-export type RegisterMsg = { type: 'register'; token: string; clientType: ClientType };
-export type ScrapeQuery = { artist: string; album?: string; kind: 'album' | 'artist' };
-export type ScrapeMsg = {
-  type: 'scrape';
+export interface ScrapeRequest {
+  source: ScrapeSource;
+  url?: string;
+  mode?: ScrapeMode;
+  query?: ScrapeQuery;
+  force?: boolean;
+}
+export interface ScrapeJob {
+  requestId: string;
+  status: ScrapeStatus;
+  source: ScrapeSource;
+  url: string;
+  targetUrl: string | null;
+  mode: ScrapeMode | null;
+  query: ScrapeQuery | null;
+  attempts: number;
+  error: string | null;
+  data: ScrapeData | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  fetchedAt: Date | string | null;
+  expiresAt: Date | string;
+}
+
+export type RegisterMsg = {
+  type: 'register';
+  token: string;
+  clientType: 'agent';
+};
+export type ScrapeMsg = ScrapeRequest & { type: 'scrape'; requestId: string };
+export type ScrapeResultMsg = {
+  type: 'scrape_result';
   requestId: string;
   source: ScrapeSource;
-  url?: string;                 // absent for mode:'resolve' (menu bar resolves it)
-  mode?: 'label' | 'related' | 'resolve';
-  query?: ScrapeQuery;          // present for mode:'resolve'
-  force?: boolean;              // skip the shared cache and always re-scrape
+  data: ScrapeData;
 };
-export type ScrapeResultMsg = { type: 'scrape_result'; requestId: string; source: ScrapeSource; data: ScrapeData };
-export type ResultReadyMsg = { type: 'result_ready'; requestId: string };
-export type ScrapeErrorMsg = { type: 'scrape_error'; requestId: string; message: string };
-export type MenubarPresenceMsg = { type: 'menubar_presence'; online: boolean };
-export type BridgeMessage = RegisterMsg | ScrapeMsg | ScrapeResultMsg | ResultReadyMsg | ScrapeErrorMsg | MenubarPresenceMsg;
+export type ScrapeErrorMsg = {
+  type: 'scrape_error';
+  requestId: string;
+  message: string;
+};
+export type BridgeMessage = RegisterMsg | ScrapeResultMsg | ScrapeErrorMsg;

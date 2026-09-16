@@ -9,6 +9,7 @@
 ## Fixing soundscape-db (PostgreSQL)
 
 The database service failure is usually due to:
+
 1. **Volume issues** - PostgreSQL needs a volume for data persistence
 2. **Resource limits** - Not enough memory/CPU
 3. **Configuration issues** - Missing environment variables
@@ -56,7 +57,6 @@ The web service needs to be created. Since you're using Option C (Express server
 
 3. **Set Environment Variables**
    - `VITE_API_URL` - Get this from your `soundscape-api` service URL
-   - `VITE_WS_URL` - WebSocket URL (e.g., `wss://your-api.railway.app/ws`)
    - `VITE_LASTFM_API_KEY` - Your Last.fm API key
    - `PORT` - Railway should set this, but check if it's there
 
@@ -76,23 +76,24 @@ railway up    # This should create the service
 After services are running:
 
 1. **Get API URL:**
+
    ```bash
    cd apps/server
    railway domain
    ```
 
 2. **Get Web URL:**
+
    ```bash
    cd apps/web
    railway domain
    ```
 
 3. **Update Environment Variables:**
-   - In `soundscape-api`: Set `WEB_APP_URL` to the web service URL
-   - In `soundscape-web`: Set `VITE_API_URL` and `VITE_WS_URL` to the API service URL
+   - In `soundscape-web`: Set `VITE_API_URL` to the API service URL
+   - On the local desktop agent: Set `SCRAPE_AGENT_WS_URL` and the pairing token
 
 ## Next Steps
 
 1. Create the web service (via dashboard or CLI)
 2. Set environment variables for inter-service communication
-

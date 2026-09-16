@@ -27,7 +27,6 @@ import BandcampUrlTool from './components/BandcampUrlTool';
 import Breadcrumbs from './components/Breadcrumbs';
 import Button from './components/Button';
 import PanelTab from './components/PanelTab';
-import StatusIndicator from './components/StatusIndicator';
 import EmptyState from './components/EmptyState';
 import { buildSimilarPanelModel } from './lib/app-right-panel';
 import { buildAppLayoutModel } from './lib/app-layout';
@@ -52,11 +51,7 @@ import { groupTracksByAlbum, groupTracksByArtist } from '@soundscape/utils';
 import { useSearchState } from './lib/use-search-state';
 import { useNav } from './lib/use-nav';
 import { useTheme } from './lib/use-theme';
-import {
-  menubarOnline,
-  connected,
-  requestScrapeRefresh,
-} from './lib/scrape-bridge';
+import { requestScrapeRefresh } from './lib/scrape-jobs';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -274,18 +269,6 @@ const App: Component = () => {
           />
 
           <div class="flex flex-1 gap-2 justify-end items-center w-full">
-            <div class="flex items-center gap-3">
-              <StatusIndicator
-                status={menubarOnline() ? 'online' : 'offline'}
-                label="Menu bar"
-                class="gap-2 text-xs text-fg-muted"
-              />
-              <StatusIndicator
-                status={connected() ? 'online' : 'offline'}
-                label="WS"
-                class="gap-2 text-xs text-fg-muted"
-              />
-            </div>
 
             <PairWsDropdown />
 

@@ -16,7 +16,6 @@ pnpm install
 ```bash
 VITE_LASTFM_API_KEY=your_lastfm_api_key
 VITE_API_URL=http://localhost:3001
-VITE_WS_URL=ws://localhost:3001/ws
 ```
 
 **Extension** - Create `apps/extension/.env`:
@@ -153,35 +152,26 @@ pnpm --filter @soundscape/ingest start -- --reprocess-bandcamp-links --verbose
 
 With no mode flag, the wrapper defaults to `--sync-now`, so `bash scripts/run-newsletter-sync.sh --verbose` runs a live sync with readable progress output. `--from-scratch` clears the local newsletter DB before the run starts. Use the direct ingest CLI for `--reprocess-bandcamp-links`; that path intentionally skips Gmail fetches and only reprocesses rows already stored in SQLite.
 
-### Test Real-Time Communication
+### Test scrape job communication
 
-**From Extension → Web App:**
+1. Start the API with `DATABASE_URL` configured.
+2. Start the external desktop agent with an authenticated browser profile and
+   the pairing token saved in the web app.
+3. Create a scrape from the web app or `POST /api/rest/scrape/jobs`.
+4. Confirm the API reports `queued`, then `running`, then `done` (or a visible
+   `error`) at `/api/rest/scrape/jobs/{requestId}`.
+5. Stop the agent, create another job, and confirm it remains `queued`; restart
+   the agent and confirm it is eventually dispatched.
 
-1. Open extension popup
-2. Type a message in the input field
-3. Click "Send"
-4. Check web app - message should appear in "Recent messages"
-
-**From Web App → Extension:**
-
-1. Open web app
-2. Find the WebSocket Demo component (or add it to your app)
-3. Type a message and send
-4. Check extension popup - message should appear
-
-**Test API Calls:**
-
-- Click "Test API Connection" in extension popup
-- Click "Health Check" button in web app
-- Both should show successful API responses
+The extension's own WebSocket is separate from scrape-job orchestration.
 
 ## Troubleshooting
 
-### WebSocket won't connect
+### Desktop agent won't receive jobs
 
-- Make sure backend server is running on port 3001
-- Check browser console for CORS errors
-- Verify `VITE_WS_URL` matches server URL
+- Confirm `SCRAPE_AGENT_WS_URL` points to the API `/ws` endpoint.
+- Confirm its pairing token matches the token entered in the web app.
+- Jobs created while it is offline remain queued in PostgreSQL.
 
 ### Extension won't load
 

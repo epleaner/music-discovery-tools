@@ -1,87 +1,56 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { Rooms, type Sender } from './ws-rooms.js';
+import { AgentRegistry, type Sender } from './ws-rooms.js';
 
 function makeSender(): Sender & { received: string[] } {
   const received: string[] = [];
-  return { received, send(json: string) { received.push(json); } };
+  return {
+    received,
+    send(json: string) {
+      received.push(json);
+    },
+  };
 }
 
-test('sendToMenubar: reaches only menubar in same token, not another token', () => {
-  const rooms = new Rooms();
-  const mbA = makeSender();
-  const mbB = makeSender();
-  rooms.registerMenubar('A', mbA);
-  rooms.registerMenubar('B', mbB);
-  const result = rooms.sendToMenubar('A', { type: 'ping' });
-  assert.equal(result, true);
-  assert.equal(mbA.received.length, 1);
-  assert.equal(mbB.received.length, 0);
+test('send reaches only the agent for the same pairing token', () => {
+  const registry = new AgentRegistry();
+  const agentA = makeSender();
+  const agentB = makeSender();
+  registry.register('hash-a', 'agent-a', agentA);
+  registry.register('hash-b', 'agent-b', agentB);
+
+  assert.equal(
+    registry.send('hash-a', { type: 'scrape', requestId: 'a' }),
+    true
+  );
+  assert.deepEqual(JSON.parse(agentA.received[0]), {
+    type: 'scrape',
+    requestId: 'a',
+  });
+  assert.equal(agentB.received.length, 0);
 });
 
-test('sendToWebs: reaches all webs in same token, not webs in another token', () => {
-  const rooms = new Rooms();
-  const w1 = makeSender();
-  const w2 = makeSender();
-  const wB = makeSender();
-  rooms.registerWeb('A', w1);
-  rooms.registerWeb('A', w2);
-  rooms.registerWeb('B', wB);
-  rooms.sendToWebs('A', { type: 'hello' });
-  assert.equal(w1.received.length, 1);
-  assert.equal(w2.received.length, 1);
-  assert.equal(wB.received.length, 0);
-  assert.deepEqual(JSON.parse(w1.received[0]), { type: 'hello' });
+test('a new connection replaces the previous agent for one token', () => {
+  const registry = new AgentRegistry();
+  const first = makeSender();
+  const second = makeSender();
+  registry.register('hash', 'first', first);
+  registry.register('hash', 'second', second);
+
+  assert.equal(registry.get('hash')?.agentId, 'second');
+  assert.equal(registry.forSender(first), null);
+  assert.equal(registry.send('hash', { type: 'next' }), true);
+  assert.equal(first.received.length, 0);
+  assert.equal(second.received.length, 1);
 });
 
-test('registerMenubar emits presence(true) to existing webs in that token', () => {
-  const rooms = new Rooms();
-  const w1 = makeSender();
-  const w2 = makeSender();
-  rooms.registerWeb('A', w1);
-  rooms.registerWeb('A', w2);
-  const mb = makeSender();
-  rooms.registerMenubar('A', mb);
-  assert.equal(w1.received.length, 1);
-  assert.deepEqual(JSON.parse(w1.received[0]), { type: 'menubar_presence', online: true });
-  assert.equal(w2.received.length, 1);
-  assert.deepEqual(JSON.parse(w2.received[0]), { type: 'menubar_presence', online: true });
-});
+test('unregister removes only the active sender', () => {
+  const registry = new AgentRegistry();
+  const sender = makeSender();
+  registry.register('hash', 'agent', sender);
+  const connection = registry.unregister(sender);
 
-test('unregister menubar emits presence(false) to webs and menubarFor returns null', () => {
-  const rooms = new Rooms();
-  const w = makeSender();
-  const mb = makeSender();
-  rooms.registerWeb('A', w);
-  rooms.registerMenubar('A', mb);
-  // clear presence(true) notification
-  w.received.length = 0;
-  rooms.unregister(mb);
-  assert.equal(w.received.length, 1);
-  assert.deepEqual(JSON.parse(w.received[0]), { type: 'menubar_presence', online: false });
-  assert.equal(rooms.menubarFor('A'), null);
-});
-
-test('sendToMenubar returns false when no menubar registered', () => {
-  const rooms = new Rooms();
-  rooms.registerWeb('A', makeSender());
-  const result = rooms.sendToMenubar('A', { type: 'ping' });
-  assert.equal(result, false);
-});
-
-test('unregister web removes it from websFor and does not emit presence', () => {
-  const rooms = new Rooms();
-  const w1 = makeSender();
-  const w2 = makeSender();
-  const mb = makeSender();
-  rooms.registerWeb('A', w1);
-  rooms.registerWeb('A', w2);
-  rooms.registerMenubar('A', mb);
-  // clear presence notifications
-  w1.received.length = 0;
-  w2.received.length = 0;
-  rooms.unregister(w1);
-  assert.deepEqual(rooms.websFor('A'), [w2]);
-  assert.equal(w1.received.length, 0);
-  assert.equal(w2.received.length, 0);
+  assert.equal(connection?.agentId, 'agent');
+  assert.equal(registry.get('hash'), null);
+  assert.equal(registry.send('hash', { type: 'after-close' }), false);
 });

@@ -81,7 +81,6 @@ railway link || {
 echo "Setting environment variables..."
 if [ -n "$API_URL" ]; then
     railway variables set VITE_API_URL="$API_URL" || true
-    railway variables set VITE_WS_URL="${API_URL/https:\/\//wss:\/\/}/ws" || true
 fi
 railway variables set VITE_LASTFM_API_KEY="your_key_here" || echo "⚠️  Set VITE_LASTFM_API_KEY manually"
 railway variables set PORT=\$PORT || true

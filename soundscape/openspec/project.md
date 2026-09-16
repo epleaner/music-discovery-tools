@@ -2,16 +2,15 @@
 
 ## Purpose
 
-Soundscape is a music-discovery companion that unifies Last.fm listening telemetry, RateYourMusic context capture, and EveryNoise genre exploration into a single workspace. The web app provides a multi-panel dashboard for browsing artists, genres, and reference sites, while the browser extension scrapes RateYourMusic pages and syncs discoveries back to the platform in real time through tRPC + WebSocket services.
+Soundscape is a music-discovery companion that unifies Last.fm listening telemetry, RateYourMusic context capture, and EveryNoise genre exploration into a single workspace. The web app provides a multi-panel dashboard and creates durable scrape jobs over HTTP; a local desktop agent owns the authenticated browser profile and connects to the remote queue over WebSocket.
 
 ## Tech Stack
 
 - TypeScript everywhere (apps + packages) with pnpm + Turborepo orchestration
 - SolidJS + Vite web app (`apps/web`) styled with Tailwind tokens
 - React + WXT browser extension (`apps/extension`) for popup/background/content scripts
-- Node.js 18, Express, and tRPC server (`apps/server`) with ws-based realtime transport
-- Prisma ORM targeting PostgreSQL; deployments run on Railway
-- Shared packages (`packages/*`) for API router, types, utils, and UI primitives
+- Node.js 18, Express, and tRPC server (`apps/server`) with an agent-only ws transport
+- Shared packages (`packages/*`) for API router, types, utils, UI primitives, and scrape persistence
 
 ## Project Conventions
 
@@ -25,10 +24,10 @@ Soundscape is a music-discovery companion that unifies Last.fm listening telemet
 
 ### Architecture Patterns
 
-- Turborepo monorepo with three primary apps (server, web, extension) and shared packages for cross-cutting code.
-- tRPC defines the contract once (`packages/api`), consumed by server and client helpers (`apps/*/src/lib/trpc.ts`).
-- Real-time communication flows through a dedicated WebSocket bridge so the web app and extension stay in sync without polling.
-- Data fetching and transformations live in `packages/utils` to keep UI components declarative; storage and schema changes run through Prisma in `packages/db`.
+- Turborepo monorepo with three primary apps (server, web, extension) plus an external local scrape agent.
+- tRPC defines the contract once (`packages/api`), consumed by the server and HTTP client helpers.
+- PostgreSQL-backed scrape jobs are the queue and source of truth; the agent transport is used only for local browser dispatch/results.
+- Data fetching and transformations live in `packages/utils`; newsletter storage remains SQLite and scrape jobs use PostgreSQL.
 - New features are expected to ship behind focused capabilities/specs; prefer incremental additions over global rewrites.
 
 ### Testing Strategy
@@ -53,7 +52,7 @@ Soundscape is a music-discovery companion that unifies Last.fm listening telemet
 
 ## Domain Context
 
-Soundscape blends listening telemetry (Last.fm), RateYourMusic list metadata, and genre taxonomies (EveryNoise) to help users discover, organize, and revisit music. The web UI offers resizable panels for artist/album lists, embedded site viewers, and genre selectors backed by the static `rym-genres.json` dataset. The extension operates on RateYourMusic pages to capture context and trigger tRPC mutations; both clients authenticate via Supabase helpers and stay connected through shared WebSocket utilities. Keeping artist/album data consistent across these sources is core to the product’s value.
+Soundscape blends listening telemetry (Last.fm), RateYourMusic list metadata, and genre taxonomies (EveryNoise) to help users discover, organize, and revisit music. The web UI offers resizable panels for artist/album lists, embedded site viewers, and scrape status polling. The external desktop agent operates the real browser profile locally; browser cookies and pages do not cross the agent boundary.
 
 ## Important Constraints
 
@@ -61,7 +60,7 @@ Soundscape blends listening telemetry (Last.fm), RateYourMusic list metadata, an
 - UI must remain monochrome (black/white/grays) and implemented with Tailwind tokens; no custom colors, gradients, or box shadows.
 - Shared code belongs in packages; avoid cross-importing between apps to preserve module boundaries and type safety.
 - Prefer simple, <100-line implementations unless scale or performance forces additional abstraction; new frameworks/deps need justification via OpenSpec proposals.
-- Environment variables: `VITE_LASTFM_API_KEY`, `VITE_API_URL`, `VITE_WS_URL` for clients; `DATABASE_URL` for Prisma tasks.
+- Environment variables: `VITE_LASTFM_API_KEY`, `VITE_API_URL` for the web app; the extension additionally uses `VITE_WS_URL`; the server uses `DATABASE_URL`.
 
 ## External Dependencies
 

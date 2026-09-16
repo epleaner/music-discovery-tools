@@ -1,14 +1,15 @@
 # Soundscape
 
-A modern music discovery platform with browser extension and web app, integrating Last.fm, RateYourMusic, and real-time synchronization.
+A music discovery platform with a remote web/API service and a local browser agent for authenticated RateYourMusic and Bandcamp scraping.
 
 ## Architecture
 
 Turborepo monorepo with:
 
-- **Web App**: SolidJS with real-time WebSocket communication
+- **Web App**: SolidJS using tRPC/HTTP job creation and polling
 - **Browser Extension**: WXT (React) for RateYourMusic integration
-- **Backend**: tRPC + Express + WebSocket server
+- **Backend**: tRPC + Express + PostgreSQL-backed scrape queue
+- **Desktop Agent**: External local menu-bar process that owns the real browser profile
 
 ## Quick Start
 
@@ -72,11 +73,10 @@ pnpm --filter @soundscape/ingest start -- --sample apps/ingest/fixtures/sample-n
 ```
 
 Phase 1 expects Gmail newsletters to be labeled `music` by default. Live sync resolves that label, fetches only messages newer than the last successful sync cursor, and stores newsletter data in a local SQLite database at `data/newsletters.sqlite` unless `NEWSLETTER_DB_PATH` overrides it. Newsletter ingest stores raw newsletter content and deterministic Bandcamp links only.
-
 The services will be available at:
 
 - Backend API: http://localhost:3001/trpc
-- Backend WebSocket: ws://localhost:3001/ws
+- Agent WebSocket: ws://localhost:3001/ws (local agent only)
 - Web App: http://localhost:3000
 - Extension: Load `.wxt/chrome-mv3` in Chrome
 
@@ -87,15 +87,26 @@ The services will be available at:
 ```bash
 VITE_LASTFM_API_KEY=your_api_key_here
 VITE_API_URL=http://localhost:3001
-VITE_WS_URL=ws://localhost:3001/ws
 ```
+
+**Local desktop agent**:
+
+```bash
+SCRAPE_API_URL=http://localhost:3001
+SCRAPE_AGENT_WS_URL=ws://localhost:3001/ws
+SCRAPE_PAIRING_TOKEN=the-token-entered-in-the-web-app
+```
+
+The agent runs on the machine with the authenticated browser profile. It
+connects outbound to the server, receives queued jobs, and sends results back;
+browser cookies and pages never move to the API server.
 
 **Extension** (`apps/extension/.env`):
 
-```bash
 VITE_API_URL=http://localhost:3001
 VITE_WS_URL=ws://localhost:3001/ws
-```
+
+````
 
 **Newsletter ingest** (`apps/ingest/.env.local` or `.env`):
 
@@ -106,7 +117,7 @@ GMAIL_CLIENT_ID=
 GMAIL_CLIENT_SECRET=
 GMAIL_REFRESH_TOKEN=
 GMAIL_REDIRECT_URI=
-```
+````
 
 Setup notes:
 
@@ -119,28 +130,51 @@ Setup notes:
 - Redirect resolution is best-effort. Failed trackers and timeouts are skipped without failing the whole newsletter.
 - `--from-scratch` deletes the local newsletter SQLite DB before the run starts, including SQLite `-wal` and `-shm` sidecar files.
 
-## Testing Real-Time Communication
+## Scrape jobs and Orca scheduling
 
-1. Open the web app at http://localhost:3000
-2. Load the extension in Chrome
-3. Open the extension popup
-4. Send messages between web app and extension via WebSocket
-5. Test tRPC API calls from both clients
+The web app and Orca create jobs over HTTPS/tRPC; neither needs a WebSocket or
+browser access. The API stores `queued`, `running`, `done`, `error`, and
+`expired` state in PostgreSQL. Jobs created while the desktop agent is offline
+remain queued until its outbound agent connection returns.
+
+The OpenAPI equivalent is available at `/api/rest/scrape/jobs`:
+
+```json
+{
+  "token": "pairing-token",
+  "source": "bandcamp",
+  "mode": "resolve",
+  "query": { "artist": "Burial", "album": "Untrue", "kind": "album" },
+  "idempotencyKey": "orca:burial:untrue:2026-09-15"
+}
+```
+
+Use the returned `requestId` with `GET /api/rest/scrape/jobs/{requestId}` and
+the same token. Orca schedules should use a stable idempotency key so retries
+do not enqueue duplicate browser work. URL jobs use `url` instead of
+`mode: "resolve"` and must target an allowed RYM or Bandcamp host.
+
+Manual desktop-agent QA: start the local agent with an authenticated browser
+profile, register its pairing token on `/ws`, confirm it receives one queued
+job, complete the real browser scrape, and confirm the web status poll reaches
+`done`. This checkout does not contain that external native agent; the server
+dispatcher is verified with a deterministic fake agent.
 
 ## Project Structure
 
 ```
 soundscape/
 ├── apps/
-│   ├── server/              # tRPC + Express + WebSocket server
+│   ├── server/              # tRPC + Express + agent WebSocket server
 │   │   └── src/
 │   │       ├── index.ts     # Server entry point
-│   │       └── context.ts   # tRPC context
+│   │       ├── context.ts   # tRPC context
+│   │       └── scrape-dispatcher.ts # Durable queue dispatch
 │   ├── web/                 # SolidJS web app
 │   │   └── src/
 │   │       ├── lib/
 │   │       │   ├── trpc.ts  # tRPC client
-│   │       │   └── websocket.ts  # WebSocket client
+│   │       │   └── scrape-jobs.ts # HTTP job client and polling
 │   │       └── components/
 │   └── extension/           # WXT browser extension
 │       ├── entrypoints/
@@ -149,7 +183,7 @@ soundscape/
 │       │   └── content.ts
 │       └── lib/
 │           ├── trpc.ts      # tRPC client
-│           └── websocket.ts # WebSocket client
+│           └── websocket.ts # Extension WebSocket client
 ├── packages/
 │   ├── api/                 # tRPC router definitions (shared)
 │   │   └── src/
@@ -162,9 +196,8 @@ soundscape/
 
 ## Technology Stack
 
-- **Framework**: SolidJS (web), React (extension)
 - **Backend**: Node.js + Express + tRPC
-- **Real-Time**: WebSocket (ws library)
+- **Agent transport**: WebSocket (local agent only)
 - **Build**: Turborepo + Vite + WXT
 - **Styling**: TailwindCSS
 - **Language**: TypeScript
@@ -177,7 +210,7 @@ soundscape/
 - ✅ Similar artist discovery
 - ✅ EveryNoise genre exploration
 - ✅ Multi-panel blog/site browsing
-- ✅ Real-time WebSocket communication
+- ✅ Durable scrape jobs with offline-agent queueing
 - ✅ Type-safe API with tRPC
 - ✅ Monochrome design system
 - ✅ Newsletter ingest with deterministic Bandcamp-link extraction

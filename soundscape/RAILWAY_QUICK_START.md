@@ -5,12 +5,14 @@ Since Railway CLI requires interactive prompts, here's the step-by-step process:
 ## 1. Add PostgreSQL Database
 
 From project root:
+
 ```bash
 railway add --database postgres
 # Select "PostgreSQL" when prompted
 ```
 
 Or do it via Railway dashboard:
+
 - Go to https://railway.app
 - Open your "soundscape" project
 - Click "New" → "Database" → "Add PostgreSQL"
@@ -25,6 +27,7 @@ railway up
 ```
 
 This will:
+
 - Auto-create a service for the server
 - Build and deploy using railway-build.sh
 - Start with `pnpm --filter @soundscape/server start`
@@ -38,6 +41,7 @@ railway variables set PORT=$PORT
 ```
 
 After web is deployed, set:
+
 ```bash
 railway variables set API_BASE_URL=https://your-api.railway.app
 railway variables set WEB_APP_URL=https://your-web.railway.app
@@ -48,11 +52,12 @@ railway variables set WEB_APP_URL=https://your-web.railway.app
 ```bash
 cd apps/web
 railway link
-# Select your project when prompted  
+# Select your project when prompted
 railway up
 ```
 
 This will:
+
 - Auto-create a service for the web app
 - Build using railway-build.sh
 - Start Express server with `pnpm --filter @soundscape/web start`
@@ -62,7 +67,6 @@ This will:
 ```bash
 cd apps/web
 railway variables set VITE_API_URL=https://your-api.railway.app
-railway variables set VITE_WS_URL=wss://your-api.railway.app/ws
 railway variables set VITE_LASTFM_API_KEY=your_key_here
 railway variables set PORT=$PORT
 ```
@@ -74,7 +78,7 @@ railway variables set PORT=$PORT
 cd apps/server
 railway domain
 
-# Get Web URL  
+# Get Web URL
 cd ../web
 railway domain
 ```
@@ -111,8 +115,8 @@ If CLI prompts are problematic:
 ## Next Steps
 
 After both services are deployed:
-1. Update API's `WEB_APP_URL` with web service URL
-2. Update Web's `VITE_API_URL` and `VITE_WS_URL` with API service URL
-3. Test the deployment
-4. Set up custom domains if needed
 
+1. Update API's `WEB_APP_URL` with web service URL
+2. Update Web's `VITE_API_URL` with API service URL
+3. Configure the local desktop agent's outbound `SCRAPE_AGENT_WS_URL` and pairing token
+4. Test the deployment

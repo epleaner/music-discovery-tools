@@ -1,81 +1,48 @@
-import type { MenubarPresenceMsg } from '@soundscape/types';
-
 export interface Sender {
   send(json: string): void;
 }
 
-interface Room {
-  webs: Set<Sender>;
-  menubar: Sender | null;
+export interface AgentConnection {
+  tokenHash: string;
+  agentId: string;
+  sender: Sender;
 }
 
-export class Rooms {
-  private rooms = new Map<string, Room>();
-  private senderToken = new Map<Sender, string>();
+/** One authenticated local browser agent may be connected per pairing token. */
+export class AgentRegistry {
+  private agents = new Map<string, AgentConnection>();
+  private senderAgents = new Map<Sender, AgentConnection>();
 
-  private getOrCreate(token: string): Room {
-    let room = this.rooms.get(token);
-    if (!room) {
-      room = { webs: new Set(), menubar: null };
-      this.rooms.set(token, room);
+  register(tokenHash: string, agentId: string, sender: Sender): void {
+    const connection = { tokenHash, agentId, sender };
+    const previous = this.agents.get(tokenHash);
+    if (previous) this.senderAgents.delete(previous.sender);
+    this.agents.set(tokenHash, connection);
+    this.senderAgents.set(sender, connection);
+  }
+
+  get(tokenHash: string): AgentConnection | null {
+    return this.agents.get(tokenHash) ?? null;
+  }
+
+  forSender(sender: Sender): AgentConnection | null {
+    return this.senderAgents.get(sender) ?? null;
+  }
+
+  unregister(sender: Sender): AgentConnection | null {
+    const connection = this.senderAgents.get(sender);
+    if (!connection) return null;
+    this.senderAgents.delete(sender);
+    if (this.agents.get(connection.tokenHash)?.sender === sender) {
+      this.agents.delete(connection.tokenHash);
     }
-    return room;
+    return connection;
   }
 
-  registerWeb(token: string, sender: Sender): void {
-    const room = this.getOrCreate(token);
-    room.webs.add(sender);
-    this.senderToken.set(sender, token);
-  }
-
-  registerMenubar(token: string, sender: Sender): void {
-    const room = this.getOrCreate(token);
-    room.menubar = sender;
-    this.senderToken.set(sender, token);
-    const presence: MenubarPresenceMsg = { type: 'menubar_presence', online: true };
-    const json = JSON.stringify(presence);
-    for (const web of room.webs) {
-      web.send(json);
-    }
-  }
-
-  unregister(sender: Sender): void {
-    const token = this.senderToken.get(sender);
-    if (token == null) return;
-    this.senderToken.delete(sender);
-    const room = this.rooms.get(token);
-    if (!room) return;
-    if (room.menubar === sender) {
-      room.menubar = null;
-      const presence: MenubarPresenceMsg = { type: 'menubar_presence', online: false };
-      const json = JSON.stringify(presence);
-      for (const web of room.webs) {
-        web.send(json);
-      }
-    } else {
-      room.webs.delete(sender);
-    }
-  }
-
-  menubarFor(token: string): Sender | null {
-    return this.rooms.get(token)?.menubar ?? null;
-  }
-
-  websFor(token: string): Sender[] {
-    return [...(this.rooms.get(token)?.webs ?? [])];
-  }
-
-  sendToWebs(token: string, msg: unknown): void {
-    const json = JSON.stringify(msg);
-    for (const web of this.rooms.get(token)?.webs ?? []) {
-      web.send(json);
-    }
-  }
-
-  sendToMenubar(token: string, msg: unknown): boolean {
-    const mb = this.rooms.get(token)?.menubar;
-    if (!mb) return false;
-    mb.send(JSON.stringify(msg));
+  send(tokenHash: string, message: unknown): boolean {
+    const connection = this.agents.get(tokenHash);
+    if (!connection) return false;
+    connection.sender.send(JSON.stringify(message));
     return true;
   }
 }

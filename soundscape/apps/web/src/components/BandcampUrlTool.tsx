@@ -1,88 +1,100 @@
-import { Component, createSignal, onMount, onCleanup } from 'solid-js';
-import type { BandcampRelease, BandcampAlbumDetail } from '@soundscape/types';
-import { trpc } from '../lib/trpc';
-import { requestScrape, onResultReady, onScrapeError, menubarOnline } from '../lib/scrape-bridge';
+import { Component, createSignal, onCleanup } from 'solid-js';
+import type {
+  BandcampRelease,
+  BandcampAlbumDetail,
+  ScrapeJob,
+} from '@soundscape/types';
+import { startScrapeJob, getPairingToken } from '../lib/scrape-jobs';
 import BandcampResults from './BandcampResults';
 import Input from './Input';
 import Button from './Button';
 import ControlGroup from './ControlGroup';
 import CacheAge from './CacheAge';
 
-const TOKEN_KEY = 'scrape_pairing_token';
-
 const BandcampUrlTool: Component = () => {
   const [bcUrl, setBcUrl] = createSignal('');
   const [bcStatus, setBcStatus] = createSignal<string | null>(null);
   const [bcReqId, setBcReqId] = createSignal<string | null>(null);
   const [releases, setReleases] = createSignal<BandcampRelease[]>([]);
-  const [currentLabel, setCurrentLabel] = createSignal<{ name: string; url: string } | null>(null);
+  const [currentLabel, setCurrentLabel] = createSignal<{
+    name: string;
+    url: string;
+  } | null>(null);
   const [album, setAlbum] = createSignal<BandcampAlbumDetail | null>(null);
-  const [bcFetchedAt, setBcFetchedAt] = createSignal<string | null>(null);
+  const [bcFetchedAt, setBcFetchedAt] = createSignal<string | Date | null>(
+    null
+  );
   const [isLabelResult, setIsLabelResult] = createSignal(false);
   const [isRelatedResult, setIsRelatedResult] = createSignal(false);
   const [lastScrapedUrl, setLastScrapedUrl] = createSignal<string | null>(null);
-  const [pendingMode, setPendingMode] = createSignal<'label' | 'related' | undefined>(undefined);
+  const [pendingMode, setPendingMode] = createSignal<
+    'label' | 'related' | undefined
+  >(undefined);
+  let cancelScrape = () => {};
 
-  const hasToken = () => !!localStorage.getItem(TOKEN_KEY);
-
-  const scrapeBandcampUrl = (url: string, mode?: 'label' | 'related', force = false) => {
-    if (!hasToken() || !menubarOnline()) {
-      setBcStatus('Connect the menu bar & set a token to scrape Bandcamp.');
+  const applyJob = (job: ScrapeJob) => {
+    setBcReqId(job.requestId);
+    if (job.status === 'queued') {
+      setBcStatus('Queued for your Mac…');
       return;
     }
+    if (job.status === 'running') {
+      setBcStatus('Scraping on your Mac…');
+      return;
+    }
+    if (job.status === 'error') {
+      setBcStatus(`Error: ${job.error ?? 'unknown'}`);
+      return;
+    }
+    if (job.status === 'expired') {
+      setBcStatus('Expired before the local agent completed it.');
+      return;
+    }
+    if (job.data?.kind !== 'bandcamp') {
+      setBcStatus('The agent returned an unexpected result.');
+      return;
+    }
+    setReleases(job.data.releases);
+    setCurrentLabel(job.data.label ?? null);
+    setAlbum(job.data.album ?? null);
+    setBcFetchedAt(job.fetchedAt);
+    setBcStatus(null);
+    if (job.data.album?.url) setLastScrapedUrl(job.data.album.url);
+    setIsLabelResult(pendingMode() === 'label' && !!job.data.label);
+    setIsRelatedResult(pendingMode() === 'related');
+  };
+
+  const scrapeBandcampUrl = (
+    url: string,
+    mode?: 'label' | 'related',
+    force = false
+  ) => {
+    if (!getPairingToken()) {
+      setBcStatus('Set a pairing token to scrape Bandcamp.');
+      return;
+    }
+    cancelScrape();
     setReleases([]);
     setCurrentLabel(null);
     setAlbum(null);
     setIsLabelResult(false);
     setIsRelatedResult(false);
     setPendingMode(mode);
-    setBcStatus('Scraping on your Mac…');
+    setBcStatus('Queueing scrape…');
     setLastScrapedUrl(url);
-    const id = requestScrape({ source: 'bandcamp', url, mode, force });
-    setBcReqId(id);
+    cancelScrape = startScrapeJob(
+      { source: 'bandcamp', url, mode, force },
+      applyJob,
+      (message) => setBcStatus(`Error: ${message}`)
+    );
   };
 
-  onMount(() => {
-    const removeResult = onResultReady(async (requestId) => {
-      if (requestId !== bcReqId()) return;
-      const result = await (trpc.scrape.getResult as any).query({ requestId });
-      if (!result) {
-        setBcStatus('No result found.');
-        return;
-      }
-      if (result.status === 'error') {
-        setBcStatus(`Error: ${result.error ?? 'unknown'}`);
-        return;
-      }
-      if (result.data?.kind === 'bandcamp') {
-        setReleases(result.data.releases as BandcampRelease[]);
-        const label = (result.data as any).label as { name: string; url: string } | undefined;
-        setCurrentLabel(label ?? null);
-        const albumDetail = (result.data as any).album as BandcampAlbumDetail | undefined;
-        setAlbum(albumDetail ?? null);
-        setBcFetchedAt((result as any).fetchedAt ?? null);
-        setBcStatus(null);
-        if (albumDetail?.url) setLastScrapedUrl(albumDetail.url);
-        setIsLabelResult(pendingMode() === 'label' && !!label);
-        setIsRelatedResult(pendingMode() === 'related');
-      }
-    });
+  onCleanup(() => cancelScrape());
 
-    const removeError = onScrapeError((requestId, message) => {
-      if (requestId === bcReqId()) setBcStatus(`Error: ${message}`);
-    });
-
-    onCleanup(() => {
-      removeResult();
-      removeError();
-    });
-  });
-
-  const bcScrapeDisabled = () => !hasToken() || !menubarOnline() || !bcUrl().trim();
-
+  const bcScrapeDisabled = () => !getPairingToken() || !bcUrl().trim();
   const isAlbumOrTrackUrl = () => {
-    const u = lastScrapedUrl();
-    return !!u && (u.includes('/album/') || u.includes('/track/'));
+    const url = lastScrapedUrl();
+    return !!url && (url.includes('/album/') || url.includes('/track/'));
   };
 
   return (
@@ -96,7 +108,10 @@ const BandcampUrlTool: Component = () => {
               placeholder="https://bandcamp.com/tag/<tag>"
               value={bcUrl()}
               onInput={(e) => setBcUrl(e.currentTarget.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !bcScrapeDisabled()) scrapeBandcampUrl(bcUrl()); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !bcScrapeDisabled())
+                  scrapeBandcampUrl(bcUrl());
+              }}
               class="flex-1"
             />
             <Button
@@ -110,7 +125,6 @@ const BandcampUrlTool: Component = () => {
           </div>
         </ControlGroup>
       </div>
-
       <div class="flex-1 min-w-0 overflow-y-auto">
         <div class="flex justify-end mb-1">
           <CacheAge
@@ -128,10 +142,24 @@ const BandcampUrlTool: Component = () => {
           status={bcStatus()}
           isLabelResult={isLabelResult()}
           isRelatedResult={isRelatedResult()}
-          showExploreLabel={!!currentLabel() && !isLabelResult() && !isRelatedResult() && hasToken() && menubarOnline()}
-          showRelated={hasToken() && menubarOnline() && isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()}
-          onExploreLabel={() => scrapeBandcampUrl(lastScrapedUrl() ?? bcUrl(), 'label')}
-          onRelated={() => scrapeBandcampUrl(lastScrapedUrl() ?? bcUrl(), 'related')}
+          showExploreLabel={
+            !!currentLabel() &&
+            !isLabelResult() &&
+            !isRelatedResult() &&
+            !!getPairingToken()
+          }
+          showRelated={
+            !!getPairingToken() &&
+            isAlbumOrTrackUrl() &&
+            !isLabelResult() &&
+            !isRelatedResult()
+          }
+          onExploreLabel={() =>
+            scrapeBandcampUrl(lastScrapedUrl() ?? bcUrl(), 'label')
+          }
+          onRelated={() =>
+            scrapeBandcampUrl(lastScrapedUrl() ?? bcUrl(), 'related')
+          }
         />
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import express from 'express';
 import cors from 'cors';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
@@ -6,69 +7,81 @@ import { createServer } from 'http';
 import swaggerUi from 'swagger-ui-express';
 import { appRouter } from '@soundscape/api';
 import { createContext } from './context.js';
-import { generateOpenApiDocument, createOpenApiHttpHandler } from 'trpc-openapi';
-import type { BridgeMessage } from '@soundscape/types';
-import { Rooms } from './ws-rooms.js';
-import { isUrlAllowed } from './scrape-allowlist.js';
+import {
+  generateOpenApiDocument,
+  createOpenApiHttpHandler,
+} from 'trpc-openapi';
+import type { ScrapeData, ScrapeResultMsg } from '@soundscape/types';
 import { createScrapesDb, hashToken } from '@soundscape/scrapes-db';
-import type { ScrapeData, ScrapeSource } from '@soundscape/types';
-import { setScrapesDb } from './scrapes-state.js';
+import type { ScrapesDb } from '@soundscape/scrapes-db';
+import { AgentRegistry } from './ws-rooms.js';
+import { ScrapeDispatcher } from './scrape-dispatcher.js';
+import { setScrapeJobNotifier, setScrapesDb } from './scrapes-state.js';
+import { z } from 'zod';
 
-// Filled in by the persistence task; default no-ops.
-export const scrapeHooks: {
-  onAccepted?: (a: { token: string; requestId: string; source: string; url: string }) => Promise<void> | void;
-  onResult?: (a: { requestId: string; data: unknown; fetchedAt?: Date }) => void;
-  onError?: (a: { requestId: string; error: string }) => void;
-  getCached?: (a: { source: string; url: string }) => Promise<{ data: unknown; fetchedAt: Date } | null>;
-} = {};
+const wsMessageSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('register'),
+    token: z.string().min(1),
+    clientType: z.literal('agent'),
+  }),
+  z.object({
+    type: z.literal('scrape_result'),
+    requestId: z.string().min(1),
+    source: z.enum(['rym', 'bandcamp']),
+    data: z.unknown(),
+  }),
+  z.object({
+    type: z.literal('scrape_error'),
+    requestId: z.string().min(1),
+    message: z.string().min(1),
+  }),
+]);
 
-const CACHE_TTL_MS = Number(process.env.SCRAPE_CACHE_TTL_MS) || 30 * 24 * 60 * 60 * 1000;
+type ParsedWsMessage = z.infer<typeof wsMessageSchema>;
+
+function isScrapeData(
+  value: unknown,
+  source: ScrapeResultMsg['source']
+): value is ScrapeData {
+  if (!value || typeof value !== 'object' || !('kind' in value)) return false;
+  return value.kind === source;
+}
+
+const app = express();
+const server = createServer(app);
+const registry = new AgentRegistry();
+let scrapeStateDb: ScrapesDb | undefined;
+const dispatcher = new ScrapeDispatcher(registry, {
+  getDb: () => scrapeStateDb,
+  leaseMs: Number(process.env.SCRAPE_LEASE_MS) || 60_000,
+});
+setScrapeJobNotifier((tokenHash) =>
+  dispatcher.dispatch(tokenHash).then(() => undefined)
+);
 
 async function initScrapesDb() {
   if (!process.env.DATABASE_URL) {
-    console.warn('[scrapes] DATABASE_URL not set — scrape persistence disabled');
+    console.warn('[scrapes] DATABASE_URL not set — scrape queue disabled');
     return;
   }
   try {
     const db = createScrapesDb(process.env.DATABASE_URL);
     await db.init();
+    scrapeStateDb = db;
     setScrapesDb(db);
-    console.log('[scrapes] Postgres persistence enabled');
-
-    scrapeHooks.onAccepted = async ({ token, requestId, source, url }) => {
-      try {
-        await db.createPending({ id: requestId, tokenHash: hashToken(token), source: source as ScrapeSource, url });
-      } catch (err) {
-        console.error('[scrapes] createPending', err);
-      }
-    };
-    scrapeHooks.onResult = ({ requestId, data, fetchedAt }) => {
-      db.markDone({ id: requestId, data: data as ScrapeData, fetchedAt })
-        .catch((err) => console.error('[scrapes] markDone', err));
-    };
-    scrapeHooks.onError = ({ requestId, error }) => {
-      db.markError({ id: requestId, error })
-        .catch((err) => console.error('[scrapes] markError', err));
-    };
-    scrapeHooks.getCached = ({ source, url }) =>
-      db.getFresh({ source: source as ScrapeSource, url, maxAgeMs: CACHE_TTL_MS });
+    console.log('[scrapes] Postgres queue enabled');
   } catch (err) {
-    console.error('[scrapes] Failed to init scrapes DB — persistence disabled:', err);
+    console.error('[scrapes] Failed to init scrape queue:', err);
   }
 }
 
-void initScrapesDb();
+const scrapeInitialization = initScrapesDb();
 
-const app = express();
-const server = createServer(app);
-
-// CORS configuration
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:5174',
-  // Production web app origins. WEB_APP_URL may be a comma-separated list
-  // (e.g. the custom domain plus the railway.app URL).
   ...(process.env.WEB_APP_URL?.split(',') ?? []),
 ]
   .map((origin) => origin?.trim())
@@ -77,238 +90,98 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, Postman, etc.)
-      if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
+      if (!origin || allowedOrigins.includes(origin)) callback(null, true);
+      else callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
   })
 );
-
 app.use(express.json());
 
-// Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Generate OpenAPI document
 const API_BASE_URL =
   process.env.API_BASE_URL ||
   process.env.RENDER_EXTERNAL_URL ||
   `http://localhost:${process.env.PORT || 3001}`;
-
 const openApiDocument = generateOpenApiDocument(appRouter, {
   title: 'Soundscape API',
   version: '1.0.0',
   baseUrl: API_BASE_URL,
 });
 
-// OpenAPI JSON endpoint
-app.get('/api/openapi.json', (req, res) => {
-  res.json(openApiDocument);
-});
-
-// Swagger UI
+app.get('/api/openapi.json', (_req, res) => res.json(openApiDocument));
 app.use('/api', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
-// REST API endpoints (OpenAPI)
 const openApiHandler = createOpenApiHttpHandler({
   router: appRouter,
   createContext,
   responseMeta: () => ({}),
-  onError: ({ error }: { error: unknown }) => {
-    console.error('OpenAPI error:', error);
-  },
-  maxBodySize: 10 * 1024 * 1024, // 10MB
+  onError: ({ error }: { error: unknown }) =>
+    console.error('OpenAPI error:', error),
+  maxBodySize: 10 * 1024 * 1024,
 });
+app.use('/api/rest', (req, res) => openApiHandler(req, res));
+app.use('/trpc', createExpressMiddleware({ router: appRouter, createContext }));
 
-app.use('/api/rest', (req, res) => {
-  openApiHandler(req, res);
-});
-
-// tRPC middleware
-app.use(
-  '/trpc',
-  createExpressMiddleware({
-    router: appRouter,
-    createContext,
-  })
-);
-
-// WebSocket server for real-time communication
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-const rooms = new Rooms();
-// Per-token rate limiting: map of token -> list of accepted scrape timestamps
-const scrapeTimestamps = new Map<string, number[]>();
-// Pending timeout handles keyed by requestId
-const pendingTimeouts = new Map<string, NodeJS.Timeout>();
-
-const RATE_LIMIT_MAX = 10;
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const SCRAPE_TIMEOUT_MS = 30_000;
-
 wss.on('connection', (ws) => {
-  let connectionToken: string | null = null;
-  const sender = { send: (json: string) => ws.send(json) };
+  const sender = {
+    send: (json: string) => {
+      if (ws.readyState === 1) ws.send(json);
+    },
+  };
 
   ws.on('message', (message) => {
-    let data: BridgeMessage;
+    let parsed: ParsedWsMessage;
     try {
-      data = JSON.parse(message.toString()) as BridgeMessage;
+      const result = wsMessageSchema.safeParse(JSON.parse(message.toString()));
+      if (!result.success) return;
+      parsed = result.data;
     } catch {
       return;
     }
 
-    if (data.type === 'register') {
-      const { token, clientType } = data;
-      if (!token || (clientType !== 'web' && clientType !== 'menubar')) return;
-      connectionToken = token;
-      if (clientType === 'menubar') {
-        rooms.registerMenubar(token, sender);
-      } else {
-        rooms.registerWeb(token, sender);
-        sender.send(JSON.stringify({ type: 'menubar_presence', online: rooms.menubarFor(token) !== null }));
-      }
-      console.log(`Client registered as ${clientType} for token ${token.slice(0, 4)}…`);
+    if (parsed.type === 'register') {
+      const agentId = randomUUID();
+      const tokenHash = hashToken(parsed.token);
+      registry.register(tokenHash, agentId, sender);
+      console.log(
+        `[agent] registered ${agentId.slice(0, 8)}… for token ${parsed.token.slice(0, 4)}…`
+      );
+      void dispatcher.dispatch(tokenHash);
       return;
     }
 
-    if (data.type === 'scrape') {
-      const { requestId, source, url, mode, query, force } = data;
-      const token = connectionToken;
-      if (!token) return;
-
-      if (mode === 'resolve') {
-        if (!query || !query.artist) {
-          sender.send(JSON.stringify({ type: 'scrape_error', requestId, message: 'invalid resolve query' }));
-          return;
-        }
-      } else if (!url || !isUrlAllowed(source, url)) {
-        sender.send(JSON.stringify({ type: 'scrape_error', requestId, message: 'url not allowed' }));
-        return;
-      }
-
-      // Cache key. Must distinguish scrape MODE so a 'related'/'label' scrape of a
-      // URL doesn't collide with a normal scrape of the same URL (they return
-      // different data). resolve scrapes are already distinct via their pseudo-url.
-      const persistedUrl =
-        mode === 'resolve' && query
-          ? `resolve:${query.kind}:${query.artist}${query.album ? ' - ' + query.album : ''}`
-          : mode === 'label' || mode === 'related'
-            ? `${url}#${mode}`
-            : (url as string);
-
-      void (async () => {
-        try {
-          if (!force && scrapeHooks.getCached) {
-            const cached = await scrapeHooks.getCached({ source, url: persistedUrl });
-            if (cached) {
-              await scrapeHooks.onAccepted?.({ token, requestId, source, url: persistedUrl });
-              scrapeHooks.onResult?.({ requestId, data: cached.data, fetchedAt: cached.fetchedAt });
-              rooms.sendToWebs(token, { type: 'result_ready', requestId });
-              return;
-            }
-          }
-        } catch (err) {
-          console.error('[scrapes] cache lookup failed; falling through to scrape', err);
-          // fall through to the menu-bar path below
-        }
-
-        // Rate limiting (only real scrapes that reach the menu bar count)
-        const now = Date.now();
-        const timestamps = (scrapeTimestamps.get(token) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-        if (timestamps.length >= RATE_LIMIT_MAX) {
-          sender.send(JSON.stringify({ type: 'scrape_error', requestId, message: 'rate limited' }));
-          return;
-        }
-        timestamps.push(now);
-        scrapeTimestamps.set(token, timestamps);
-
-        if (!rooms.sendToMenubar(token, data)) {
-          sender.send(JSON.stringify({ type: 'scrape_error', requestId, message: 'menu bar offline' }));
-          return;
-        }
-
-        // Fire-and-forget: unlike the awaited cache-hit path above, the natural WS
-        // round-trip (menu bar scrapes, then POSTs the result) provides INSERT-before-UPDATE
-        // ordering here, so this doesn't need to be awaited.
-        scrapeHooks.onAccepted?.({ token, requestId, source, url: persistedUrl });
-
-        const timeout = setTimeout(() => {
-          pendingTimeouts.delete(requestId);
-          scrapeHooks.onError?.({ requestId, error: 'timeout' });
-          rooms.sendToWebs(token, { type: 'scrape_error', requestId, message: 'timeout' });
-        }, SCRAPE_TIMEOUT_MS);
-        pendingTimeouts.set(requestId, timeout);
-      })();
+    if (parsed.type === 'scrape_result') {
+      if (!isScrapeData(parsed.data, parsed.source)) return;
+      void dispatcher.handleResult(sender, parsed as ScrapeResultMsg);
       return;
     }
 
-    if (data.type === 'scrape_error') {
-      const { requestId, message } = data;
-      const token = connectionToken;
-      if (!token) return;
-
-      if (rooms.menubarFor(token) !== sender) return;
-
-      const timeout = pendingTimeouts.get(requestId);
-      if (timeout) {
-        clearTimeout(timeout);
-        pendingTimeouts.delete(requestId);
-      }
-
-      scrapeHooks.onError?.({ requestId, error: message });
-      rooms.sendToWebs(token, { type: 'scrape_error', requestId, message });
-      return;
-    }
-
-    if (data.type === 'scrape_result') {
-      const { requestId } = data;
-      const token = connectionToken;
-      if (!token) return;
-
-      if (rooms.menubarFor(token) !== sender) return;
-
-      const timeout = pendingTimeouts.get(requestId);
-      if (timeout) {
-        clearTimeout(timeout);
-        pendingTimeouts.delete(requestId);
-      }
-
-      scrapeHooks.onResult?.({ requestId, data: data.data });
-      rooms.sendToWebs(token, { type: 'result_ready', requestId });
-      return;
-    }
+    void dispatcher.handleResult(sender, parsed);
   });
 
   ws.on('close', () => {
-    rooms.unregister(sender);
-    if (connectionToken) scrapeTimestamps.delete(connectionToken);
-    console.log(`Client disconnected (token: ${connectionToken ? connectionToken.slice(0, 4) + '…' : 'unregistered'})`);
+    const connection = registry.unregister(sender);
+    console.log(
+      `[agent] disconnected${connection ? ` ${connection.agentId.slice(0, 8)}…` : ''}`
+    );
   });
-
-  ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
-  });
+  ws.on('error', (error) => console.error('WebSocket error:', error));
 });
 
 const PORT = process.env.PORT || 3001;
-
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📡 tRPC endpoint: http://localhost:${PORT}/trpc`);
-  console.log(`🔌 WebSocket endpoint: ws://localhost:${PORT}/ws`);
-  console.log(`📚 OpenAPI docs: http://localhost:${PORT}/api`);
-  console.log(`🔗 OpenAPI JSON: http://localhost:${PORT}/api/openapi.json`);
-  console.log(`🌐 REST API: http://localhost:${PORT}/api/rest`);
+scrapeInitialization.then(() => {
+  server.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`tRPC endpoint: http://localhost:${PORT}/trpc`);
+    console.log(`Agent WebSocket endpoint: ws://localhost:${PORT}/ws`);
+    console.log(`OpenAPI docs: http://localhost:${PORT}/api`);
+    console.log(`OpenAPI JSON: http://localhost:${PORT}/api/openapi.json`);
+    console.log(`REST API: http://localhost:${PORT}/api/rest`);
+  });
 });
-
-
-

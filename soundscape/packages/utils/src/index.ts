@@ -8,3 +8,4 @@ export * from './url-hash';
 export * from './rym';
 export * from './cache';
 export * from './everynoise';
+export * from './scrape';

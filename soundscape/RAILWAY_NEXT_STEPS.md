@@ -1,8 +1,9 @@
 # Railway Deployment - Next Steps
 
 🎉 **Congratulations!** All services are deployed and running:
+
 - ✅ **soundscape-api** - Backend API
-- ✅ **soundscape-db** - PostgreSQL Database  
+- ✅ **soundscape-db** - PostgreSQL Database
 - ✅ **soundscape-web** - Web Application
 
 ## Immediate Next Steps
@@ -11,36 +12,39 @@
 
 The database is running, but you need to create the schema:
 
-```bash
+````bash
 ### 2. Get Service URLs
 
 **API URL:**
 ```bash
 cd apps/server
 railway domain
-```
+````
 
 **Web URL:**
+
 ```bash
 cd apps/web
 railway domain
 ```
 
 Or check in Railway dashboard:
+
 - Click on each service
 - Look for "Domains" or the service URL
 
 ### 3. Verify Environment Variables
 
 **In `soundscape-api` service:**
+
 - ✅ `NODE_ENV=production`
 - ✅ `PORT` - Should be set by Railway
 - ⚠️ `API_BASE_URL` - Set to your API service URL
 - ⚠️ `WEB_APP_URL` - Set to your web service URL
 
 **In `soundscape-web` service:**
+
 - ✅ `VITE_API_URL` - Should be your API URL
-- ✅ `VITE_WS_URL` - Should be `wss://your-api-url/ws`
 - ✅ `VITE_LASTFM_API_KEY` - Your Last.fm API key
 - ✅ `PORT` - Should be set by Railway
 
@@ -58,21 +62,28 @@ Or check in Railway dashboard:
    - Visit: `https://your-web-url.railway.app`
    - Should load the Soundscape web app
 
-
 ### 5. Update Cross-Service URLs
 
 After getting both URLs, update:
 
 **In `soundscape-api` Variables:**
+
 ```bash
 railway variables set API_BASE_URL=https://your-api-url.railway.app
 railway variables set WEB_APP_URL=https://your-web-url.railway.app
 ```
 
 **In `soundscape-web` Variables:**
+
 ```bash
 railway variables set VITE_API_URL=https://your-api-url.railway.app
-railway variables set VITE_WS_URL=wss://your-api-url.railway.app/ws
+```
+
+**On the local desktop agent:**
+
+```bash
+export SCRAPE_AGENT_WS_URL=wss://your-api-url.railway.app/ws
+export SCRAPE_PAIRING_TOKEN=the-token-entered-in-the-web-app
 ```
 
 ### 6. Monitor Logs
@@ -89,12 +100,12 @@ railway logs --tail
 
 ## Troubleshooting
 
-### If web app can't connect to API:
 - Verify `VITE_API_URL` is set correctly
 - Check CORS settings in API (should allow web app URL)
 - Verify API service is running
 
 ### If services show errors:
+
 - Check logs for specific error messages
 - Verify all environment variables are set
 
@@ -111,10 +122,10 @@ railway logs --tail
 ## What's Next?
 
 Once everything is working:
+
 1. Test the full application flow
 2. Set up custom domains (optional)
 3. Configure monitoring/alerts (optional)
 4. Set up CI/CD for automatic deployments (optional)
 
 🎊 **You're live on Railway!**
-

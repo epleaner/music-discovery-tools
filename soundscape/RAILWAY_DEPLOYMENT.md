@@ -51,6 +51,7 @@ railway up
 Railway doesn't have a built-in static site service, but you can:
 
 **Option A: Use Railway's Static Files Service**
+
 ```bash
 cd apps/web
 railway service create --name soundscape-web
@@ -58,6 +59,7 @@ railway up --service soundscape-web
 ```
 
 **Option B: Deploy to Railway + Cloudflare Pages / Vercel**
+
 - Build the web app locally or in CI
 - Deploy `apps/web/dist` to a static hosting service
 - Point environment variables to Railway API URL
@@ -132,6 +134,7 @@ Railway auto-detects Node.js projects, but you can customize:
 Create `railway.json` in each service directory:
 
 **apps/server/railway.json:**
+
 ```json
 {
   "build": {
@@ -148,12 +151,13 @@ Create `railway.json` in each service directory:
 Railway supports monorepos. For multiple services:
 
 1. **Create separate services for each app:**
+
    ```bash
    # API service
    cd apps/server
    railway service create --name soundscape-api
    railway link
-   
+
    # Web service (if using Option C)
    cd ../web
    railway service create --name soundscape-web
@@ -183,7 +187,6 @@ railway variables set PORT=$PORT  # Railway sets this automatically
 
 ```bash
 railway variables set VITE_API_URL=https://your-api.railway.app
-railway variables set VITE_WS_URL=wss://your-api.railway.app/ws
 railway variables set VITE_LASTFM_API_KEY=your_key_here
 ```
 
@@ -192,6 +195,7 @@ railway variables set VITE_LASTFM_API_KEY=your_key_here
 If you want to serve the static site from Railway:
 
 Create `apps/web/server.js`:
+
 ```javascript
 import express from 'express';
 const app = express();
@@ -200,6 +204,7 @@ app.listen(process.env.PORT || 3000);
 ```
 
 Update `apps/web/package.json`:
+
 ```json
 {
   "scripts": {
@@ -237,6 +242,7 @@ Railway automatically deploys on git push if connected to GitHub:
 3. Auto-deploys on push
 
 Or deploy manually:
+
 ```bash
 railway up
 ```
@@ -283,6 +289,7 @@ railway variables
    - Copy all env vars from Render dashboard
 
 2. **Set in Railway:**
+
    ```bash
    railway variables set KEY=value
    ```
@@ -309,4 +316,3 @@ Railway is often cheaper for low-traffic apps.
 - Configure auto-deploy from GitHub
 - Set up monitoring and alerts
 - Configure staging environment
-

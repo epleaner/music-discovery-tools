@@ -2,20 +2,17 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import postgres from 'postgres';
-import { hashToken, createScrapesDb } from './client.js';
+import {
+  hashToken,
+  createScrapesDb,
+  type CreateQueuedScrapeArgs,
+} from './client.js';
 
-test('hashToken returns a 64-char lowercase hex string', () => {
+test('hashToken returns deterministic lowercase SHA-256', () => {
   const result = hashToken('abc');
-  assert.equal(result.length, 64);
-  assert.match(result, /^[0-9a-f]+$/);
-});
-
-test('hashToken is deterministic', () => {
-  assert.equal(hashToken('abc'), hashToken('abc'));
-});
-
-test('hashToken produces different outputs for different inputs', () => {
-  assert.notEqual(hashToken('abc'), hashToken('xyz'));
+  assert.match(result, /^[0-9a-f]{64}$/);
+  assert.equal(result, hashToken('abc'));
+  assert.notEqual(result, hashToken('xyz'));
 });
 
 const dbUrl = process.env.SCRAPES_TEST_DATABASE_URL;
@@ -23,166 +20,150 @@ const dbUrl = process.env.SCRAPES_TEST_DATABASE_URL;
 if (!dbUrl) {
   console.log('SCRAPES_TEST_DATABASE_URL not set — skipping DB-backed tests');
 } else {
-  const TEST_TOKEN_A = `test-token-a-${randomUUID()}`;
-  const TEST_TOKEN_B = `test-token-b-${randomUUID()}`;
-  const tokenHashA = hashToken(TEST_TOKEN_A);
-  const tokenHashB = hashToken(TEST_TOKEN_B);
+  const tokenHash = hashToken(`test-token-${randomUUID()}`);
+  const otherTokenHash = hashToken(`other-token-${randomUUID()}`);
   const testIds: string[] = [];
-
   const db = createScrapesDb(dbUrl);
 
-  test('init creates the scrapes table and index', async () => {
+  async function queue(
+    source: 'rym' | 'bandcamp' = 'rym',
+    url = `https://rateyourmusic.com/~${randomUUID()}`,
+    options: Partial<
+      Omit<CreateQueuedScrapeArgs, 'id' | 'tokenHash' | 'source' | 'url'>
+    > = {}
+  ) {
+    const input: CreateQueuedScrapeArgs = {
+      ...options,
+      id: randomUUID(),
+      tokenHash,
+      source,
+      url,
+    };
+    testIds.push(input.id);
+    return db.createQueued(input);
+  }
+  test('init creates the queue schema', async () => {
     await db.init();
   });
 
-  test('createPending inserts a pending row', async () => {
-    const id = randomUUID();
-    testIds.push(id);
-    await db.createPending({ id, tokenHash: tokenHashA, source: 'rym', url: 'https://rateyourmusic.com/~test' });
-    const row = await db.getById(id);
-    assert.ok(row);
-    assert.equal(row.id, id);
-    assert.equal(row.token_hash, tokenHashA);
-    assert.equal(row.source, 'rym');
-    assert.equal(row.status, 'pending');
+  test('createQueued inserts a queued row with lease fields clear', async () => {
+    const { row, created } = await queue();
+    assert.equal(created, true);
+    assert.equal(row.status, 'queued');
+    assert.equal(row.attempts, 0);
+    assert.equal(row.lease_owner, null);
     assert.equal(row.data, null);
-    assert.equal(row.error, null);
   });
 
-  test('markDone sets status to done and stores data', async () => {
-    const id = randomUUID();
-    testIds.push(id);
-    await db.createPending({ id, tokenHash: tokenHashA, source: 'rym', url: 'https://rateyourmusic.com/~test2' });
+  test('idempotency returns the existing row', async () => {
+    const key = `retry-${randomUUID()}`;
+    const first = await queue('rym', undefined, { idempotencyKey: key });
+    const second = await queue('rym', undefined, { idempotencyKey: key });
+    assert.equal(second.created, false);
+    assert.equal(second.row.id, first.row.id);
+  });
+
+  test('claim and complete transition a job for the owning agent', async () => {
+    const queued = await queue();
+    const claimed = await db.claimNext({
+      tokenHash,
+      agentId: 'agent-a',
+      leaseMs: 60_000,
+    });
+    assert.equal(claimed?.id, queued.row.id);
+    assert.equal(claimed?.status, 'running');
+    assert.equal(claimed?.attempts, 1);
+
     const data = { kind: 'rym' as const, entries: [] };
-    await db.markDone({ id, data });
-    const row = await db.getById(id);
-    assert.ok(row);
-    assert.equal(row.status, 'done');
-    assert.deepEqual(row.data, data);
+    assert.equal(
+      await db.complete({ id: queued.row.id, agentId: 'agent-a', data }),
+      true
+    );
+    const row = await db.getById(queued.row.id);
+    assert.equal(row?.status, 'done');
+    assert.deepEqual(row?.data, data);
   });
 
-  test('markError sets status to error and stores error message', async () => {
-    const id = randomUUID();
-    testIds.push(id);
-    await db.createPending({ id, tokenHash: tokenHashA, source: 'rym', url: 'https://rateyourmusic.com/~test3' });
-    await db.markError({ id, error: 'scrape failed' });
-    const row = await db.getById(id);
-    assert.ok(row);
-    assert.equal(row.status, 'error');
-    assert.equal(row.error, 'scrape failed');
+  test('stale leases can be reclaimed by a reconnecting agent', async () => {
+    const queued = await queue();
+    assert.equal(
+      (await db.claimNext({ tokenHash, agentId: 'agent-a', leaseMs: -1 }))?.id,
+      queued.row.id
+    );
+    const reclaimed = await db.claimNext({
+      tokenHash,
+      agentId: 'agent-b',
+      leaseMs: 60_000,
+    });
+    assert.equal(reclaimed?.id, queued.row.id);
+    assert.equal(reclaimed?.lease_owner, 'agent-b');
+    assert.equal(reclaimed?.attempts, 2);
   });
 
-  test('listByToken returns only rows for the matching token, newest first', async () => {
-    const idA1 = randomUUID();
-    const idA2 = randomUUID();
-    const idB = randomUUID();
-    testIds.push(idA1, idA2, idB);
-
-    await db.createPending({ id: idA1, tokenHash: tokenHashA, source: 'rym', url: 'https://rateyourmusic.com/~a1' });
-    await db.createPending({ id: idA2, tokenHash: tokenHashA, source: 'rym', url: 'https://rateyourmusic.com/~a2' });
-    await db.createPending({ id: idB, tokenHash: tokenHashB, source: 'rym', url: 'https://rateyourmusic.com/~b' });
-
-    const rowsA = await db.listByToken({ tokenHash: tokenHashA, limit: 10 });
-    const idsA = rowsA.map((r) => r.id);
-    assert.ok(idsA.includes(idA1));
-    assert.ok(idsA.includes(idA2));
-    assert.ok(!idsA.includes(idB));
-  });
-
-  test('listByToken respects source filter', async () => {
-    const idRym = randomUUID();
-    const idBandcamp = randomUUID();
-    testIds.push(idRym, idBandcamp);
-
-    await db.createPending({ id: idRym, tokenHash: tokenHashA, source: 'rym', url: 'https://rateyourmusic.com/~filter' });
-    await db.createPending({ id: idBandcamp, tokenHash: tokenHashA, source: 'bandcamp', url: 'https://bandcamp.com/filter' });
-
-    const rymOnly = await db.listByToken({ tokenHash: tokenHashA, source: 'rym', limit: 10 });
-    assert.ok(rymOnly.every((r) => r.source === 'rym'));
-    assert.ok(rymOnly.map((r) => r.id).includes(idRym));
-    assert.ok(!rymOnly.map((r) => r.id).includes(idBandcamp));
-  });
-
-  test('listByToken respects limit', async () => {
-    const rows = await db.listByToken({ tokenHash: tokenHashA, limit: 2 });
-    assert.ok(rows.length <= 2);
-  });
-
-  test('getFresh returns the data of a recently done row matching source+url', async () => {
-    const id = randomUUID();
-    testIds.push(id);
-    const url = `resolve:album:getFresh-test-${randomUUID()}`;
+  test('completion and failure require the current lease owner', async () => {
+    const queued = await queue();
+    await db.claimNext({ tokenHash, agentId: 'agent-a', leaseMs: 60_000 });
     const data = { kind: 'rym' as const, entries: [] };
-    await db.createPending({ id, tokenHash: tokenHashA, source: 'rym', url });
-    await db.markDone({ id, data });
+    assert.equal(
+      await db.complete({ id: queued.row.id, agentId: 'agent-b', data }),
+      false
+    );
+    assert.equal(
+      await db.fail({
+        id: queued.row.id,
+        agentId: 'agent-b',
+        error: 'wrong agent',
+      }),
+      false
+    );
+    assert.equal(
+      await db.fail({
+        id: queued.row.id,
+        agentId: 'agent-a',
+        error: 'browser failed',
+      }),
+      true
+    );
+  });
+
+  test('listByToken isolates tokens and supports source and limit filters', async () => {
+    const first = await queue('rym');
+    const second = await queue('bandcamp', 'https://bandcamp.com/filter');
+    const other = randomUUID();
+    testIds.push(other);
+    await db.createQueued({
+      id: other,
+      tokenHash: otherTokenHash,
+      source: 'rym',
+      url: 'https://rateyourmusic.com/other',
+    });
+
+    const rows = await db.listByToken({ tokenHash, source: 'rym', limit: 10 });
+    assert.ok(rows.some((row) => row.id === first.row.id));
+    assert.ok(!rows.some((row) => row.id === second.row.id));
+    assert.ok(!rows.some((row) => row.id === other));
+    assert.ok((await db.listByToken({ tokenHash, limit: 1 })).length <= 1);
+  });
+
+  test('getFresh reads recent cache data by source and cache URL', async () => {
+    const url = `resolve:album:${randomUUID()}`;
+    const queued = await queue('rym', url);
+    const data = { kind: 'rym' as const, entries: [] };
+    await db.claimNext({ tokenHash, agentId: 'agent-a', leaseMs: 60_000 });
+    await db.complete({ id: queued.row.id, agentId: 'agent-a', data });
 
     const result = await db.getFresh({ source: 'rym', url, maxAgeMs: 60_000 });
-    assert.ok(result);
-    assert.deepEqual(result.data, data);
-    assert.ok(result.fetchedAt instanceof Date);
-  });
-
-  test('getFresh returns null when the only matching row is older than maxAgeMs', async () => {
-    const id = randomUUID();
-    testIds.push(id);
-    const url = `resolve:album:getFresh-stale-${randomUUID()}`;
-    const data = { kind: 'rym' as const, entries: [] };
-    await db.createPending({ id, tokenHash: tokenHashA, source: 'rym', url });
-    await db.markDone({ id, data });
-
-    // maxAgeMs: 0 means "created_at > now()", which the just-inserted row fails.
-    const result = await db.getFresh({ source: 'rym', url, maxAgeMs: 0 });
-    assert.equal(result, null);
-  });
-
-  test('getFresh returns null for a different source or url', async () => {
-    const id = randomUUID();
-    testIds.push(id);
-    const url = `resolve:album:getFresh-mismatch-${randomUUID()}`;
-    const data = { kind: 'rym' as const, entries: [] };
-    await db.createPending({ id, tokenHash: tokenHashA, source: 'rym', url });
-    await db.markDone({ id, data });
-
-    assert.equal(await db.getFresh({ source: 'bandcamp', url, maxAgeMs: 60_000 }), null);
-    assert.equal(await db.getFresh({ source: 'rym', url: `${url}-other`, maxAgeMs: 60_000 }), null);
-  });
-
-  test('getFresh ignores token_hash — a row created under token A is found with no token specified', async () => {
-    const id = randomUUID();
-    testIds.push(id);
-    const url = `resolve:album:getFresh-shared-${randomUUID()}`;
-    const data = { kind: 'rym' as const, entries: [] };
-    await db.createPending({ id, tokenHash: tokenHashA, source: 'rym', url });
-    await db.markDone({ id, data });
-
-    const result = await db.getFresh({ source: 'rym', url, maxAgeMs: 60_000 });
-    assert.ok(result);
-    assert.deepEqual(result.data, data);
-  });
-
-  test('markDone preserves an explicit past fetchedAt (cache-hit copy)', async () => {
-    const id = randomUUID();
-    testIds.push(id);
-    const url = `resolve:album:getFresh-fetchedAt-${randomUUID()}`;
-    const data = { kind: 'rym' as const, entries: [] };
-    const originalFetchedAt = new Date('2026-01-01T00:00:00Z');
-    await db.createPending({ id, tokenHash: tokenHashA, source: 'rym', url });
-    await db.markDone({ id, data, fetchedAt: originalFetchedAt });
-
-    const row = await db.getById(id);
-    assert.ok(row);
-    assert.deepEqual(row.fetched_at, originalFetchedAt);
-
-    const result = await db.getFresh({ source: 'rym', url, maxAgeMs: 60_000 });
-    assert.ok(result);
-    assert.deepEqual(result.fetchedAt, originalFetchedAt);
+    assert.deepEqual(result?.data, data);
+    assert.ok(result?.fetchedAt instanceof Date);
+    assert.equal(
+      await db.getFresh({ source: 'bandcamp', url, maxAgeMs: 60_000 }),
+      null
+    );
   });
 
   test('cleanup test rows', async () => {
     const sql = postgres(dbUrl);
-    for (const id of testIds) {
-      await sql`DELETE FROM scrapes WHERE id = ${id}`;
-    }
+    await sql`DELETE FROM scrapes WHERE id IN ${sql(testIds)}`;
     await sql.end();
     await db.close();
   });
