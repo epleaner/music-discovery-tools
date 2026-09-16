@@ -13,7 +13,6 @@
     "@soundscape/api": "workspace:*",
     "@soundscape/types": "workspace:*",
     "@soundscape/utils": "workspace:*",
-    "@soundscape/newsletters-db": "workspace:*",
     "@soundscape/scrapes-db": "workspace:*",
     "@trpc/server": "^10.45.0",
     "cors": "^2.8.5",

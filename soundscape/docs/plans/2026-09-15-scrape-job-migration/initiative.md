@@ -78,8 +78,7 @@ connection. Browser and Orca clients use HTTP only.
   idempotency, leasing, completion, failure, status lookup, and cache queries.
 - Keep the existing table name where possible; add only the columns and indexes
   required for queue semantics.
-- Make persistence required for scrape jobs when `DATABASE_URL` is configured;
-  preserve newsletter startup behavior separately.
+- Make persistence required for scrape jobs when `DATABASE_URL` is configured.
 
 ### Server/API
 
@@ -122,7 +121,7 @@ connection. Browser and Orca clients use HTTP only.
 - Moving browser automation to the remote server.
 - Replacing the existing authentication system wholesale.
 - Adding scheduler-specific server code.
-- Migrating unrelated newsletter, Last.fm, or extension flows.
+- Migrating unrelated Last.fm or extension flows.
 
 ## Decisions and risks
 
@@ -168,7 +167,7 @@ connection. Browser and Orca clients use HTTP only.
   API/server/web builds and focused type checks pass.
 - Full workspace type-check remains blocked by pre-existing WXT extension
   environment/type errors. PostgreSQL-backed DB tests skip without
-  `SCRAPES_TEST_DATABASE_URL`; server process smoke is blocked locally by the
-  existing Node 26/better-sqlite3 ABI mismatch in newsletter startup.
+  `SCRAPES_TEST_DATABASE_URL`; the earlier server process smoke was blocked by
+  a stale native SQLite ABI in the removed ingest path.
 - External native desktop-agent rollout remains required for real-browser QA;
   this checkout verifies the wire contract with a deterministic fake agent.

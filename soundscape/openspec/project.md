@@ -27,7 +27,7 @@ Soundscape is a music-discovery companion that unifies Last.fm listening telemet
 - Turborepo monorepo with three primary apps (server, web, extension) plus an external local scrape agent.
 - tRPC defines the contract once (`packages/api`), consumed by the server and HTTP client helpers.
 - PostgreSQL-backed scrape jobs are the queue and source of truth; the agent transport is used only for local browser dispatch/results.
-- Data fetching and transformations live in `packages/utils`; newsletter storage remains SQLite and scrape jobs use PostgreSQL.
+- Data fetching and transformations live in `packages/utils`; scrape jobs use PostgreSQL.
 - New features are expected to ship behind focused capabilities/specs; prefer incremental additions over global rewrites.
 
 ### Testing Strategy

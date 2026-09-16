@@ -1,46 +1,8 @@
-import {
-  getNewsletterDetail,
-  listNewsletters,
-  listNewsletterSources,
-} from '@soundscape/newsletters-db';
 import { router, publicProcedure } from './trpc.js';
 import { z } from 'zod';
 import { bandcampRouter } from './bandcamp-router.js';
 import { scrapeRouter } from './scrape-router.js';
 
-const newsletterLinkSchema = z.object({
-  url: z.string(),
-  domain: z.string().nullable(),
-  title: z.string().nullable(),
-  confidence: z.number().nullable(),
-});
-
-const newsletterSourceSchema = z.object({
-  id: z.number().nullable(),
-  canonicalName: z.string().nullable(),
-  senderEmail: z.string().nullable(),
-});
-
-const newsletterSummarySchema = z.object({
-  id: z.number(),
-  gmailMessageId: z.string(),
-  source: newsletterSourceSchema,
-  subject: z.string().nullable(),
-  summary: z.string().nullable(),
-  sentAt: z.string().nullable(),
-  extractionStatus: z.string(),
-  links: z.array(newsletterLinkSchema),
-});
-
-const newsletterDetailSchema = newsletterSummarySchema.extend({
-  cleanedText: z.string().nullable(),
-});
-
-const newsletterListInputSchema = z.object({
-  sourceId: z.number().int().positive().optional(),
-  limit: z.number().int().min(1).max(100).default(25),
-  offset: z.number().int().min(0).default(0),
-});
 
 export const appRouter = router({
   bandcamp: bandcampRouter,
@@ -118,39 +80,6 @@ export const appRouter = router({
       return { pong: true, timestamp: new Date().toISOString() };
     }),
 
-  newsletterList: publicProcedure
-    .input(newsletterListInputSchema)
-    .output(
-      z.object({
-        newsletters: z.array(newsletterSummarySchema),
-      })
-    )
-    .query(({ ctx, input }) => ({
-      newsletters: listNewsletters(ctx.db, input),
-    })),
-
-  newsletterDetail: publicProcedure
-    .input(
-      z.object({
-        id: z.number().int().positive(),
-      })
-    )
-    .output(newsletterDetailSchema.nullable())
-    .query(({ ctx, input }) => getNewsletterDetail(ctx.db, input.id)),
-
-  newsletterSources: publicProcedure
-    .input(z.void())
-    .output(
-      z.array(
-        z.object({
-          id: z.number(),
-          canonicalName: z.string(),
-          senderEmail: z.string().nullable(),
-          newsletterCount: z.number(),
-        })
-      )
-    )
-    .query(({ ctx }) => listNewsletterSources(ctx.db)),
 });
 
 export type AppRouter = typeof appRouter;

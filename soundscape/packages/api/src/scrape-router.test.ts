@@ -9,9 +9,6 @@ import type {
 import type { ScrapeData } from '@soundscape/types';
 import { appRouter } from './router.js';
 import type { Context } from './context.js';
-import type { NewsletterDatabase } from '@soundscape/newsletters-db';
-
-const fakeDb = {} as NewsletterDatabase;
 
 function makeRow(overrides: Partial<ScrapeRow> = {}): ScrapeRow {
   return {
@@ -107,7 +104,6 @@ test('scrape.createJob queues offline without requiring an agent', async () => {
   const rows: ScrapeRow[] = [];
   let notified = '';
   const caller = appRouter.createCaller({
-    db: fakeDb,
     scrapesDb: makeScrapesDb(rows),
     onScrapeJobCreated: (tokenHash) => {
       notified = tokenHash;
@@ -130,7 +126,6 @@ test('scrape.createJob turns a fresh cache hit into a terminal job', async () =>
   const data: ScrapeData = { kind: 'rym', entries: [] };
   let notified = false;
   const caller = appRouter.createCaller({
-    db: fakeDb,
     scrapesDb: makeScrapesDb(rows, { data, fetchedAt }),
     onScrapeJobCreated: () => {
       notified = true;
@@ -149,7 +144,6 @@ test('scrape.createJob turns a fresh cache hit into a terminal job', async () =>
 
 test('scrape.createJob rejects an unapproved URL', async () => {
   const caller = appRouter.createCaller({
-    db: fakeDb,
     scrapesDb: makeScrapesDb(),
   } satisfies Context);
   await assert.rejects(
@@ -165,7 +159,6 @@ test('scrape.createJob rejects an unapproved URL', async () => {
 test('scrape.createJob returns the same job for a repeated idempotency key', async () => {
   const rows: ScrapeRow[] = [];
   const caller = appRouter.createCaller({
-    db: fakeDb,
     scrapesDb: makeScrapesDb(rows),
   } satisfies Context);
   const input = {
@@ -189,7 +182,6 @@ test('scrape.getJob authorizes the pairing token', async () => {
     data: { kind: 'rym', entries: [] },
   });
   const caller = appRouter.createCaller({
-    db: fakeDb,
     scrapesDb: makeScrapesDb([row]),
   } satisfies Context);
   const result = await caller.scrape.getJob({ token, requestId: 'req-1' });
@@ -202,13 +194,12 @@ test('scrape.getJob authorizes the pairing token', async () => {
 });
 
 test('scrape.getJob returns null without persistence or for unknown IDs', async () => {
-  const noDb = appRouter.createCaller({ db: fakeDb } satisfies Context);
+  const noDb = appRouter.createCaller({} satisfies Context);
   assert.equal(
     await noDb.scrape.getJob({ token: 'token', requestId: 'anything' }),
     null
   );
   const caller = appRouter.createCaller({
-    db: fakeDb,
     scrapesDb: makeScrapesDb(),
   } satisfies Context);
   assert.equal(
@@ -225,7 +216,6 @@ test('scrape.listScrapes hashes the token and maps rows', async () => {
     created_at: new Date('2026-06-01T12:00:00Z'),
   });
   const caller = appRouter.createCaller({
-    db: fakeDb,
     scrapesDb: makeScrapesDb([row]),
   } satisfies Context);
   const result = await caller.scrape.listScrapes({ token });

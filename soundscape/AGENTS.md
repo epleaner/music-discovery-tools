@@ -167,7 +167,6 @@ Keep it handy whenever you run commands, edit code, or make architectural decisi
 - Web app expects `VITE_LASTFM_API_KEY` and `VITE_API_URL` in `apps/web/.env.local`; scrape status uses HTTP polling.
 - Extension expects `VITE_API_URL` and its own `VITE_WS_URL` in `apps/extension/.env`.
 - Local desktop scrape agent uses the remote API URL, agent WebSocket URL, and pairing token.
-- Server scrape queue uses `DATABASE_URL`; newsletter storage remains controlled by `NEWSLETTER_DB_PATH`.
 
 ## Final Reminders
 

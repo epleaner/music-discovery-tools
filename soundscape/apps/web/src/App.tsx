@@ -20,7 +20,6 @@ import SiteViewer from './components/SiteViewer';
 import ResizablePanels from './components/ResizablePanels';
 import EveryNoiseViewer from './components/EveryNoiseViewer';
 import PairWsDropdown from './components/PairWsDropdown';
-import NewsletterPanel from './components/NewsletterPanel';
 import ScrapeSections from './components/ScrapeSections';
 import RymChartTool from './components/RymChartTool';
 import BandcampUrlTool from './components/BandcampUrlTool';
@@ -85,7 +84,7 @@ const App: Component = () => {
   const nav = useNav();
 
   const [bottomTab, setBottomTab] = createSignal<
-    'history' | 'newsletters' | 'sites' | 'rym-charts' | 'bandcamp'
+    'history' | 'sites' | 'rym-charts' | 'bandcamp'
   >('history');
 
   const { theme, toggleTheme, colorTheme, setColorTheme } = useTheme();
@@ -376,12 +375,6 @@ const App: Component = () => {
                   Listening History
                 </PanelTab>
                 <PanelTab
-                  onClick={() => setBottomTab('newsletters')}
-                  active={bottomTab() === 'newsletters'}
-                >
-                  Newsletters
-                </PanelTab>
-                <PanelTab
                   onClick={() => setBottomTab('sites')}
                   active={bottomTab() === 'sites'}
                 >
@@ -621,9 +614,6 @@ const App: Component = () => {
                     </div>
                 </div>
                 <Switch>
-                  <Match when={bottomTab() === 'newsletters'}>
-                    <NewsletterPanel />
-                  </Match>
                   <Match when={bottomTab() === 'sites'}>
                     <SiteViewer
                       sites={musicSites()}

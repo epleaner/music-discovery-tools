@@ -15,7 +15,6 @@
     "test": "bash -c 'shopt -s globstar nullglob; tsx --test src/**/*.test.ts'"
   },
   "dependencies": {
-    "@soundscape/newsletters-db": "workspace:*",
     "@soundscape/scrapes-db": "workspace:*",
     "@soundscape/types": "workspace:*",
     "@soundscape/utils": "workspace:*",
