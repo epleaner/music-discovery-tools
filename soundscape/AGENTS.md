@@ -43,28 +43,21 @@ Keep it handy whenever you run commands, edit code, or make architectural decisi
 
 ## Build, Dev, and Tooling Commands
 
-- Run everything: `pnpm dev` (server, web, extension) and `pnpm build` for production bundles.
-- Targeted dev servers: `pnpm dev:server`, `pnpm dev:web`, `pnpm dev:extension`.
+- Run everything: `pnpm dev` (server and web) and `pnpm build` for production bundles.
+- Targeted dev servers: `pnpm dev:server`, `pnpm dev:web`.
 - Workspace lint: `pnpm lint`; workspace type safety: `pnpm type-check`; cleanup: `pnpm clean`.
-- API schema refresh: `pnpm api:generate` (remote) or `pnpm api:generate:local` for local mocks.
-- Database tasks: `pnpm db:generate`, `pnpm db:push`, `pnpm db:studio` from repo root.
-- Shared packages build with tsup: `pnpm --filter @soundscape/{types,utils,ui} build`.
+- Shared packages build with tsup: `pnpm --filter @soundscape/{types,utils} build`.
 - Server bundle: `pnpm --filter @soundscape/server build`; start locally via `pnpm dev:server` or `pnpm --filter @soundscape/server start`.
 - Web app build: `pnpm --filter @soundscape/web build`; preview via `pnpm --filter @soundscape/web preview`.
-- Extension build targets: `pnpm --filter wxt-react-starter build` plus `build:firefox` or `build:safari`; zip with `pnpm --filter wxt-react-starter zip`.
-- Prisma within packages/db: `pnpm --filter @soundscape/db db:generate|db:push|db:studio`.
 - Utility scripts run with tsx, e.g. `pnpm tsx scripts/scrape-rym-genres.ts`.
 - Always run commands from repo root unless a package README says otherwise.
 
 ## Package Cheat Sheet
 
 - `@soundscape/web`: Solid + Vite; scripts `dev`, `build`, `preview`, `type-check`, `start`.
-- `wxt-react-starter`: React extension; scripts `dev[:browser]`, `build[:browser]`, `zip[:browser]`, `lint`, `type-check`.
-- `@soundscape/server`: tsx-powered backend; scripts `dev`, `build`, `start`, plus Prisma helpers re-exported at root.
-- `@soundscape/types`, `@soundscape/utils`, `@soundscape/ui`: tsup builds with `build`, watch via `dev`, lint via `lint`, strict `type-check`.
+- `@soundscape/server`: tsx-powered backend; scripts `dev`, `build`, `start`.
+- `@soundscape/types`, `@soundscape/utils`: tsup builds with `build`, watch via `dev`, lint via `lint`, strict `type-check`.
 - `@soundscape/api`: tRPC router only; run `pnpm --filter @soundscape/api type-check` after API edits.
-- `@soundscape/db`: Prisma schema owner with `db:generate`, `db:push`, `db:studio`; ensure `DATABASE_URL` is set.
-- `@soundscape/api-client`: Orval outputs; rerun `pnpm api:generate` whenever API contracts change.
 
 ## Testing and Single-Test Workflow
 
@@ -72,7 +65,7 @@ Keep it handy whenever you run commands, edit code, or make architectural decisi
 - Preferred pattern: add a `test` script (e.g. `"test": "vitest"`) and run `pnpm --filter <package> test`.
 - To execute one spec file once Vitest is installed, use `pnpm --filter <package> vitest run path/to/file.test.ts`.
 - For focused case names, append `--runInBand --relatedTests path/to/file.ts` or `--testNamePattern "<name>"`.
-- Until formal tests exist, validate logic via `pnpm type-check`, manual flows (web + extension), and targeted tsx scripts.
+- Until formal tests exist, validate logic via `pnpm type-check` and targeted tsx scripts.
 - Capture manual QA steps in PR descriptions so others can reproduce.
 
 ## Formatting and Imports
@@ -98,12 +91,6 @@ Keep it handy whenever you run commands, edit code, or make architectural decisi
 - Keep components small (<150 lines); split nested views into subcomponents under `src/components`.
 - Compose resource factories in `src/lib` so UI files stay declarative.
 
-## React (apps/extension)
-
-- Use functional components with hooks; keep state minimal since WXT popup lifetimes are short.
-- Prefer `useState` + `useEffect` pairs over class-like patterns; memoize expensive work with `useMemo` only when necessary.
-- Share logic with web app via utilities in `packages/utils` and types in `packages/types`.
-- React files should also honor the monochrome design system and Tailwind preset.
 
 ## Styling
 
@@ -117,8 +104,7 @@ Keep it handy whenever you run commands, edit code, or make architectural decisi
 
 ## Data, APIs, and Shared Utilities
 
-- All Last.fm work flows through `@soundscape/utils`; set API keys once during app bootstrap.
-- tRPC client helpers live at `apps/web/src/lib/trpc.ts` and `apps/extension/lib/trpc.ts`; reuse them instead of raw fetch calls.
+- tRPC client helpers live at `apps/web/src/lib/trpc.ts`; reuse them instead of raw fetch calls.
 - Shared schemas/types belong in `packages/types`; keep them the single source of truth for server and clients.
 - When adding data transforms, place them in `packages/utils` (or `utils/src`) so apps stay lean.
 - Cache-heavy helpers belong in `packages/utils/src/cache.ts` instead of duplicating memoization in UI code.
@@ -133,16 +119,13 @@ Keep it handy whenever you run commands, edit code, or make architectural decisi
 
 ## File Organization
 
-- Keep Solid components under `apps/web/src/components` and React popup pieces under `apps/extension/entrypoints/popup`.
 - Resource factories stay in `apps/web/src/lib`; shared hooks live beside them.
 - Shared helpers default to `packages/utils/src`; keep files under 200 lines and co-locate tests once they exist.
-- Place Prisma schema edits in `packages/db/prisma/schema.prisma` and rerun `pnpm db:generate`.
-- When adding assets, prefer `apps/extension/public` or `apps/web/public` to avoid bundler surprises.
 
 ## Git and Review
 
 - Follow conventional commits (`feat:`, `fix:`, `docs:`, etc.) and describe the why, not only the what.
-- Never commit generated files (dist outputs, .wxt builds); rely on build pipelines.
+- Never commit generated files (dist outputs); rely on build pipelines.
 - Before pushing, run at least `pnpm lint`, `pnpm type-check`, and the relevant package build.
 - Document manual testing steps plus environment variables in PR descriptions.
 
@@ -158,14 +141,12 @@ Keep it handy whenever you run commands, edit code, or make architectural decisi
 ## API Surface and Exports
 
 - Add new endpoints to `packages/api/src/router.ts` and expose them through the shared client before consuming them.
-- Update `packages/api-client` when regenerating Orval outputs; rerun `pnpm api:generate`.
 - When exposing new public helpers, update `packages/utils/src/index.ts` plus `packages/types/src/index.ts`.
 - Keep barrel files alphabetical to reduce merge conflicts.
 
 ## Environment Variables
 
 - Web app expects `VITE_LASTFM_API_KEY` and `VITE_API_URL` in `apps/web/.env.local`; scrape status uses HTTP polling.
-- Extension expects `VITE_API_URL` and its own `VITE_WS_URL` in `apps/extension/.env`.
 - Local desktop scrape agent uses the remote API URL, agent WebSocket URL, and pairing token.
 
 ## Final Reminders

@@ -5,7 +5,6 @@ node_modules/
 # Build outputs
 dist/
 .next/
-.wxt/
 build/
 
 # Environment files
@@ -50,10 +49,7 @@ Thumbs.db
 # Turbo
 .turbo/ 
 
-# Generated API client (will be regenerated)
-packages/api-client/src/api.ts
-packages/api-client/src/models/
-packages/api-client/src/mocks/
+# Generated OpenAPI document
 openapi.json
 
 # Render build artifacts

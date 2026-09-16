@@ -98,19 +98,6 @@ const [data] = createResource(userId, fetchUser);
 {items().map(item => <div>{item.name}</div>)}
 ```
 
-## React (Extension Only)
-
-- Extension popup uses React due to WXT requirements
-- Use functional components with hooks
-- Minimize state complexity in extension UI
-
-```typescript
-// ✅ Good
-const Popup: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  return <div onClick={() => setIsOpen(!isOpen)}>...</div>;
-};
-```
 
 ## Styling with Tailwind
 

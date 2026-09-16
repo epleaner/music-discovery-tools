@@ -85,7 +85,7 @@ if (apiKey) {
 }
 ```
 
-This approach keeps the shared `@soundscape/utils` package environment-agnostic while allowing the web app (and potentially the extension) to configure the API key at runtime.
+This approach keeps the shared `@soundscape/utils` package environment-agnostic while allowing the web app to configure the API key at runtime.
 
 ## Tech Stack
 

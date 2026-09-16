@@ -8,9 +8,8 @@ Soundscape is a music-discovery companion that unifies Last.fm listening telemet
 
 - TypeScript everywhere (apps + packages) with pnpm + Turborepo orchestration
 - SolidJS + Vite web app (`apps/web`) styled with Tailwind tokens
-- React + WXT browser extension (`apps/extension`) for popup/background/content scripts
 - Node.js 18, Express, and tRPC server (`apps/server`) with an agent-only ws transport
-- Shared packages (`packages/*`) for API router, types, utils, UI primitives, and scrape persistence
+- Shared packages (`packages/*`) for API router, types, utils, and scrape persistence
 
 ## Project Conventions
 
@@ -24,7 +23,7 @@ Soundscape is a music-discovery companion that unifies Last.fm listening telemet
 
 ### Architecture Patterns
 
-- Turborepo monorepo with three primary apps (server, web, extension) plus an external local scrape agent.
+- Turborepo monorepo with two primary apps (server and web) plus an external local scrape agent.
 - tRPC defines the contract once (`packages/api`), consumed by the server and HTTP client helpers.
 - PostgreSQL-backed scrape jobs are the queue and source of truth; the agent transport is used only for local browser dispatch/results.
 - Data fetching and transformations live in `packages/utils`; scrape jobs use PostgreSQL.
@@ -32,7 +31,6 @@ Soundscape is a music-discovery companion that unifies Last.fm listening telemet
 
 ### Testing Strategy
 
-- No automated unit tests yet; rely on `pnpm type-check`, manual QA passes in both the web app and extension, and targeted tsx scripts.
 - When adding specs, introduce Vitest per package/app and run via `pnpm --filter <package> test`; new logic should include colocated tests following this pattern.
 - Document manual verification steps in PR descriptions, especially for real-time flows between clients.
 
@@ -40,7 +38,7 @@ Soundscape is a music-discovery companion that unifies Last.fm listening telemet
 
 - Conventional commits (`feat:`, `fix:`, `docs:`, etc.) focusing on the "why" of the change.
 - Work happens on feature branches off `main`; run `pnpm lint`, `pnpm type-check`, and the relevant package build before pushing.
-- Never commit generated artifacts (dist, .wxt builds, Prisma client); rerun `pnpm install` after lockfile edits.
+- Never commit generated artifacts (dist outputs); rerun `pnpm install` after lockfile edits.
 - Specs and proposals must be approved (OpenSpec workflow) before implementation of net-new capabilities.
 
 ### Planning Workflow
@@ -60,12 +58,11 @@ Soundscape blends listening telemetry (Last.fm), RateYourMusic list metadata, an
 - UI must remain monochrome (black/white/grays) and implemented with Tailwind tokens; no custom colors, gradients, or box shadows.
 - Shared code belongs in packages; avoid cross-importing between apps to preserve module boundaries and type safety.
 - Prefer simple, <100-line implementations unless scale or performance forces additional abstraction; new frameworks/deps need justification via OpenSpec proposals.
-- Environment variables: `VITE_LASTFM_API_KEY`, `VITE_API_URL` for the web app; the extension additionally uses `VITE_WS_URL`; the server uses `DATABASE_URL`.
+- Environment variables: `VITE_LASTFM_API_KEY`, `VITE_API_URL` for the web app; the server uses `DATABASE_URL`.
 
 ## External Dependencies
 
 - Last.fm REST API for recent tracks, top artists, and similar artist data (`@soundscape/utils/lastfm`).
-- RateYourMusic website, accessed via the browser extension for HTML scraping and list capture.
-- Supabase Auth for user sessions in the web app and extension (`apps/web/src/lib/supabase-client.ts`).
-- Prisma + PostgreSQL database (local or Railway-hosted) for persistence.
+- RateYourMusic website, accessed via the local desktop agent for authenticated scraping.
+- PostgreSQL database for scrape persistence.
 - EveryNoise genre dataset (bundled at `apps/web/public/static/rym-genres.json`) as the source of genre metadata.

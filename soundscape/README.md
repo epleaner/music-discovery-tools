@@ -7,7 +7,6 @@ A music discovery platform with a remote web/API service and a local browser age
 Turborepo monorepo with:
 
 - **Web App**: SolidJS using tRPC/HTTP job creation and polling
-- **Browser Extension**: WXT (React) for RateYourMusic integration
 - **Backend**: tRPC + Express + PostgreSQL-backed scrape queue
 - **Desktop Agent**: External local menu-bar process that owns the real browser profile
 
@@ -42,9 +41,6 @@ pnpm dev:server
 
 # Terminal 2 - Web app
 pnpm dev:web
-
-# Terminal 3 - Browser extension
-pnpm dev:extension
 ```
 
 The services will be available at:
@@ -52,7 +48,6 @@ The services will be available at:
 - Backend API: http://localhost:3001/trpc
 - Agent WebSocket: ws://localhost:3001/ws (local agent only)
 - Web App: http://localhost:3000
-- Extension: Load `.wxt/chrome-mv3` in Chrome
 
 ### Environment Setup
 
@@ -75,12 +70,6 @@ The agent runs on the machine with the authenticated browser profile. It
 connects outbound to the server, receives queued jobs, and sends results back;
 browser cookies and pages never move to the API server.
 
-**Extension** (`apps/extension/.env`):
-
-```bash
-VITE_API_URL=http://localhost:3001
-VITE_WS_URL=ws://localhost:3001/ws
-```
 
 ### Server configuration
 
@@ -129,35 +118,24 @@ soundscape/
 │   │       ├── index.ts     # Server entry point
 │   │       ├── context.ts   # tRPC context
 │   │       └── scrape-dispatcher.ts # Durable queue dispatch
-│   ├── web/                 # SolidJS web app
-│   │   └── src/
-│   │       ├── lib/
-│   │       │   ├── trpc.ts  # tRPC client
-│   │       │   └── scrape-jobs.ts # HTTP job client and polling
-│   │       └── components/
-│   └── extension/           # WXT browser extension
-│       ├── entrypoints/
-│       │   ├── popup/       # Extension popup (React)
-│       │   ├── background.ts
-│       │   └── content.ts
-│       └── lib/
-│           ├── trpc.ts      # tRPC client
-│           └── websocket.ts # Extension WebSocket client
+│   └── web/                 # SolidJS web app
+│       └── src/
+│           ├── lib/
+│           │   ├── trpc.ts  # tRPC client
+│           │   └── scrape-jobs.ts # HTTP job client and polling
+│           └── components/
 ├── packages/
 │   ├── api/                 # tRPC router definitions (shared)
 │   │   └── src/
 │   │       └── router.ts    # API endpoints
 │   ├── types/               # Shared TypeScript types
-│   ├── utils/               # Shared utilities
-│   └── ui/                  # Shared UI components
+│   └── utils/               # Shared utilities
 └── turbo.json               # Turborepo configuration
 ```
-
 ## Technology Stack
 
 - **Backend**: Node.js + Express + tRPC
 - **Agent transport**: WebSocket (local agent only)
-- **Build**: Turborepo + Vite + WXT
 - **Styling**: TailwindCSS
 - **Language**: TypeScript
 

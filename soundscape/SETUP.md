@@ -18,15 +18,9 @@ VITE_LASTFM_API_KEY=your_lastfm_api_key
 VITE_API_URL=http://localhost:3001
 ```
 
-**Extension** - Create `apps/extension/.env`:
-
-```bash
-VITE_API_URL=http://localhost:3001
-VITE_WS_URL=ws://localhost:3001/ws
-```
 
 
-### 4. Start Development
+### 3. Start Development
 
 **Option A: Everything together**
 
@@ -43,17 +37,9 @@ pnpm dev:server
 # Terminal 2 - Web App
 pnpm dev:web
 
-# Terminal 3 - Extension
-pnpm dev:extension
 ```
+The desktop browser agent runs separately from the web client.
 
-### 5. Load Extension in Browser
-
-1. Open Chrome
-2. Navigate to `chrome://extensions/`
-3. Enable "Developer mode" (top right)
-4. Click "Load unpacked"
-5. Select `soundscape/apps/extension/.wxt/chrome-mv3` folder
 
 ## Testing the Setup
 
@@ -67,11 +53,6 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 2. You should see the Soundscape web app
 3. Verify that scrape status updates through HTTP polling.
 
-### Test Extension
-
-1. Click the extension icon in Chrome toolbar
-2. You should see "Soundscape Extension" popup
-3. Connection status should show "Connected" (green dot)
 
 ### Test scrape job communication
 
@@ -84,7 +65,6 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 5. Stop the agent, create another job, and confirm it remains `queued`; restart
    the agent and confirm it is eventually dispatched.
 
-The extension's own WebSocket is separate from scrape-job orchestration.
 
 ## Troubleshooting
 
@@ -94,11 +74,6 @@ The extension's own WebSocket is separate from scrape-job orchestration.
 - Confirm its pairing token matches the token entered in the web app.
 - Jobs created while it is offline remain queued in PostgreSQL.
 
-### Extension won't load
-
-- Make sure you ran `pnpm dev:extension` or `pnpm build` in extension directory
-- Check that `.wxt` folder exists
-- Try reloading the extension in chrome://extensions/
 
 ### Type errors in web app
 
@@ -133,11 +108,6 @@ export const appRouter = router({
 const result = await trpc.myNewEndpoint.query({ name: 'World' });
 ```
 
-3. Use in extension:
-
-```typescript
-const result = await trpc.myNewEndpoint.query({ name: 'Extension' });
-```
 
 ### WebSocket Message Types
 
@@ -164,11 +134,6 @@ export interface CustomMessage {
 1. Build: `pnpm --filter @soundscape/web build`
 2. Deploy `apps/web/dist` to your hosting (Vercel, Netlify, etc.)
 
-### Extension
-
-1. Build: `pnpm --filter wxt-react-starter build`
-2. Package: `pnpm --filter wxt-react-starter zip`
-3. Submit to Chrome Web Store
 
 ## Next Steps
 

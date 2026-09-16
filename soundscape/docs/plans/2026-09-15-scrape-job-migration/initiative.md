@@ -121,7 +121,7 @@ connection. Browser and Orca clients use HTTP only.
 - Moving browser automation to the remote server.
 - Replacing the existing authentication system wholesale.
 - Adding scheduler-specific server code.
-- Migrating unrelated Last.fm or extension flows.
+- Migrating unrelated Last.fm flows.
 
 ## Decisions and risks
 
@@ -165,9 +165,7 @@ connection. Browser and Orca clients use HTTP only.
 - Removed the web scrape bridge, presence UI, and unused demo WebSocket files.
 - Verified shared utility, API, server dispatcher/registry, and web tests;
   API/server/web builds and focused type checks pass.
-- Full workspace type-check remains blocked by pre-existing WXT extension
-  environment/type errors. PostgreSQL-backed DB tests skip without
-  `SCRAPES_TEST_DATABASE_URL`; the earlier server process smoke was blocked by
-  a stale native SQLite ABI in the removed ingest path.
+- PostgreSQL-backed DB tests skip without `SCRAPES_TEST_DATABASE_URL`; server
+  `/health` smoke passed after the cleanup.
 - External native desktop-agent rollout remains required for real-browser QA;
   this checkout verifies the wire contract with a deterministic fake agent.
