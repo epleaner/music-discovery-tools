@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "tsx src/index.ts",
+    "start": "pnpm --filter @soundscape/types build && pnpm --filter @soundscape/utils build && tsx src/index.ts",
     "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
