@@ -127,8 +127,8 @@ headed browser profile and receives only that user's scrape jobs.
   WebSocket, received only their own jobs, completed them, and could not read
   each other's jobs.
 - Deployment: API deployment
-  `971914f9-2adf-4595-976f-e579e6ede949` and web deployment
-  `1551597d-080c-4769-a0db-9b24c5b815ca` reached `SUCCESS`. Production API
+  `6b0ad584-a638-45f2-9a17-6dcca942b220` and web deployment
+  `d3efea20-9137-4a6f-b8df-e600b14ae058` reached `SUCCESS`. Production API
   health returned `status: ok`; `/auth/me` returned 401 without a session;
   OpenAPI advertised the production API URL; the deployed web rendered the
   sign-in screen.
