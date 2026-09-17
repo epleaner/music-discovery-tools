@@ -1,7 +1,7 @@
 # Multi-user local browser agent
 
 Status: complete
-Updated: 2026-09-16
+Updated: 2026-09-17
 
 ## Goal
 
@@ -113,17 +113,25 @@ headed browser profile and receives only that user's scrape jobs.
 
 ## Execution state
 
-- Branch: `feat/multi-user-local-agent`
-- Current phase: Verified
+- Branch: `main`
+- Current phase: Deployed and verified
 - Changed: session/auth routes, per-user agent credentials, user-owned scrape
   rows, authenticated API procedures, agent registry/dispatch, web auth and
-  agent setup UI, current docs, and focused tests.
-- Verification: `pnpm type-check` passed; `pnpm build` passed; root `pnpm test`
-  passed with `SCRAPES_TEST_DATABASE_URL` set, covering API (6), server (8),
-  PostgreSQL-backed scrapes-db (11), and web (16) tests; deployment shell
-  syntax passed; browser smoke rendered the sign-in screen.
+  agent setup UI, deterministic PostgreSQL tests, root test entrypoint, and
+  Railway startup compatibility.
+- Verification: `pnpm type-check`, `pnpm build`, and root `pnpm test` passed.
+  The root suite covered API (6), server (8), PostgreSQL-backed scrapes-db
+  (11), and web (16) tests. Deployment shell syntax passed.
 - Integration: a temporary PostgreSQL 16 container initialized the schema.
   Two unique users registered, received distinct agent tokens, connected over
   WebSocket, received only their own jobs, completed them, and could not read
-  each other's jobs. Both jobs reached `done`.
+  each other's jobs.
+- Deployment: API deployment
+  `971914f9-2adf-4595-976f-e579e6ede949` and web deployment
+  `1551597d-080c-4769-a0db-9b24c5b815ca` reached `SUCCESS`. Production API
+  health returned `status: ok`; `/auth/me` returned 401 without a session;
+  OpenAPI advertised the production API URL; the deployed web rendered the
+  sign-in screen.
+- `pnpm lint` remains unavailable as a clean gate because the existing
+  `@soundscape/types` lint script targets a missing `src/` directory.
 - Next action: none for this change.
