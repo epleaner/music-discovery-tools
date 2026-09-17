@@ -18,8 +18,6 @@ VITE_LASTFM_API_KEY=your_lastfm_api_key
 VITE_API_URL=http://localhost:3001
 ```
 
-
-
 ### 3. Start Development
 
 **Option A: Everything together**
@@ -38,8 +36,8 @@ pnpm dev:server
 pnpm dev:web
 
 ```
-The desktop browser agent runs separately from the web client.
 
+The desktop browser agent runs separately from the web client.
 
 ## Testing the Setup
 
@@ -50,30 +48,29 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 ### Test Web App
 
 1. Open http://localhost:3000
-2. You should see the Soundscape web app
+2. Create an account or sign in.
 3. Verify that scrape status updates through HTTP polling.
-
 
 ### Test scrape job communication
 
 1. Start the API with `DATABASE_URL` configured.
-2. Start the external desktop agent with an authenticated browser profile and
-   the pairing token saved in the web app.
-3. Create a scrape from the web app or `POST /api/rest/scrape/jobs`.
-4. Confirm the API reports `queued`, then `running`, then `done` (or a visible
+2. Sign in to the web app and generate an agent token from the Agent control.
+3. Start the external local agent with the token and an authenticated browser
+   profile.
+4. Create a scrape from the web app.
+5. Confirm the API reports `queued`, then `running`, then `done` (or a visible
    `error`) at `/api/rest/scrape/jobs/{requestId}`.
-5. Stop the agent, create another job, and confirm it remains `queued`; restart
+6. Stop the agent, create another job, and confirm it remains `queued`; restart
    the agent and confirm it is eventually dispatched.
-
 
 ## Troubleshooting
 
-### Desktop agent won't receive jobs
+### Local agent won't receive jobs
 
 - Confirm `SCRAPE_AGENT_WS_URL` points to the API `/ws` endpoint.
-- Confirm its pairing token matches the token entered in the web app.
+- Confirm `SCRAPE_AGENT_TOKEN` was generated for the signed-in web account.
+- Confirm the agent uses the same account's token and warm browser profile.
 - Jobs created while it is offline remain queued in PostgreSQL.
-
 
 ### Type errors in web app
 
@@ -108,7 +105,6 @@ export const appRouter = router({
 const result = await trpc.myNewEndpoint.query({ name: 'World' });
 ```
 
-
 ### WebSocket Message Types
 
 Define message types in `packages/types` for type safety:
@@ -133,7 +129,6 @@ export interface CustomMessage {
 
 1. Build: `pnpm --filter @soundscape/web build`
 2. Deploy `apps/web/dist` to your hosting (Vercel, Netlify, etc.)
-
 
 ## Next Steps
 

@@ -118,5 +118,6 @@ After both services are deployed:
 
 1. Update API's `WEB_APP_URL` with web service URL
 2. Update Web's `VITE_API_URL` with API service URL
-3. Configure the local desktop agent's outbound `SCRAPE_AGENT_WS_URL` and pairing token
+3. Sign in to the deployed web UI, generate an agent token, and start the local
+   agent with the API's `SCRAPE_AGENT_WS_URL`.
 4. Test the deployment

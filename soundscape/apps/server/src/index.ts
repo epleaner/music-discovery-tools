@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import express from 'express';
+import type { Request } from 'express';
 import cors from 'cors';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { WebSocketServer } from 'ws';
@@ -13,8 +14,9 @@ import {
 } from 'trpc-openapi';
 import type { ScrapeData, ScrapeResultMsg } from '@soundscape/types';
 import { createScrapesDb, hashToken } from '@soundscape/scrapes-db';
-import type { ScrapesDb } from '@soundscape/scrapes-db';
+import type { Database } from '@soundscape/scrapes-db';
 import { AgentRegistry } from './ws-rooms.js';
+import { createAuthRouter, ownerKeyForUser } from './auth.js';
 import { ScrapeDispatcher } from './scrape-dispatcher.js';
 import { setScrapeJobNotifier, setScrapesDb } from './scrapes-state.js';
 import { z } from 'zod';
@@ -51,13 +53,13 @@ function isScrapeData(
 const app = express();
 const server = createServer(app);
 const registry = new AgentRegistry();
-let scrapeStateDb: ScrapesDb | undefined;
+let scrapeStateDb: Database | undefined;
 const dispatcher = new ScrapeDispatcher(registry, {
   getDb: () => scrapeStateDb,
   leaseMs: Number(process.env.SCRAPE_LEASE_MS) || 60_000,
 });
-setScrapeJobNotifier((tokenHash) =>
-  dispatcher.dispatch(tokenHash).then(() => undefined)
+setScrapeJobNotifier((ownerKey) =>
+  dispatcher.dispatch(ownerKey).then(() => undefined)
 );
 
 async function initScrapesDb() {
@@ -97,6 +99,13 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(
+  '/auth',
+  createAuthRouter({
+    getDb: () => scrapeStateDb,
+    agentRegistry: registry,
+  })
+);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -117,14 +126,20 @@ app.use('/api', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
 const openApiHandler = createOpenApiHttpHandler({
   router: appRouter,
-  createContext,
+  createContext: ({ req }: { req: Request }) => createContext(req),
   responseMeta: () => ({}),
   onError: ({ error }: { error: unknown }) =>
     console.error('OpenAPI error:', error),
   maxBodySize: 10 * 1024 * 1024,
 });
 app.use('/api/rest', (req, res) => openApiHandler(req, res));
-app.use('/trpc', createExpressMiddleware({ router: appRouter, createContext }));
+app.use(
+  '/trpc',
+  createExpressMiddleware({
+    router: appRouter,
+    createContext: ({ req }) => createContext(req),
+  })
+);
 
 const wss = new WebSocketServer({ server, path: '/ws' });
 
@@ -135,7 +150,7 @@ wss.on('connection', (ws) => {
     },
   };
 
-  ws.on('message', (message) => {
+  ws.on('message', async (message) => {
     let parsed: ParsedWsMessage;
     try {
       const result = wsMessageSchema.safeParse(JSON.parse(message.toString()));
@@ -146,13 +161,24 @@ wss.on('connection', (ws) => {
     }
 
     if (parsed.type === 'register') {
+      const db = scrapeStateDb;
+      if (!db) {
+        ws.close(1013, 'database unavailable');
+        return;
+      }
+      const user = await db.getUserByAgentTokenHash(hashToken(parsed.token));
+      if (!user) {
+        ws.close(1008, 'invalid agent token');
+        return;
+      }
+      const ownerKey = ownerKeyForUser(user.id);
       const agentId = randomUUID();
-      const tokenHash = hashToken(parsed.token);
-      registry.register(tokenHash, agentId, sender);
+      registry.register(ownerKey, user.id, agentId, sender);
+      await db.touchAgent(user.id);
       console.log(
-        `[agent] registered ${agentId.slice(0, 8)}… for token ${parsed.token.slice(0, 4)}…`
+        `[agent] registered ${agentId.slice(0, 8)}… for user ${user.username}`
       );
-      void dispatcher.dispatch(tokenHash);
+      void dispatcher.dispatch(ownerKey);
       return;
     }
 

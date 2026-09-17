@@ -58,18 +58,19 @@ VITE_LASTFM_API_KEY=your_api_key_here
 VITE_API_URL=http://localhost:3001
 ```
 
-**Local desktop agent**:
+**Local browser agent**:
+
+The deployed web UI creates one agent token per account. Copy that token into
+the manually started local agent:
 
 ```bash
-SCRAPE_API_URL=http://localhost:3001
 SCRAPE_AGENT_WS_URL=ws://localhost:3001/ws
-SCRAPE_PAIRING_TOKEN=the-token-entered-in-the-web-app
+SCRAPE_AGENT_TOKEN=the-token-generated-in-the-web-ui
 ```
 
 The agent runs on the machine with the authenticated browser profile. It
-connects outbound to the server, receives queued jobs, and sends results back;
-browser cookies and pages never move to the API server.
-
+connects outbound to the server, receives that user's queued jobs, and sends
+results back; browser cookies and pages never move to the API server.
 
 ### Server configuration
 
@@ -80,16 +81,16 @@ SCRAPE_LEASE_MS=60000
 
 ## Scrape jobs and Orca scheduling
 
-The web app and Orca create jobs over HTTPS/tRPC; neither needs a WebSocket or
-browser access. The API stores `queued`, `running`, `done`, `error`, and
-`expired` state in PostgreSQL. Jobs created while the desktop agent is offline
-remain queued until its outbound agent connection returns.
+The web app and Orca create jobs over authenticated HTTPS/tRPC; neither needs a
+WebSocket or browser access. The API stores `queued`, `running`, `done`,
+`error`, and `expired` state in PostgreSQL. Jobs created while a user's local
+agent is offline remain queued until that agent reconnects.
 
-The OpenAPI equivalent is available at `/api/rest/scrape/jobs`:
+The OpenAPI equivalent is available at `/api/rest/scrape/jobs` and requires the
+user's authenticated session cookie:
 
 ```json
 {
-  "token": "pairing-token",
   "source": "bandcamp",
   "mode": "resolve",
   "query": { "artist": "Burial", "album": "Untrue", "kind": "album" },
@@ -97,16 +98,15 @@ The OpenAPI equivalent is available at `/api/rest/scrape/jobs`:
 }
 ```
 
-Use the returned `requestId` with `GET /api/rest/scrape/jobs/{requestId}` and
-the same token. Orca schedules should use a stable idempotency key so retries
-do not enqueue duplicate browser work. URL jobs use `url` instead of
-`mode: "resolve"` and must target an allowed RYM or Bandcamp host.
+Use the returned `requestId` with `GET /api/rest/scrape/jobs/{requestId}` in the
+same authenticated session. Orca schedules should use a stable idempotency key
+so retries do not enqueue duplicate browser work. URL jobs use `url` instead
+of `mode: "resolve"` and must target an allowed RYM or Bandcamp host.
 
-Manual desktop-agent QA: start the local agent with an authenticated browser
-profile, register its pairing token on `/ws`, confirm it receives one queued
-job, complete the real browser scrape, and confirm the web status poll reaches
-`done`. This checkout does not contain that external native agent; the server
-dispatcher is verified with a deterministic fake agent.
+Manual desktop-agent QA: create an account, generate an agent token, start the
+local agent with an authenticated browser profile, and confirm it receives only
+that account's queued job. This checkout does not contain that external native
+agent; the server dispatcher is verified with a deterministic fake agent.
 
 ## Project Structure
 
@@ -132,6 +132,7 @@ soundscape/
 │   └── utils/               # Shared utilities
 └── turbo.json               # Turborepo configuration
 ```
+
 ## Technology Stack
 
 - **Backend**: Node.js + Express + tRPC
@@ -158,7 +159,6 @@ soundscape/
 - [ ] Playlist generation
 - [ ] Spotify/YouTube integration
 - [ ] Advanced filtering and search
-
 
 See `project-plan.md` for complete roadmap.
 

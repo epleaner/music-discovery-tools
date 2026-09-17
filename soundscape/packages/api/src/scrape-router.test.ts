@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { hashToken } from '@soundscape/scrapes-db';
 import type {
   CreateQueuedScrapeArgs,
   ScrapesDb,
@@ -8,11 +7,12 @@ import type {
 } from '@soundscape/scrapes-db';
 import type { ScrapeData } from '@soundscape/types';
 import { appRouter } from './router.js';
-import type { Context } from './context.js';
+import type { Context, UserIdentity } from './context.js';
 
 function makeRow(overrides: Partial<ScrapeRow> = {}): ScrapeRow {
   return {
     id: 'test-id',
+    user_id: 'user-a',
     token_hash: 'hash',
     source: 'rym',
     url: 'https://rateyourmusic.com/album/foo',
@@ -46,13 +46,13 @@ function makeScrapesDb(
         input.idempotencyKey &&
         rows.find(
           (row) =>
-            row.token_hash === input.tokenHash &&
+            row.user_id === input.userId &&
             row.idempotency_key === input.idempotencyKey
         );
       if (existing) return { row: existing, created: false };
       const row = makeRow({
         id: input.id,
-        token_hash: input.tokenHash,
+        user_id: input.userId,
         source: input.source,
         url: input.url,
         target_url: input.targetUrl ?? null,
@@ -88,11 +88,10 @@ function makeScrapesDb(
     async getById(id) {
       return rows.find((row) => row.id === id) ?? null;
     },
-    async listByToken({ tokenHash, source, limit }) {
+    async listByUser({ userId, source, limit }) {
       return rows
         .filter(
-          (row) =>
-            row.token_hash === tokenHash && (!source || row.source === source)
+          (row) => row.user_id === userId && (!source || row.source === source)
         )
         .slice(0, limit);
     },
@@ -100,24 +99,45 @@ function makeScrapesDb(
   };
 }
 
-test('scrape.createJob queues offline without requiring an agent', async () => {
+const userA: UserIdentity = { id: 'user-a', username: 'alice' };
+const userB: UserIdentity = { id: 'user-b', username: 'bob' };
+
+function caller(
+  scrapesDb: ScrapesDb,
+  user: UserIdentity | null = userA,
+  onScrapeJobCreated?: Context['onScrapeJobCreated']
+) {
+  return appRouter.createCaller({
+    scrapesDb,
+    user,
+    onScrapeJobCreated,
+  } satisfies Context);
+}
+
+test('scrape procedures require an authenticated user', async () => {
+  const unauthenticated = appRouter.createCaller({
+    scrapesDb: makeScrapesDb(),
+    user: null,
+  });
+  await assert.rejects(
+    unauthenticated.scrape.listScrapes({}),
+    (error: unknown) => (error as { code?: string }).code === 'UNAUTHORIZED'
+  );
+});
+
+test('scrape.createJob queues offline for the authenticated user', async () => {
   const rows: ScrapeRow[] = [];
   let notified = '';
-  const caller = appRouter.createCaller({
-    scrapesDb: makeScrapesDb(rows),
-    onScrapeJobCreated: (tokenHash) => {
-      notified = tokenHash;
-    },
-  } satisfies Context);
-  const result = await caller.scrape.createJob({
-    token: 'my-token',
+  const result = await caller(makeScrapesDb(rows), userA, (ownerKey) => {
+    notified = ownerKey;
+  }).scrape.createJob({
     source: 'rym',
     url: 'https://rateyourmusic.com/album/foo',
     idempotencyKey: 'job-1',
   });
   assert.equal(result.status, 'queued');
   assert.equal(result.requestId, rows[0]?.id);
-  assert.equal(notified, hashToken('my-token'));
+  assert.equal(notified.length, 64);
 });
 
 test('scrape.createJob turns a fresh cache hit into a terminal job', async () => {
@@ -125,14 +145,13 @@ test('scrape.createJob turns a fresh cache hit into a terminal job', async () =>
   const fetchedAt = new Date('2026-09-15T00:00:00Z');
   const data: ScrapeData = { kind: 'rym', entries: [] };
   let notified = false;
-  const caller = appRouter.createCaller({
-    scrapesDb: makeScrapesDb(rows, { data, fetchedAt }),
-    onScrapeJobCreated: () => {
+  const result = await caller(
+    makeScrapesDb(rows, { data, fetchedAt }),
+    userA,
+    () => {
       notified = true;
-    },
-  } satisfies Context);
-  const result = await caller.scrape.createJob({
-    token: 'my-token',
+    }
+  ).scrape.createJob({
     source: 'rym',
     url: 'https://rateyourmusic.com/album/foo',
   });
@@ -143,12 +162,8 @@ test('scrape.createJob turns a fresh cache hit into a terminal job', async () =>
 });
 
 test('scrape.createJob rejects an unapproved URL', async () => {
-  const caller = appRouter.createCaller({
-    scrapesDb: makeScrapesDb(),
-  } satisfies Context);
   await assert.rejects(
-    caller.scrape.createJob({
-      token: 'token',
+    caller(makeScrapesDb()).scrape.createJob({
       source: 'rym',
       url: 'https://evil.example/scrape',
     }),
@@ -156,70 +171,45 @@ test('scrape.createJob rejects an unapproved URL', async () => {
   );
 });
 
-test('scrape.createJob returns the same job for a repeated idempotency key', async () => {
+test('idempotency is isolated per authenticated user', async () => {
   const rows: ScrapeRow[] = [];
-  const caller = appRouter.createCaller({
-    scrapesDb: makeScrapesDb(rows),
-  } satisfies Context);
+  const db = makeScrapesDb(rows);
   const input = {
-    token: 'token',
     source: 'rym' as const,
     url: 'https://rateyourmusic.com/album/foo',
     idempotencyKey: 'same',
   };
-  const first = await caller.scrape.createJob(input);
-  const second = await caller.scrape.createJob(input);
-  assert.equal(second.requestId, first.requestId);
-  assert.equal(rows.length, 1);
+  const first = await caller(db, userA).scrape.createJob(input);
+  const repeat = await caller(db, userA).scrape.createJob(input);
+  const otherUser = await caller(db, userB).scrape.createJob(input);
+  assert.equal(repeat.requestId, first.requestId);
+  assert.notEqual(otherUser.requestId, first.requestId);
+  assert.equal(rows.length, 2);
 });
 
-test('scrape.getJob authorizes the pairing token', async () => {
-  const token = 'token-alpha';
-  const row = makeRow({
-    id: 'req-1',
-    token_hash: hashToken(token),
+test('scrape.getJob and listScrapes only expose the current user', async () => {
+  const rowA = makeRow({
+    id: 'req-a',
+    user_id: userA.id,
     status: 'done',
     data: { kind: 'rym', entries: [] },
   });
-  const caller = appRouter.createCaller({
-    scrapesDb: makeScrapesDb([row]),
-  } satisfies Context);
-  const result = await caller.scrape.getJob({ token, requestId: 'req-1' });
-  assert.equal(result?.status, 'done');
-  assert.deepEqual(result?.data, { kind: 'rym', entries: [] });
-  assert.equal(
-    await caller.scrape.getJob({ token: 'wrong-token', requestId: 'req-1' }),
-    null
-  );
-});
+  const rowB = makeRow({ id: 'req-b', user_id: userB.id });
+  const db = makeScrapesDb([rowA, rowB]);
+  const alice = caller(db, userA);
+  const bob = caller(db, userB);
 
-test('scrape.getJob returns null without persistence or for unknown IDs', async () => {
-  const noDb = appRouter.createCaller({} satisfies Context);
   assert.equal(
-    await noDb.scrape.getJob({ token: 'token', requestId: 'anything' }),
-    null
+    (await alice.scrape.getJob({ requestId: 'req-a' }))?.requestId,
+    'req-a'
   );
-  const caller = appRouter.createCaller({
-    scrapesDb: makeScrapesDb(),
-  } satisfies Context);
-  assert.equal(
-    await caller.scrape.getJob({ token: 'token', requestId: 'unknown' }),
-    null
+  assert.equal(await alice.scrape.getJob({ requestId: 'req-b' }), null);
+  assert.deepEqual(
+    (await alice.scrape.listScrapes({})).map((job) => job.requestId),
+    ['req-a']
   );
-});
-
-test('scrape.listScrapes hashes the token and maps rows', async () => {
-  const token = 'my-token';
-  const row = makeRow({
-    id: 'r1',
-    token_hash: hashToken(token),
-    created_at: new Date('2026-06-01T12:00:00Z'),
-  });
-  const caller = appRouter.createCaller({
-    scrapesDb: makeScrapesDb([row]),
-  } satisfies Context);
-  const result = await caller.scrape.listScrapes({ token });
-  assert.equal(result.length, 1);
-  assert.equal(result[0]?.requestId, 'r1');
-  assert.deepEqual(result[0]?.createdAt, row.created_at);
+  assert.deepEqual(
+    (await bob.scrape.listScrapes({})).map((job) => job.requestId),
+    ['req-b']
+  );
 });

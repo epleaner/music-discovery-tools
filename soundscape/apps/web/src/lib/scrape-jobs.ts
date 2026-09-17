@@ -2,13 +2,9 @@ import { createSignal } from 'solid-js';
 import type { ScrapeJob, ScrapeRequest } from '@soundscape/types';
 import { trpc } from './trpc';
 
-export const TOKEN_KEY = 'scrape_pairing_token';
 const POLL_INTERVAL_MS = 1_000;
 
 const [refreshTick, setRefreshTick] = createSignal(0);
-const [pairingToken, setPairingTokenSignal] = createSignal(
-  typeof localStorage === 'undefined' ? null : localStorage.getItem(TOKEN_KEY)
-);
 
 export function requestScrapeRefresh() {
   setRefreshTick((tick) => tick + 1);
@@ -16,28 +12,15 @@ export function requestScrapeRefresh() {
 
 export { refreshTick };
 
-export function getPairingToken(): string | null {
-  return pairingToken();
-}
-
-export function setPairingToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
-  setPairingTokenSignal(token);
-}
-
 export type ScrapeJobParams = ScrapeRequest & { idempotencyKey?: string };
 export type ScrapeJobUpdate = (job: ScrapeJob) => void;
 
 async function createJob(params: ScrapeJobParams): Promise<ScrapeJob> {
-  const token = getPairingToken();
-  if (!token) throw new Error('Set a pairing token before scraping.');
-  return trpc.scrape.createJob.mutate({ token, ...params });
+  return trpc.scrape.createJob.mutate(params);
 }
 
 async function getJob(requestId: string): Promise<ScrapeJob | null> {
-  const token = getPairingToken();
-  if (!token) return null;
-  return trpc.scrape.getJob.query({ token, requestId });
+  return trpc.scrape.getJob.query({ requestId });
 }
 
 /** Starts one durable job and polls its server-owned state until terminal. */

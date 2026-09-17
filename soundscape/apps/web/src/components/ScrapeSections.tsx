@@ -8,11 +8,7 @@ import type {
   ScrapeQuery,
 } from '@soundscape/types';
 import { getRYMArtistUrl, getRYMAlbumUrl } from '@soundscape/utils';
-import {
-  getPairingToken,
-  refreshTick,
-  startScrapeJob,
-} from '../lib/scrape-jobs';
+import { refreshTick, startScrapeJob } from '../lib/scrape-jobs';
 import { useNav } from '../lib/use-nav';
 import RymResults from './RymResults';
 import BandcampResults from './BandcampResults';
@@ -88,9 +84,6 @@ const ScrapeSections: Component = () => {
   };
 
   const scrapeRym = (url: string, query?: ScrapeQuery, force = false) => {
-    if (!getPairingToken())
-      return setRymStatus('Set a pairing token to scrape RYM.');
-    cancelRym();
     setEntries([]);
     setRymAlbum(null);
     setRymStatus('Queueing scrape…');
@@ -114,9 +107,6 @@ const ScrapeSections: Component = () => {
   };
 
   const scrapeBandcamp = (query: ScrapeQuery, force = false) => {
-    if (!getPairingToken())
-      return setBcStatus('Set a pairing token to scrape Bandcamp.');
-    cancelBc();
     setReleases([]);
     setCurrentLabel(null);
     setAlbum(null);
@@ -143,9 +133,6 @@ const ScrapeSections: Component = () => {
     );
 
   const scrapeBandcampUrl = (url: string, mode?: 'label' | 'related') => {
-    if (!getPairingToken())
-      return setBcStatus('Set a pairing token to scrape Bandcamp.');
-    cancelBc();
     setReleases([]);
     setCurrentLabel(null);
     setAlbum(null);
@@ -264,16 +251,10 @@ const ScrapeSections: Component = () => {
           isLabelResult={isLabelResult()}
           isRelatedResult={isRelatedResult()}
           showExploreLabel={
-            !!currentLabel() &&
-            !isLabelResult() &&
-            !isRelatedResult() &&
-            !!getPairingToken()
+            !!currentLabel() && !isLabelResult() && !isRelatedResult()
           }
           showRelated={
-            !!getPairingToken() &&
-            isAlbumOrTrackUrl() &&
-            !isLabelResult() &&
-            !isRelatedResult()
+            isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()
           }
           onExploreLabel={() =>
             scrapeBandcampUrl(lastScrapedUrl() ?? '', 'label')

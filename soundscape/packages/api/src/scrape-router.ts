@@ -5,7 +5,7 @@ import type { ScrapeRow } from '@soundscape/scrapes-db';
 import type { ScrapeData } from '@soundscape/types';
 import { isScrapeUrlAllowed, scrapeCacheKey } from '@soundscape/utils';
 import { z } from 'zod';
-import { router, publicProcedure } from './trpc.js';
+import { router, protectedProcedure } from './trpc.js';
 
 const scrapeQuerySchema = z.object({
   artist: z.string().min(1).max(300),
@@ -15,7 +15,6 @@ const scrapeQuerySchema = z.object({
 
 const scrapeJobInputSchema = z
   .object({
-    token: z.string().min(1),
     source: z.enum(['rym', 'bandcamp']),
     url: z.string().url().optional(),
     mode: z.enum(['label', 'related', 'resolve']).optional(),
@@ -95,7 +94,7 @@ function mapJob(row: ScrapeRow): JobOutput {
 }
 
 export const scrapeRouter = router({
-  createJob: publicProcedure
+  createJob: protectedProcedure
     .meta({
       openapi: {
         method: 'POST',
@@ -103,7 +102,7 @@ export const scrapeRouter = router({
         tags: ['scrape'],
         summary: 'Create a durable scrape job',
         description:
-          'Queues a scrape for the paired local browser agent. Safe to retry with an idempotency key.',
+          'Queues a scrape for the authenticated user’s local browser agent.',
       },
     })
     .input(scrapeJobInputSchema)
@@ -115,11 +114,11 @@ export const scrapeRouter = router({
           message: 'scrape queue is unavailable',
         });
       }
-      const tokenHash = hashToken(input.token);
+      const ownerKey = hashToken(ctx.user.id);
       const cacheUrl = scrapeCacheKey(input);
       const created = await ctx.scrapesDb.createQueued({
         id: randomUUID(),
-        tokenHash,
+        userId: ctx.user.id,
         source: input.source,
         url: cacheUrl,
         targetUrl: input.url,
@@ -132,6 +131,7 @@ export const scrapeRouter = router({
 
       if (!input.force) {
         const cached = await ctx.scrapesDb.getFresh({
+          userId: ctx.user.id,
           source: input.source,
           url: cacheUrl,
           maxAgeMs:
@@ -148,43 +148,41 @@ export const scrapeRouter = router({
         }
       }
 
-      await ctx.onScrapeJobCreated?.(tokenHash);
+      await ctx.onScrapeJobCreated?.(ownerKey);
       const row = await ctx.scrapesDb.getById(created.row.id);
       return mapJob(row ?? created.row);
     }),
 
-  getJob: publicProcedure
+  getJob: protectedProcedure
     .meta({
       openapi: {
         method: 'GET',
         path: '/scrape/jobs/{requestId}',
         tags: ['scrape'],
         summary: 'Read scrape job status',
-        description:
-          'Reads one scrape job owned by the supplied pairing token.',
+        description: 'Reads one scrape job owned by the authenticated user.',
       },
     })
-    .input(z.object({ token: z.string().min(1), requestId: z.string().min(1) }))
+    .input(z.object({ requestId: z.string().min(1) }))
     .output(jobOutputSchema.nullable())
     .query(async ({ ctx, input }) => {
       if (!ctx.scrapesDb) return null;
       const row = await ctx.scrapesDb.getById(input.requestId);
-      if (!row || row.token_hash !== hashToken(input.token)) return null;
+      if (!row || row.user_id !== ctx.user.id) return null;
       return mapJob(row);
     }),
 
-  listScrapes: publicProcedure
+  listScrapes: protectedProcedure
     .input(
       z.object({
-        token: z.string().min(1),
         source: z.enum(['rym', 'bandcamp']).optional(),
         limit: z.number().int().min(1).max(50).default(20),
       })
     )
     .query(async ({ ctx, input }) => {
       if (!ctx.scrapesDb) return [];
-      const rows = await ctx.scrapesDb.listByToken({
-        tokenHash: hashToken(input.token),
+      const rows = await ctx.scrapesDb.listByUser({
+        userId: ctx.user.id,
         source: input.source,
         limit: input.limit,
       });

@@ -1,21 +1,19 @@
-import type { ScrapesDb } from '@soundscape/scrapes-db';
+import type { Database } from '@soundscape/scrapes-db';
 
 // Shared mutable references avoid importing server startup from request context.
-export let scrapesDb: ScrapesDb | undefined;
-let scrapeJobNotifier:
-  | ((tokenHash: string) => Promise<void> | void)
-  | undefined;
+export let scrapesDb: Database | undefined;
+let scrapeJobNotifier: ((ownerKey: string) => Promise<void> | void) | undefined;
 
-export function setScrapesDb(db: ScrapesDb | undefined) {
+export function setScrapesDb(db: Database | undefined) {
   scrapesDb = db;
 }
 
 export function setScrapeJobNotifier(
-  notifier: ((tokenHash: string) => Promise<void> | void) | undefined
+  notifier: ((ownerKey: string) => Promise<void> | void) | undefined
 ) {
   scrapeJobNotifier = notifier;
 }
 
-export function notifyScrapeJobCreated(tokenHash: string) {
-  return scrapeJobNotifier?.(tokenHash);
+export function notifyScrapeJobCreated(ownerKey: string) {
+  return scrapeJobNotifier?.(ownerKey);
 }

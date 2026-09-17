@@ -8,6 +8,7 @@ import { AgentRegistry, type Sender } from './ws-rooms.js';
 function makeRow(overrides: Partial<ScrapeRow> = {}): ScrapeRow {
   return {
     id: 'job-1',
+    user_id: 'user-a',
     token_hash: 'token-hash',
     source: 'rym',
     url: 'https://rateyourmusic.com/album/foo',
@@ -61,7 +62,7 @@ function makeDb(row: ScrapeRow): ScrapesDb {
     async getById(id) {
       return id === row.id ? row : null;
     },
-    async listByToken() {
+    async listByUser() {
       return [row];
     },
     async getFresh() {
@@ -86,7 +87,7 @@ test('dispatcher sends claimed jobs only to the matching agent', async () => {
   const db = makeDb(row);
   const registry = new AgentRegistry();
   const sender = makeSender();
-  registry.register('token-hash', 'agent-a', sender);
+  registry.register('token-hash', 'user-a', 'agent-a', sender);
   const dispatcher = new ScrapeDispatcher(registry, {
     getDb: () => db,
     leaseMs: 10_000,
@@ -107,7 +108,7 @@ test('accepted result completes the lease and rejects a different agent', async 
   const db = makeDb(row);
   const registry = new AgentRegistry();
   const sender = makeSender();
-  registry.register('token-hash', 'agent-a', sender);
+  registry.register('token-hash', 'user-a', 'agent-a', sender);
   const dispatcher = new ScrapeDispatcher(registry, {
     getDb: () => db,
     leaseMs: 10_000,
@@ -130,7 +131,7 @@ test('agent errors become visible terminal failures', async () => {
   const db = makeDb(row);
   const registry = new AgentRegistry();
   const sender = makeSender();
-  registry.register('token-hash', 'agent-a', sender);
+  registry.register('token-hash', 'user-a', 'agent-a', sender);
   const dispatcher = new ScrapeDispatcher(registry, {
     getDb: () => db,
     leaseMs: 10_000,

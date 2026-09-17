@@ -1,6 +1,12 @@
 import type { ScrapesDb } from '@soundscape/scrapes-db';
 
+export interface UserIdentity {
+  id: string;
+  username: string;
+}
+
 export interface Context {
   scrapesDb?: ScrapesDb;
-  onScrapeJobCreated?: (tokenHash: string) => Promise<void> | void;
+  user: UserIdentity | null;
+  onScrapeJobCreated?: (ownerKey: string) => Promise<void> | void;
 }

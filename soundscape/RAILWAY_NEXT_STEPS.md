@@ -81,9 +81,13 @@ railway variables set VITE_API_URL=https://your-api-url.railway.app
 
 **On the local desktop agent:**
 
+1. Sign in to the deployed web UI.
+2. Generate an agent token from the Agent control.
+3. Start the local agent with:
+
 ```bash
 export SCRAPE_AGENT_WS_URL=wss://your-api-url.railway.app/ws
-export SCRAPE_PAIRING_TOKEN=the-token-entered-in-the-web-app
+export SCRAPE_AGENT_TOKEN=the-token-generated-in-the-web-ui
 ```
 
 ### 6. Monitor Logs

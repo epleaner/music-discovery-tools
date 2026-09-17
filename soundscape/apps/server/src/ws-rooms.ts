@@ -3,26 +3,32 @@ export interface Sender {
 }
 
 export interface AgentConnection {
-  tokenHash: string;
+  ownerKey: string;
+  userId: string;
   agentId: string;
   sender: Sender;
 }
 
-/** One authenticated local browser agent may be connected per pairing token. */
+/** One authenticated local browser agent may be connected per user. */
 export class AgentRegistry {
   private agents = new Map<string, AgentConnection>();
   private senderAgents = new Map<Sender, AgentConnection>();
 
-  register(tokenHash: string, agentId: string, sender: Sender): void {
-    const connection = { tokenHash, agentId, sender };
-    const previous = this.agents.get(tokenHash);
+  register(
+    ownerKey: string,
+    userId: string,
+    agentId: string,
+    sender: Sender
+  ): void {
+    const connection = { ownerKey, userId, agentId, sender };
+    const previous = this.agents.get(ownerKey);
     if (previous) this.senderAgents.delete(previous.sender);
-    this.agents.set(tokenHash, connection);
+    this.agents.set(ownerKey, connection);
     this.senderAgents.set(sender, connection);
   }
 
-  get(tokenHash: string): AgentConnection | null {
-    return this.agents.get(tokenHash) ?? null;
+  get(ownerKey: string): AgentConnection | null {
+    return this.agents.get(ownerKey) ?? null;
   }
 
   forSender(sender: Sender): AgentConnection | null {
@@ -33,14 +39,25 @@ export class AgentRegistry {
     const connection = this.senderAgents.get(sender);
     if (!connection) return null;
     this.senderAgents.delete(sender);
-    if (this.agents.get(connection.tokenHash)?.sender === sender) {
-      this.agents.delete(connection.tokenHash);
+    if (this.agents.get(connection.ownerKey)?.sender === sender) {
+      this.agents.delete(connection.ownerKey);
     }
     return connection;
   }
 
-  send(tokenHash: string, message: unknown): boolean {
-    const connection = this.agents.get(tokenHash);
+  unregisterOwner(ownerKey: string): void {
+    const connection = this.agents.get(ownerKey);
+    if (!connection) return;
+    this.senderAgents.delete(connection.sender);
+    this.agents.delete(ownerKey);
+  }
+
+  isConnected(ownerKey: string): boolean {
+    return this.agents.has(ownerKey);
+  }
+
+  send(ownerKey: string, message: unknown): boolean {
+    const connection = this.agents.get(ownerKey);
     if (!connection) return false;
     connection.sender.send(JSON.stringify(message));
     return true;

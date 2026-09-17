@@ -12,13 +12,48 @@ import type {
 export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
+
 function asJsonValue(value: unknown): JSONValue {
   // Scrape payloads are JSON-compatible domain values; postgres's JSONValue type cannot express their interfaces.
   return value as JSONValue;
 }
 
+export interface UserRecord {
+  id: string;
+  username: string;
+  password_hash: string;
+  agent_token_hash: string | null;
+  agent_last_seen_at: Date | null;
+  created_at: Date;
+}
+
+export interface CreateUserArgs {
+  id: string;
+  username: string;
+  passwordHash: string;
+}
+
+export interface CreateSessionArgs {
+  tokenHash: string;
+  userId: string;
+  expiresAt: Date;
+}
+
+export interface UserAuthDb {
+  createUser(a: CreateUserArgs): Promise<UserRecord>;
+  getUserByUsername(username: string): Promise<UserRecord | null>;
+  getUserBySession(tokenHash: string): Promise<UserRecord | null>;
+  createSession(a: CreateSessionArgs): Promise<void>;
+  deleteSession(tokenHash: string): Promise<void>;
+  setAgentTokenHash(userId: string, tokenHash: string): Promise<UserRecord>;
+  clearAgentTokenHash(userId: string): Promise<void>;
+  getUserByAgentTokenHash(tokenHash: string): Promise<UserRecord | null>;
+  touchAgent(userId: string): Promise<void>;
+}
+
 export interface ScrapeRow {
   id: string;
+  user_id: string | null;
   token_hash: string;
   source: ScrapeSource;
   /** Cache key, including mode/query identity when needed. */
@@ -42,7 +77,7 @@ export interface ScrapeRow {
 
 export interface CreateQueuedScrapeArgs {
   id: string;
-  tokenHash: string;
+  userId: string;
   source: ScrapeSource;
   url: string;
   targetUrl?: string;
@@ -64,7 +99,7 @@ export interface ScrapesDb {
     fetchedAt?: Date;
   }): Promise<void>;
   claimNext(a: {
-    tokenHash: string;
+    userId: string;
     agentId: string;
     leaseMs: number;
   }): Promise<ScrapeRow | null>;
@@ -76,12 +111,13 @@ export interface ScrapesDb {
   }): Promise<boolean>;
   fail(a: { id: string; agentId: string; error: string }): Promise<boolean>;
   getById(id: string): Promise<ScrapeRow | null>;
-  listByToken(a: {
-    tokenHash: string;
+  listByUser(a: {
+    userId: string;
     source?: ScrapeSource;
     limit: number;
   }): Promise<ScrapeRow[]>;
   getFresh(a: {
+    userId: string;
     source: ScrapeSource;
     url: string;
     maxAgeMs: number;
@@ -89,7 +125,9 @@ export interface ScrapesDb {
   close(): Promise<void>;
 }
 
-export function createScrapesDb(connectionString: string): ScrapesDb {
+export interface Database extends ScrapesDb, UserAuthDb {}
+
+export function createScrapesDb(connectionString: string): Database {
   // Railway private networking and local dev DBs speak plaintext; only a
   // genuine public host needs TLS, and its certificate is not trusted by node.
   const host = (() => {
@@ -119,8 +157,31 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
       for (let attempt = 1; ; attempt++) {
         try {
           await sql`
+            CREATE TABLE IF NOT EXISTS users (
+              id                   text PRIMARY KEY,
+              username             text NOT NULL UNIQUE,
+              password_hash        text NOT NULL,
+              agent_token_hash     text UNIQUE,
+              agent_last_seen_at   timestamptz,
+              created_at           timestamptz NOT NULL DEFAULT now()
+            )
+          `;
+          await sql`
+            CREATE TABLE IF NOT EXISTS sessions (
+              token_hash  text PRIMARY KEY,
+              user_id     text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              expires_at  timestamptz NOT NULL,
+              created_at  timestamptz NOT NULL DEFAULT now()
+            )
+          `;
+          await sql`
+            CREATE INDEX IF NOT EXISTS sessions_user_expires_idx
+              ON sessions (user_id, expires_at)
+          `;
+          await sql`
             CREATE TABLE IF NOT EXISTS scrapes (
               id              uuid PRIMARY KEY,
+              user_id         text,
               token_hash      text NOT NULL,
               source          text NOT NULL,
               url             text NOT NULL,
@@ -141,6 +202,7 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
               fetched_at      timestamptz NOT NULL DEFAULT now()
             )
           `;
+          await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS user_id text`;
           await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS target_url text`;
           await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS mode text`;
           await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS query jsonb`;
@@ -153,12 +215,21 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
           await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS fetched_at timestamptz NOT NULL DEFAULT now()`;
           await sql`UPDATE scrapes SET status = 'queued' WHERE status = 'pending'`;
           await sql`
+            CREATE INDEX IF NOT EXISTS scrapes_user_status_created_idx
+              ON scrapes (user_id, status, created_at)
+          `;
+          await sql`
             CREATE INDEX IF NOT EXISTS scrapes_token_status_created_idx
               ON scrapes (token_hash, status, created_at)
           `;
           await sql`
             CREATE INDEX IF NOT EXISTS scrapes_source_url_fetched_idx
               ON scrapes (source, url, fetched_at DESC)
+          `;
+          await sql`
+            CREATE UNIQUE INDEX IF NOT EXISTS scrapes_user_idempotency_idx
+              ON scrapes (user_id, idempotency_key)
+              WHERE user_id IS NOT NULL AND idempotency_key IS NOT NULL
           `;
           await sql`
             CREATE UNIQUE INDEX IF NOT EXISTS scrapes_token_idempotency_idx
@@ -179,9 +250,80 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
       }
     },
 
+    async createUser({ id, username, passwordHash }) {
+      const rows = await sql<UserRecord[]>`
+        INSERT INTO users (id, username, password_hash)
+        VALUES (${id}, ${username}, ${passwordHash})
+        RETURNING *
+      `;
+      if (!rows[0]) throw new Error('user was not created');
+      return rows[0];
+    },
+
+    async getUserByUsername(username) {
+      const rows = await sql<UserRecord[]>`
+        SELECT * FROM users WHERE username = ${username} LIMIT 1
+      `;
+      return rows[0] ?? null;
+    },
+
+    async getUserBySession(tokenHash) {
+      const rows = await sql<UserRecord[]>`
+        SELECT u.*
+        FROM users u
+        JOIN sessions s ON s.user_id = u.id
+        WHERE s.token_hash = ${tokenHash} AND s.expires_at > now()
+        LIMIT 1
+      `;
+      return rows[0] ?? null;
+    },
+
+    async createSession({ tokenHash, userId, expiresAt }) {
+      await sql`
+        INSERT INTO sessions (token_hash, user_id, expires_at)
+        VALUES (${tokenHash}, ${userId}, ${expiresAt})
+      `;
+    },
+
+    async deleteSession(tokenHash) {
+      await sql`DELETE FROM sessions WHERE token_hash = ${tokenHash}`;
+    },
+
+    async setAgentTokenHash(userId, tokenHash) {
+      const rows = await sql<UserRecord[]>`
+        UPDATE users
+        SET agent_token_hash = ${tokenHash}, agent_last_seen_at = NULL
+        WHERE id = ${userId}
+        RETURNING *
+      `;
+      if (!rows[0]) throw new Error('user was not found');
+      return rows[0];
+    },
+
+    async clearAgentTokenHash(userId) {
+      await sql`
+        UPDATE users
+        SET agent_token_hash = NULL, agent_last_seen_at = NULL
+        WHERE id = ${userId}
+      `;
+    },
+
+    async getUserByAgentTokenHash(tokenHash) {
+      const rows = await sql<UserRecord[]>`
+        SELECT * FROM users WHERE agent_token_hash = ${tokenHash} LIMIT 1
+      `;
+      return rows[0] ?? null;
+    },
+
+    async touchAgent(userId) {
+      await sql`
+        UPDATE users SET agent_last_seen_at = now() WHERE id = ${userId}
+      `;
+    },
+
     async createQueued({
       id,
-      tokenHash,
+      userId,
       source,
       url,
       targetUrl,
@@ -191,18 +333,19 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
       idempotencyKey,
       expiresAt,
     }) {
+      const tokenHash = hashToken(userId);
       const inserted = await sql<ScrapeRow[]>`
         INSERT INTO scrapes (
-          id, token_hash, source, url, target_url, mode, query, force,
+          id, user_id, token_hash, source, url, target_url, mode, query, force,
           status, idempotency_key, expires_at
         )
         VALUES (
-          ${id}, ${tokenHash}, ${source}, ${url}, ${targetUrl ?? null}, ${mode ?? null},
+          ${id}, ${userId}, ${tokenHash}, ${source}, ${url}, ${targetUrl ?? null}, ${mode ?? null},
           ${query ? sql.json(asJsonValue(query)) : null}, ${force}, 'queued', ${idempotencyKey ?? null},
           COALESCE(${expiresAt ?? null}::timestamptz, now() + interval '24 hours')
         )
-        ON CONFLICT (token_hash, idempotency_key)
-          WHERE idempotency_key IS NOT NULL
+        ON CONFLICT (user_id, idempotency_key)
+          WHERE user_id IS NOT NULL AND idempotency_key IS NOT NULL
           DO NOTHING
         RETURNING *
       `;
@@ -210,12 +353,10 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
 
       const existing = await sql<ScrapeRow[]>`
         SELECT * FROM scrapes
-        WHERE token_hash = ${tokenHash} AND idempotency_key = ${idempotencyKey ?? null}
+        WHERE user_id = ${userId} AND idempotency_key = ${idempotencyKey ?? null}
         LIMIT 1
       `;
-      if (!existing[0]) {
-        throw new Error('scrape job was not inserted');
-      }
+      if (!existing[0]) throw new Error('scrape job was not inserted');
       return { row: existing[0], created: false };
     },
 
@@ -229,12 +370,12 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
       `;
     },
 
-    async claimNext({ tokenHash, agentId, leaseMs }) {
+    async claimNext({ userId, agentId, leaseMs }) {
       const rows = await sql<ScrapeRow[]>`
         WITH candidate AS (
           SELECT id
           FROM scrapes
-          WHERE token_hash = ${tokenHash}
+          WHERE user_id = ${userId}
             AND expires_at > now()
             AND (
               status = 'queued'
@@ -256,7 +397,7 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
       await sql`
         UPDATE scrapes
         SET status = 'expired', lease_owner = NULL, lease_until = NULL, updated_at = now()
-        WHERE token_hash = ${tokenHash}
+        WHERE user_id = ${userId}
           AND status IN ('queued', 'running')
           AND expires_at <= now()
       `;
@@ -300,34 +441,34 @@ export function createScrapesDb(connectionString: string): ScrapesDb {
       return rows[0] ?? null;
     },
 
-    async listByToken({ tokenHash, source, limit }) {
+    async listByUser({ userId, source, limit }) {
       await sql`
         UPDATE scrapes
         SET status = 'expired', lease_owner = NULL, lease_until = NULL, updated_at = now()
-        WHERE token_hash = ${tokenHash}
+        WHERE user_id = ${userId}
           AND status IN ('queued', 'running')
           AND expires_at <= now()
       `;
       if (source !== undefined) {
         return sql<ScrapeRow[]>`
           SELECT * FROM scrapes
-          WHERE token_hash = ${tokenHash} AND source = ${source}
+          WHERE user_id = ${userId} AND source = ${source}
           ORDER BY created_at DESC
           LIMIT ${limit}
         `;
       }
       return sql<ScrapeRow[]>`
         SELECT * FROM scrapes
-        WHERE token_hash = ${tokenHash}
+        WHERE user_id = ${userId}
         ORDER BY created_at DESC
         LIMIT ${limit}
       `;
     },
 
-    async getFresh({ source, url, maxAgeMs }) {
+    async getFresh({ userId, source, url, maxAgeMs }) {
       const rows = await sql<{ data: ScrapeData; fetched_at: Date }[]>`
         SELECT data, fetched_at FROM scrapes
-        WHERE source = ${source} AND url = ${url} AND status = 'done'
+        WHERE user_id = ${userId} AND source = ${source} AND url = ${url} AND status = 'done'
           AND fetched_at > now() - (${maxAgeMs}::bigint * interval '1 millisecond')
         ORDER BY fetched_at DESC
         LIMIT 1

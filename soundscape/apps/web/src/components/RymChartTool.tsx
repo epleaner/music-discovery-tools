@@ -8,7 +8,7 @@ import {
 } from 'solid-js';
 import type { RymEntry, RymAlbumDetail, ScrapeJob } from '@soundscape/types';
 import { normalizeCharacters } from '@soundscape/utils';
-import { startScrapeJob, getPairingToken } from '../lib/scrape-jobs';
+import { startScrapeJob } from '../lib/scrape-jobs';
 import Input from './Input';
 import GenreSelect from './GenreSelect';
 import Button from './Button';
@@ -91,10 +91,6 @@ const RymChartTool: Component = () => {
   };
 
   const scrapeRym = (url: string, force = false) => {
-    if (!getPairingToken()) {
-      setRymStatus('Set a pairing token to scrape RYM.');
-      return;
-    }
     cancelScrape();
     setEntries([]);
     setRymAlbum(null);
@@ -109,8 +105,7 @@ const RymChartTool: Component = () => {
 
   onCleanup(() => cancelScrape());
 
-  const rymScrapeDisabled = () => !getPairingToken() || !rymUrl().trim();
-  const chartScrapeDisabled = () => !getPairingToken();
+  const rymScrapeDisabled = () => !rymUrl().trim();
 
   return (
     <div class="flex gap-3 p-3 h-full text-xs">
@@ -185,7 +180,6 @@ const RymChartTool: Component = () => {
           <div class="flex gap-2">
             <Button
               onClick={() => scrapeRym(getRYMChartUrl())}
-              disabled={chartScrapeDisabled()}
               variant="primary"
               class="px-2 disabled:opacity-40 disabled:cursor-not-allowed"
             >

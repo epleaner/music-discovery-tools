@@ -20,8 +20,8 @@ const dbUrl = process.env.SCRAPES_TEST_DATABASE_URL;
 if (!dbUrl) {
   console.log('SCRAPES_TEST_DATABASE_URL not set — skipping DB-backed tests');
 } else {
-  const tokenHash = hashToken(`test-token-${randomUUID()}`);
-  const otherTokenHash = hashToken(`other-token-${randomUUID()}`);
+  const userId = `user-${randomUUID()}`;
+  const otherUserId = `other-user-${randomUUID()}`;
   const testIds: string[] = [];
   const db = createScrapesDb(dbUrl);
 
@@ -29,33 +29,35 @@ if (!dbUrl) {
     source: 'rym' | 'bandcamp' = 'rym',
     url = `https://rateyourmusic.com/~${randomUUID()}`,
     options: Partial<
-      Omit<CreateQueuedScrapeArgs, 'id' | 'tokenHash' | 'source' | 'url'>
+      Omit<CreateQueuedScrapeArgs, 'id' | 'userId' | 'source' | 'url'>
     > = {}
   ) {
     const input: CreateQueuedScrapeArgs = {
       ...options,
       id: randomUUID(),
-      tokenHash,
+      userId,
       source,
       url,
     };
     testIds.push(input.id);
     return db.createQueued(input);
   }
-  test('init creates the queue schema', async () => {
+
+  test('init creates the queue and auth schema', async () => {
     await db.init();
   });
 
   test('createQueued inserts a queued row with lease fields clear', async () => {
     const { row, created } = await queue();
     assert.equal(created, true);
+    assert.equal(row.user_id, userId);
     assert.equal(row.status, 'queued');
     assert.equal(row.attempts, 0);
     assert.equal(row.lease_owner, null);
     assert.equal(row.data, null);
   });
 
-  test('idempotency returns the existing row', async () => {
+  test('idempotency returns the existing row for one user', async () => {
     const key = `retry-${randomUUID()}`;
     const first = await queue('rym', undefined, { idempotencyKey: key });
     const second = await queue('rym', undefined, { idempotencyKey: key });
@@ -66,7 +68,7 @@ if (!dbUrl) {
   test('claim and complete transition a job for the owning agent', async () => {
     const queued = await queue();
     const claimed = await db.claimNext({
-      tokenHash,
+      userId,
       agentId: 'agent-a',
       leaseMs: 60_000,
     });
@@ -87,11 +89,11 @@ if (!dbUrl) {
   test('stale leases can be reclaimed by a reconnecting agent', async () => {
     const queued = await queue();
     assert.equal(
-      (await db.claimNext({ tokenHash, agentId: 'agent-a', leaseMs: -1 }))?.id,
+      (await db.claimNext({ userId, agentId: 'agent-a', leaseMs: -1 }))?.id,
       queued.row.id
     );
     const reclaimed = await db.claimNext({
-      tokenHash,
+      userId,
       agentId: 'agent-b',
       leaseMs: 60_000,
     });
@@ -102,7 +104,7 @@ if (!dbUrl) {
 
   test('completion and failure require the current lease owner', async () => {
     const queued = await queue();
-    await db.claimNext({ tokenHash, agentId: 'agent-a', leaseMs: 60_000 });
+    await db.claimNext({ userId, agentId: 'agent-a', leaseMs: 60_000 });
     const data = { kind: 'rym' as const, entries: [] };
     assert.equal(
       await db.complete({ id: queued.row.id, agentId: 'agent-b', data }),
@@ -126,37 +128,47 @@ if (!dbUrl) {
     );
   });
 
-  test('listByToken isolates tokens and supports source and limit filters', async () => {
+  test('listByUser isolates users and supports source and limit filters', async () => {
     const first = await queue('rym');
     const second = await queue('bandcamp', 'https://bandcamp.com/filter');
     const other = randomUUID();
     testIds.push(other);
     await db.createQueued({
       id: other,
-      tokenHash: otherTokenHash,
+      userId: otherUserId,
       source: 'rym',
       url: 'https://rateyourmusic.com/other',
     });
 
-    const rows = await db.listByToken({ tokenHash, source: 'rym', limit: 10 });
+    const rows = await db.listByUser({ userId, source: 'rym', limit: 10 });
     assert.ok(rows.some((row) => row.id === first.row.id));
     assert.ok(!rows.some((row) => row.id === second.row.id));
     assert.ok(!rows.some((row) => row.id === other));
-    assert.ok((await db.listByToken({ tokenHash, limit: 1 })).length <= 1);
+    assert.ok((await db.listByUser({ userId, limit: 1 })).length <= 1);
   });
 
   test('getFresh reads recent cache data by source and cache URL', async () => {
     const url = `resolve:album:${randomUUID()}`;
     const queued = await queue('rym', url);
     const data = { kind: 'rym' as const, entries: [] };
-    await db.claimNext({ tokenHash, agentId: 'agent-a', leaseMs: 60_000 });
+    await db.claimNext({ userId, agentId: 'agent-a', leaseMs: 60_000 });
     await db.complete({ id: queued.row.id, agentId: 'agent-a', data });
 
-    const result = await db.getFresh({ source: 'rym', url, maxAgeMs: 60_000 });
+    const result = await db.getFresh({
+      userId,
+      source: 'rym',
+      url,
+      maxAgeMs: 60_000,
+    });
     assert.deepEqual(result?.data, data);
     assert.ok(result?.fetchedAt instanceof Date);
     assert.equal(
-      await db.getFresh({ source: 'bandcamp', url, maxAgeMs: 60_000 }),
+      await db.getFresh({
+        userId,
+        source: 'bandcamp',
+        url,
+        maxAgeMs: 60_000,
+      }),
       null
     );
   });

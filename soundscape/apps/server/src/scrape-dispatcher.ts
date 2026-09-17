@@ -19,16 +19,16 @@ export class ScrapeDispatcher {
     private readonly options: ScrapeDispatcherOptions
   ) {}
 
-  async dispatch(tokenHash: string): Promise<ScrapeRow | null> {
-    if (this.dispatching.has(tokenHash)) return null;
-    const agent = this.registry.get(tokenHash);
+  async dispatch(ownerKey: string): Promise<ScrapeRow | null> {
+    if (this.dispatching.has(ownerKey)) return null;
+    const agent = this.registry.get(ownerKey);
     const db = this.options.getDb();
     if (!agent || !db) return null;
 
-    this.dispatching.add(tokenHash);
+    this.dispatching.add(ownerKey);
     try {
       const row = await db.claimNext({
-        tokenHash,
+        userId: agent.userId,
         agentId: agent.agentId,
         leaseMs: this.options.leaseMs,
       });
@@ -49,7 +49,7 @@ export class ScrapeDispatcher {
       agent.sender.send(JSON.stringify(message));
       return row;
     } finally {
-      this.dispatching.delete(tokenHash);
+      this.dispatching.delete(ownerKey);
     }
   }
 
@@ -81,7 +81,7 @@ export class ScrapeDispatcher {
             agentId: agent.agentId,
             error: message.message,
           });
-    if (accepted) await this.dispatch(agent.tokenHash);
+    if (accepted) await this.dispatch(agent.ownerKey);
     return accepted;
   }
 }

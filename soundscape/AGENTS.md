@@ -91,7 +91,6 @@ Keep it handy whenever you run commands, edit code, or make architectural decisi
 - Keep components small (<150 lines); split nested views into subcomponents under `src/components`.
 - Compose resource factories in `src/lib` so UI files stay declarative.
 
-
 ## Styling
 
 - Tailwind is the styling mechanism; no inline styles or arbitrary colors unless tokens are missing.
@@ -146,8 +145,8 @@ Keep it handy whenever you run commands, edit code, or make architectural decisi
 
 ## Environment Variables
 
-- Web app expects `VITE_LASTFM_API_KEY` and `VITE_API_URL` in `apps/web/.env.local`; scrape status uses HTTP polling.
-- Local desktop scrape agent uses the remote API URL, agent WebSocket URL, and pairing token.
+- Web app expects `VITE_LASTFM_API_KEY` and `VITE_API_URL` in `apps/web/.env.local`; scrape status uses authenticated HTTP polling.
+- Local desktop scrape agent uses the remote API URL, WebSocket URL, and per-user agent token generated in the web UI.
 
 ## Final Reminders
 

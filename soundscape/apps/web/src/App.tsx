@@ -19,7 +19,8 @@ import TopAlbumList from './components/TopAlbumList';
 import SiteViewer from './components/SiteViewer';
 import ResizablePanels from './components/ResizablePanels';
 import EveryNoiseViewer from './components/EveryNoiseViewer';
-import PairWsDropdown from './components/PairWsDropdown';
+import AgentSetup from './components/AgentSetup';
+import AuthScreen from './components/AuthScreen';
 import ScrapeSections from './components/ScrapeSections';
 import RymChartTool from './components/RymChartTool';
 import BandcampUrlTool from './components/BandcampUrlTool';
@@ -51,6 +52,7 @@ import { useSearchState } from './lib/use-search-state';
 import { useNav } from './lib/use-nav';
 import { useTheme } from './lib/use-theme';
 import { requestScrapeRefresh } from './lib/scrape-jobs';
+import { getSession, logout, type AuthUser } from './lib/auth';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -63,7 +65,7 @@ interface AppState extends Record<string, string> {
   sites: string; // JSON-encoded array of sites
 }
 
-const App: Component = () => {
+const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) => {
   const defaultSites = [
     {
       id: 'secret-ambient',
@@ -269,7 +271,15 @@ const App: Component = () => {
 
           <div class="flex flex-1 gap-2 justify-end items-center w-full">
 
-            <PairWsDropdown />
+            <AgentSetup />
+            <span class="text-xs text-fg-muted">{props.user.username}</span>
+            <Button
+              onClick={() => void props.onLogout()}
+              variant="secondary"
+              class="inline-flex items-center justify-center"
+            >
+              Sign out
+            </Button>
 
             <div
               class="control-size flex items-center gap-1 px-1.5 border border-border cursor-pointer hover:bg-bg-muted"
@@ -675,4 +685,42 @@ const App: Component = () => {
   );
 };
 
+const App: Component = () => {
+  const [user, setUser] = createSignal<AuthUser | null>(null);
+  const [loading, setLoading] = createSignal(true);
+
+  onMount(async () => {
+    setUser(await getSession());
+    setLoading(false);
+  });
+
+  const handleLogout = async () => {
+    await logout();
+    setUser(null);
+  };
+
+  return (
+    <Show
+      when={!loading()}
+      fallback={
+        <div class="flex h-screen items-center justify-center bg-bg text-xs text-fg-muted">
+          Loading…
+        </div>
+      }
+    >
+      <Show
+        when={user()}
+        fallback={
+          <AuthScreen
+            onAuthenticated={(authenticated) => setUser(authenticated)}
+          />
+        }
+      >
+        {(authenticated) => (
+          <Workspace user={authenticated()} onLogout={handleLogout} />
+        )}
+      </Show>
+    </Show>
+  );
+};
 export default App;

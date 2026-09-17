@@ -4,7 +4,7 @@ import type {
   BandcampAlbumDetail,
   ScrapeJob,
 } from '@soundscape/types';
-import { startScrapeJob, getPairingToken } from '../lib/scrape-jobs';
+import { startScrapeJob } from '../lib/scrape-jobs';
 import BandcampResults from './BandcampResults';
 import Input from './Input';
 import Button from './Button';
@@ -69,10 +69,6 @@ const BandcampUrlTool: Component = () => {
     mode?: 'label' | 'related',
     force = false
   ) => {
-    if (!getPairingToken()) {
-      setBcStatus('Set a pairing token to scrape Bandcamp.');
-      return;
-    }
     cancelScrape();
     setReleases([]);
     setCurrentLabel(null);
@@ -91,7 +87,7 @@ const BandcampUrlTool: Component = () => {
 
   onCleanup(() => cancelScrape());
 
-  const bcScrapeDisabled = () => !getPairingToken() || !bcUrl().trim();
+  const bcScrapeDisabled = () => !bcUrl().trim();
   const isAlbumOrTrackUrl = () => {
     const url = lastScrapedUrl();
     return !!url && (url.includes('/album/') || url.includes('/track/'));
@@ -143,16 +139,10 @@ const BandcampUrlTool: Component = () => {
           isLabelResult={isLabelResult()}
           isRelatedResult={isRelatedResult()}
           showExploreLabel={
-            !!currentLabel() &&
-            !isLabelResult() &&
-            !isRelatedResult() &&
-            !!getPairingToken()
+            !!currentLabel() && !isLabelResult() && !isRelatedResult()
           }
           showRelated={
-            !!getPairingToken() &&
-            isAlbumOrTrackUrl() &&
-            !isLabelResult() &&
-            !isRelatedResult()
+            isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()
           }
           onExploreLabel={() =>
             scrapeBandcampUrl(lastScrapedUrl() ?? bcUrl(), 'label')
