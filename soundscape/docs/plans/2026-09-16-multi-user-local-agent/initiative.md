@@ -1,6 +1,6 @@
 # Multi-user local browser agent
 
-Status: complete with environment-limited integration gap
+Status: complete
 Updated: 2026-09-16
 
 ## Goal
@@ -118,16 +118,12 @@ headed browser profile and receives only that user's scrape jobs.
 - Changed: session/auth routes, per-user agent credentials, user-owned scrape
   rows, authenticated API procedures, agent registry/dispatch, web auth and
   agent setup UI, current docs, and focused tests.
-- Verification: `pnpm type-check` passed; `pnpm build` passed; API (6), server
-  (8), web (16), and scrapes-db (3) tests passed; deployment shell syntax
-  passed; browser smoke rendered the sign-in screen; server smoke returned
-  healthy `/health`, unauthenticated `/auth/me` 401, and database-unavailable
-  registration 503 as expected.
-- `pnpm test` is not defined in the workspace; package test commands were run
-  directly.
-- PostgreSQL-backed tests and a real authenticated HTTP/WebSocket flow remain
-  unrun because `SCRAPES_TEST_DATABASE_URL` is unset and no local PostgreSQL
-  server is installed.
-- Next action: provide a PostgreSQL test/deployment environment and run the
-  authenticated two-user integration flow.
-- Blocker: no local PostgreSQL server or configured test database is available.
+- Verification: `pnpm type-check` passed; `pnpm build` passed; root `pnpm test`
+  passed with `SCRAPES_TEST_DATABASE_URL` set, covering API (6), server (8),
+  PostgreSQL-backed scrapes-db (11), and web (16) tests; deployment shell
+  syntax passed; browser smoke rendered the sign-in screen.
+- Integration: a temporary PostgreSQL 16 container initialized the schema.
+  Two unique users registered, received distinct agent tokens, connected over
+  WebSocket, received only their own jobs, completed them, and could not read
+  each other's jobs. Both jobs reached `done`.
+- Next action: none for this change.

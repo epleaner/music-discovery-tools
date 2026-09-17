@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
+    "test": "pnpm --filter @soundscape/api test && pnpm --filter @soundscape/server test && pnpm --filter @soundscape/scrapes-db test && pnpm --filter @soundscape/web test",
     "dev": "turbo dev",
     "dev:server": "pnpm --filter @soundscape/server dev",
     "dev:web": "pnpm --filter @soundscape/web dev",

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import test from 'node:test';
+import test, { after, before } from 'node:test';
 import postgres from 'postgres';
 import {
   hashToken,
@@ -30,12 +30,13 @@ if (!dbUrl) {
     url = `https://rateyourmusic.com/~${randomUUID()}`,
     options: Partial<
       Omit<CreateQueuedScrapeArgs, 'id' | 'userId' | 'source' | 'url'>
-    > = {}
+    > = {},
+    ownerId = userId
   ) {
     const input: CreateQueuedScrapeArgs = {
       ...options,
       id: randomUUID(),
-      userId,
+      userId: ownerId,
       source,
       url,
     };
@@ -43,11 +44,15 @@ if (!dbUrl) {
     return db.createQueued(input);
   }
 
-  test('init creates the queue and auth schema', async () => {
+  before(async () => {
     await db.init();
   });
 
-  test('createQueued inserts a queued row with lease fields clear', async () => {
+  test('init creates the queue and auth schema', { concurrency: false }, async () => {
+    await db.init();
+  });
+
+  test('createQueued inserts a queued row with lease fields clear', { concurrency: false }, async () => {
     const { row, created } = await queue();
     assert.equal(created, true);
     assert.equal(row.user_id, userId);
@@ -57,7 +62,7 @@ if (!dbUrl) {
     assert.equal(row.data, null);
   });
 
-  test('idempotency returns the existing row for one user', async () => {
+  test('idempotency returns the existing row for one user', { concurrency: false }, async () => {
     const key = `retry-${randomUUID()}`;
     const first = await queue('rym', undefined, { idempotencyKey: key });
     const second = await queue('rym', undefined, { idempotencyKey: key });
@@ -65,10 +70,11 @@ if (!dbUrl) {
     assert.equal(second.row.id, first.row.id);
   });
 
-  test('claim and complete transition a job for the owning agent', async () => {
-    const queued = await queue();
+  test('claim and complete transition a job for the owning agent', { concurrency: false }, async () => {
+    const ownerId = `claim-user-${randomUUID()}`;
+    const queued = await queue('rym', undefined, {}, ownerId);
     const claimed = await db.claimNext({
-      userId,
+      userId: ownerId,
       agentId: 'agent-a',
       leaseMs: 60_000,
     });
@@ -86,14 +92,16 @@ if (!dbUrl) {
     assert.deepEqual(row?.data, data);
   });
 
-  test('stale leases can be reclaimed by a reconnecting agent', async () => {
-    const queued = await queue();
+  test('stale leases can be reclaimed by a reconnecting agent', { concurrency: false }, async () => {
+    const ownerId = `stale-user-${randomUUID()}`;
+    const queued = await queue('rym', undefined, {}, ownerId);
     assert.equal(
-      (await db.claimNext({ userId, agentId: 'agent-a', leaseMs: -1 }))?.id,
+      (await db.claimNext({ userId: ownerId, agentId: 'agent-a', leaseMs: -1 }))
+        ?.id,
       queued.row.id
     );
     const reclaimed = await db.claimNext({
-      userId,
+      userId: ownerId,
       agentId: 'agent-b',
       leaseMs: 60_000,
     });
@@ -102,9 +110,10 @@ if (!dbUrl) {
     assert.equal(reclaimed?.attempts, 2);
   });
 
-  test('completion and failure require the current lease owner', async () => {
-    const queued = await queue();
-    await db.claimNext({ userId, agentId: 'agent-a', leaseMs: 60_000 });
+  test('completion and failure require the current lease owner', { concurrency: false }, async () => {
+    const ownerId = `lease-user-${randomUUID()}`;
+    const queued = await queue('rym', undefined, {}, ownerId);
+    await db.claimNext({ userId: ownerId, agentId: 'agent-a', leaseMs: 60_000 });
     const data = { kind: 'rym' as const, entries: [] };
     assert.equal(
       await db.complete({ id: queued.row.id, agentId: 'agent-b', data }),
@@ -128,7 +137,7 @@ if (!dbUrl) {
     );
   });
 
-  test('listByUser isolates users and supports source and limit filters', async () => {
+  test('listByUser isolates users and supports source and limit filters', { concurrency: false }, async () => {
     const first = await queue('rym');
     const second = await queue('bandcamp', 'https://bandcamp.com/filter');
     const other = randomUUID();
@@ -147,15 +156,16 @@ if (!dbUrl) {
     assert.ok((await db.listByUser({ userId, limit: 1 })).length <= 1);
   });
 
-  test('getFresh reads recent cache data by source and cache URL', async () => {
+  test('getFresh reads recent cache data by source and cache URL', { concurrency: false }, async () => {
+    const ownerId = `cache-user-${randomUUID()}`;
     const url = `resolve:album:${randomUUID()}`;
-    const queued = await queue('rym', url);
+    const queued = await queue('rym', url, {}, ownerId);
     const data = { kind: 'rym' as const, entries: [] };
-    await db.claimNext({ userId, agentId: 'agent-a', leaseMs: 60_000 });
+    await db.claimNext({ userId: ownerId, agentId: 'agent-a', leaseMs: 60_000 });
     await db.complete({ id: queued.row.id, agentId: 'agent-a', data });
 
     const result = await db.getFresh({
-      userId,
+      userId: ownerId,
       source: 'rym',
       url,
       maxAgeMs: 60_000,
@@ -164,7 +174,7 @@ if (!dbUrl) {
     assert.ok(result?.fetchedAt instanceof Date);
     assert.equal(
       await db.getFresh({
-        userId,
+        userId: ownerId,
         source: 'bandcamp',
         url,
         maxAgeMs: 60_000,
@@ -173,7 +183,7 @@ if (!dbUrl) {
     );
   });
 
-  test('cleanup test rows', async () => {
+  after(async () => {
     const sql = postgres(dbUrl);
     await sql`DELETE FROM scrapes WHERE id IN ${sql(testIds)}`;
     await sql.end();
