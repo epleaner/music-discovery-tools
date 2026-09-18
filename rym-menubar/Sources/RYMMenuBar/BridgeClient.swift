@@ -3,12 +3,13 @@ import os
 
 private let bridgeLog = Logger(subsystem: "com.elipleaner.rym-menubar", category: "bridge")
 
-/// Outbound WebSocket client that connects to the Railway scrape-bridge server,
-/// registers this menu bar app as a `menubar` client, and handles `scrape` commands
-/// by driving the local RYM fetcher.
+/// Outbound WebSocket client that connects to the Soundscape server,
+/// registers this local browser agent with its account token, and handles
+/// dispatched scrape commands by driving the local RYM fetcher.
 final class BridgeClient {
 
     private let serverURL: URL
+    private let agentToken: String
     private var task: URLSessionWebSocketTask?
     private let session: URLSession
     private var reconnectDelay: TimeInterval = 3
@@ -20,9 +21,12 @@ final class BridgeClient {
     private var pendingScrapes: [(requestId: String, url: String, source: String, mode: String, query: [String: Any]?)] = []
 
     init() {
-        let urlString = ProcessInfo.processInfo.environment["SCRAPE_BRIDGE_URL"]
-            ?? "wss://soundscape-api-production.up.railway.app/ws"
+        let environment = ProcessInfo.processInfo.environment
+        let urlString = environment["SCRAPE_AGENT_WS_URL"]
+            ?? environment["SCRAPE_BRIDGE_URL"]
+            ?? "ws://localhost:3001/ws"
         serverURL = URL(string: urlString)!
+        agentToken = environment["SCRAPE_AGENT_TOKEN"] ?? PairingToken.current
         session = URLSession(configuration: .default)
     }
 
@@ -50,12 +54,13 @@ final class BridgeClient {
     private func sendRegister(task: URLSessionWebSocketTask) {
         let msg: [String: Any] = [
             "type": "register",
-            "token": PairingToken.current,
-            "clientType": "menubar"
+            "token": agentToken,
+            "clientType": "agent"
         ]
         send(msg, via: task)
-        bridgeLog.info("bridge: sent register with token \(PairingToken.current, privacy: .public)")
+        bridgeLog.info("bridge: sent authenticated agent registration")
     }
+
 
     private func receive(task: URLSessionWebSocketTask) {
         task.receive { [weak self] result in
