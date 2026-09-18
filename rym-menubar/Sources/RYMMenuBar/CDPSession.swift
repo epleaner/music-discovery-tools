@@ -113,21 +113,21 @@ enum CDPSession {
                                maxPolls: Int,
                                interval: TimeInterval,
                                ready: (String) -> Bool) throws -> String {
-        let targetHost = url.host ?? ""
+        let targetPath = normalizedPath(url.path)
         var last = ""
         for _ in 0..<maxPolls {
             Thread.sleep(forTimeInterval: interval)
 
             // Guard against the CDP navigation race: a freshly navigated tab
-            // reports readyState "complete" while still on the previous page.
+            // can still expose the previous page while its new document loads.
             let locRes = try session.client.call(
                 "Runtime.evaluate",
-                ["expression": "document.location.host", "returnByValue": true],
+                ["expression": "location.pathname + location.search", "returnByValue": true],
                 sessionId: session.sessionId
             )
             guard let locInner = locRes["result"] as? [String: Any],
-                  let host = locInner["value"] as? String,
-                  !host.isEmpty, host == targetHost else { continue }
+                  let path = locInner["value"] as? String,
+                  normalizedPath(path) == targetPath else { continue }
 
             let res = try session.client.call(
                 "Runtime.evaluate",
@@ -141,5 +141,10 @@ enum CDPSession {
             }
         }
         return last
+    }
+
+    private static func normalizedPath(_ path: String) -> String {
+        guard path.count > 1 else { return path }
+        return path.hasSuffix("/") ? String(path.dropLast()) : path
     }
 }
