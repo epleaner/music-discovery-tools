@@ -341,9 +341,22 @@ final class BridgeClient {
             var m: [String: Any] = ["artist": e.artist, "album": e.album]
             if !e.date.isEmpty { m["date"] = e.date }
             if !e.path.isEmpty { m["path"] = e.path }
+            if let artistURL = e.artistURL { m["artistUrl"] = artistURL }
+            if let albumURL = e.albumURL { m["albumUrl"] = albumURL }
+            if let bandcampURL = e.bandcampURL { m["bandcampUrl"] = bandcampURL }
             if let genres = e.genres, !genres.isEmpty { m["genres"] = genres }
+            if let links = e.genreLinks, !links.isEmpty {
+                m["genreLinks"] = links.map { ["name": $0.name, "url": $0.url] }
+            }
+            if let links = e.subgenreLinks, !links.isEmpty {
+                m["subgenreLinks"] = links.map { ["name": $0.name, "url": $0.url] }
+            }
+            if let links = e.mediaLinks, !links.isEmpty {
+                m["mediaLinks"] = links.map { ["name": $0.name, "url": $0.url] }
+            }
             if let avg = e.avgRating { m["avgRating"] = avg }
             if let rat = e.ratings { m["ratings"] = rat }
+            if let reviews = e.reviews { m["reviews"] = reviews }
             if let wnt = e.wants { m["wants"] = wnt }
             entryMaps.append(m)
         }

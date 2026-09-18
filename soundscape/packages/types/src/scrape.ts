@@ -2,15 +2,27 @@ export type ScrapeSource = 'rym' | 'bandcamp';
 export type ScrapeMode = 'label' | 'related' | 'resolve';
 export type ClientType = 'agent';
 
+export interface RymLink {
+  name: string;
+  url: string;
+}
+
 export interface RymEntry {
   artist: string;
   album: string;
   date?: string;
   path?: string;
+  artistUrl?: string;
+  albumUrl?: string;
+  bandcampUrl?: string;
   genres?: string[];
-  avgRating?: number;
-  ratings?: number;
-  wants?: number;
+  genreLinks?: RymLink[];
+  subgenreLinks?: RymLink[];
+  mediaLinks?: RymLink[];
+  avgRating?: string;
+  ratings?: string;
+  reviews?: string;
+  wants?: string;
 }
 export interface RymAlbumDetail {
   title: string;

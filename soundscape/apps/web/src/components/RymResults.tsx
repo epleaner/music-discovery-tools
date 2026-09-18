@@ -1,12 +1,25 @@
-import { Component, Show, For } from 'solid-js';
+import { Component, For, Show } from 'solid-js';
 import Chip from './Chip';
-import type { RymEntry, RymAlbumDetail } from '@soundscape/types';
+import ExternalLink from './ExternalLink';
+import type { RymEntry, RymAlbumDetail, RymLink } from '@soundscape/types';
 
 interface RymResultsProps {
   entries: RymEntry[];
   album: RymAlbumDetail | null;
   status: string | null;
 }
+
+const RymLinkList: Component<{ links?: RymLink[]; class?: string }> = (props) => (
+  <div class={`flex flex-wrap gap-x-2 gap-y-1 ${props.class ?? ''}`}>
+    <For each={props.links ?? []}>
+      {(link) => (
+        <ExternalLink href={link.url} class="text-accent hover:underline">
+          {link.name}
+        </ExternalLink>
+      )}
+    </For>
+  </div>
+);
 
 const RymResults: Component<RymResultsProps> = (props) => {
   return (
@@ -22,20 +35,72 @@ const RymResults: Component<RymResultsProps> = (props) => {
               <tr class="border-b border-border text-fg-muted">
                 <th class="text-left py-1 pr-2 font-medium">Artist</th>
                 <th class="text-left py-1 pr-2 font-medium">Album</th>
-                <th class="text-left py-1 pr-2 font-medium">Date</th>
+                <th class="text-left py-1 pr-2 font-medium">Release date</th>
                 <th class="text-left py-1 pr-2 font-medium">Genres</th>
-                <th class="text-left py-1 font-medium">Rating</th>
+                <th class="text-left py-1 pr-2 font-medium">Subgenres</th>
+                <th class="text-left py-1 pr-2 font-medium">Rating</th>
+                <th class="text-left py-1 pr-2 font-medium">Ratings</th>
+                <th class="text-left py-1 pr-2 font-medium">Reviews</th>
+                <th class="text-left py-1 font-medium">Links</th>
               </tr>
             </thead>
             <tbody>
               <For each={props.entries}>
                 {(entry) => (
-                  <tr class="border-b border-border hover:bg-bg-muted">
-                    <td class="py-1 pr-2">{entry.artist}</td>
-                    <td class="py-1 pr-2">{entry.album}</td>
-                    <td class="py-1 pr-2 text-fg-muted">{entry.date ?? ''}</td>
-                    <td class="py-1 pr-2 text-fg-muted">{(entry.genres ?? []).join(', ')}</td>
-                    <td class="py-1 text-fg-muted">{entry.avgRating != null ? entry.avgRating.toFixed(2) : ''}</td>
+                  <tr class="border-b border-border hover:bg-bg-muted align-top">
+                    <td class="py-1 pr-2">
+                      <Show
+                        when={entry.artistUrl}
+                        fallback={entry.artist}
+                      >
+                        {(url) => (
+                          <ExternalLink href={url()} class="text-accent hover:underline">
+                            {entry.artist}
+                          </ExternalLink>
+                        )}
+                      </Show>
+                    </td>
+                    <td class="py-1 pr-2">
+                      <Show
+                        when={entry.albumUrl ?? entry.path}
+                        fallback={entry.album}
+                      >
+                        {(url) => (
+                          <ExternalLink
+                            href={url().startsWith('http') ? url() : `https://rateyourmusic.com${url()}`}
+                            class="text-accent hover:underline"
+                          >
+                            {entry.album}
+                          </ExternalLink>
+                        )}
+                      </Show>
+                    </td>
+                    <td class="py-1 pr-2 text-fg-muted whitespace-nowrap">
+                      {entry.date ?? ''}
+                    </td>
+                    <td class="py-1 pr-2 text-fg-muted">
+                      <Show
+                        when={entry.genreLinks?.length}
+                        fallback={(entry.genres ?? []).join(', ')}
+                      >
+                        <RymLinkList links={entry.genreLinks} />
+                      </Show>
+                    </td>
+                    <td class="py-1 pr-2 text-fg-muted">
+                      <RymLinkList links={entry.subgenreLinks} />
+                    </td>
+                    <td class="py-1 pr-2 text-fg-muted whitespace-nowrap">
+                      {entry.avgRating ?? ''}
+                    </td>
+                    <td class="py-1 pr-2 text-fg-muted whitespace-nowrap">
+                      {entry.ratings ?? ''}
+                    </td>
+                    <td class="py-1 pr-2 text-fg-muted whitespace-nowrap">
+                      {entry.reviews ?? ''}
+                    </td>
+                    <td class="py-1 text-fg-muted">
+                      <RymLinkList links={entry.mediaLinks} />
+                    </td>
                   </tr>
                 )}
               </For>
