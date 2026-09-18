@@ -37,7 +37,9 @@ pnpm dev:web
 
 ```
 
-The desktop browser agent runs separately from the web client.
+The desktop browser agent runs separately from the web client. The checked-in
+Swift client lives in `../rym-menubar`; it keeps one dedicated RYM tab open
+between jobs and reuses that tab for subsequent scrapes.
 
 ## Testing the Setup
 
@@ -55,12 +57,25 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 
 1. Start the API with `DATABASE_URL` configured.
 2. Sign in to the web app and generate an agent token from the Agent control.
-3. Start the external local agent with the token and an authenticated browser
-   profile.
-4. Create a scrape from the web app.
-5. Confirm the API reports `queued`, then `running`, then `done` (or a visible
+3. Build and start the local browser agent:
+
+   ```bash
+   cd ../rym-menubar
+   swift build -c debug
+   SCRAPE_AGENT_WS_URL=ws://localhost:3001/ws \
+   SCRAPE_AGENT_TOKEN='paste-token-here' \
+   .build/debug/RYMMenuBar
+   ```
+
+   The normal launch shows the existing menu-bar controls. For menu-less
+   foreground daemon mode, add `--daemon`. A launchd template is available at
+   `../rym-menubar/launchd/com.elipleaner.rym-browser-agent.plist`; replace
+   its placeholders without committing the token.
+4. Log into RateYourMusic in the debug Chrome profile if prompted.
+5. Create a scrape from the web app.
+6. Confirm the API reports `queued`, then `running`, then `done` (or a visible
    `error`) at `/api/rest/scrape/jobs/{requestId}`.
-6. Stop the agent, create another job, and confirm it remains `queued`; restart
+7. Stop the agent, create another job, and confirm it remains `queued`; restart
    the agent and confirm it is eventually dispatched.
 
 ## Troubleshooting
