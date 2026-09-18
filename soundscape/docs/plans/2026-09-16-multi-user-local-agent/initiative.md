@@ -1,7 +1,7 @@
 # Multi-user local browser agent
 
-Status: complete
-Updated: 2026-09-17
+Status: complete for server/auth scope; external browser-agent rollout pending
+Updated: 2026-09-18
 
 ## Goal
 
@@ -114,7 +114,7 @@ headed browser profile and receives only that user's scrape jobs.
 ## Execution state
 
 - Branch: `main`
-- Current phase: Deployed and verified
+- Current phase: Deployed and verified with a deterministic protocol agent
 - Changed: session/auth routes, per-user agent credentials, user-owned scrape
   rows, authenticated API procedures, agent registry/dispatch, web auth and
   agent setup UI, deterministic PostgreSQL tests, root test entrypoint, and
@@ -126,7 +126,8 @@ headed browser profile and receives only that user's scrape jobs.
 - Integration: a temporary PostgreSQL 16 container initialized the schema.
   Two unique users registered, received distinct agent tokens, connected over
   WebSocket, received only their own jobs, completed them, and could not read
-  each other's jobs.
+  each other's jobs. This verified the wire contract with deterministic
+  protocol clients, not the native browser agent.
 - Deployment: API deployment
   `6b0ad584-a638-45f2-9a17-6dcca942b220` and web deployment
   `d3efea20-9137-4a6f-b8df-e600b14ae058` reached `SUCCESS`. Production API
@@ -135,4 +136,6 @@ headed browser profile and receives only that user's scrape jobs.
   sign-in screen.
 - `pnpm lint` now runs the TypeScript compiler checks for the shared
   `@soundscape/types` and `@soundscape/utils` packages.
-- Next action: none for this change.
+- Next action: run real-browser QA with the external local agent. This
+  initiative intentionally does not implement a daemon, menu-bar UI, or native
+  desktop shell.
