@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.elipleaner.rym-browser-agent</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__RYM_MENUBAR_BINARY__</string>
+        <string>--daemon</string>
+    </array>
+
+    <!-- Set these values for the signed-in Soundscape account. Do not commit real credentials. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>SCRAPE_AGENT_WS_URL</key>
+        <string>__SCRAPE_AGENT_WS_URL__</string>
+        <key>SCRAPE_AGENT_TOKEN</key>
+        <string>__SCRAPE_AGENT_TOKEN__</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+
+    <key>StandardOutPath</key>
+    <string>__RYM_AGENT_LOG_DIR__/rym-browser-agent.log</string>
+    <key>StandardErrorPath</key>
+    <string>__RYM_AGENT_LOG_DIR__/rym-browser-agent.error.log</string>
+</dict>
+</plist>
