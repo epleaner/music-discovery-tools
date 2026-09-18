@@ -56,27 +56,31 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 ### Test scrape job communication
 
 1. Start the API with `DATABASE_URL` configured.
-2. Sign in to the web app and generate an agent token from the Agent control.
-3. Build and start the local browser agent:
-
-   ```bash
-   cd ../rym-menubar
-   swift build -c debug
-   SCRAPE_AGENT_WS_URL=ws://localhost:3001/ws \
-   SCRAPE_AGENT_TOKEN='paste-token-here' \
-   .build/debug/RYMMenuBar
-   ```
-
-   The normal launch shows the existing menu-bar controls. For menu-less
-   foreground daemon mode, add `--daemon`. A launchd template is available at
-   `../rym-menubar/launchd/com.elipleaner.rym-browser-agent.plist`; replace
-   its placeholders without committing the token.
-4. Log into RateYourMusic in the debug Chrome profile if prompted.
-5. Create a scrape from the web app.
-6. Confirm the API reports `queued`, then `running`, then `done` (or a visible
+2. Sign in to the web app and open the Agent control.
+3. Choose **Generate token**, then copy the token shown once.
+4. Open the RYM menu-bar app, choose **Configure Soundscape agent…**, and
+   paste the token. The app stores it in the macOS Keychain and reconnects.
+5. Log into RateYourMusic in the debug Chrome profile if prompted.
+6. Create a scrape from the web app.
+7. Confirm the API reports `queued`, then `running`, then `done` (or a visible
    `error`) at `/api/rest/scrape/jobs/{requestId}`.
-7. Stop the agent, create another job, and confirm it remains `queued`; restart
+8. Stop the agent, create another job, and confirm it remains `queued`; restart
    the agent and confirm it is eventually dispatched.
+
+For a menu-less foreground daemon or a launchd service, use the advanced
+environment-variable setup instead:
+
+```bash
+cd ../rym-menubar
+swift build -c debug
+SCRAPE_AGENT_WS_URL=ws://localhost:3001/ws \
+SCRAPE_AGENT_TOKEN='paste-token-here' \
+.build/debug/RYMMenuBar --daemon
+```
+
+The launchd template is available at
+`../rym-menubar/launchd/com.elipleaner.rym-browser-agent.plist`; replace its
+placeholders without committing the token.
 
 ## Troubleshooting
 

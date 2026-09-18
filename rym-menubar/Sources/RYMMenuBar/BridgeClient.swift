@@ -9,7 +9,7 @@ private let bridgeLog = Logger(subsystem: "com.elipleaner.rym-menubar", category
 final class BridgeClient {
 
     private let serverURL: URL
-    private let agentToken: String?
+    private var agentToken: String?
     private var task: URLSessionWebSocketTask?
     private let session: URLSession
     private var reconnectDelay: TimeInterval = 3
@@ -25,7 +25,18 @@ final class BridgeClient {
         let urlString = environment["SCRAPE_AGENT_WS_URL"]
             ?? "ws://localhost:3001/ws"
         serverURL = URL(string: urlString)!
-        agentToken = environment["SCRAPE_AGENT_TOKEN"]
+        if let environmentToken = environment["SCRAPE_AGENT_TOKEN"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !environmentToken.isEmpty {
+            agentToken = environmentToken
+        } else {
+            do {
+                agentToken = try AgentTokenStore.load()
+            } catch {
+                agentToken = nil
+                bridgeLog.error("bridge: unable to load saved agent token: \(error.localizedDescription, privacy: .public)")
+            }
+        }
         session = URLSession(configuration: .default)
     }
 
@@ -36,6 +47,15 @@ final class BridgeClient {
     func stop() {
         stopped = true
         task?.cancel(with: .normalClosure, reason: nil)
+    }
+
+    func updateAgentToken(_ token: String) throws {
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        try AgentTokenStore.save(trimmed)
+        agentToken = trimmed
+        task?.cancel(with: .normalClosure, reason: nil)
+        task = nil
+        connect()
     }
 
     // MARK: - Connection

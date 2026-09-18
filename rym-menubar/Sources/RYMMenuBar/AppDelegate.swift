@@ -39,6 +39,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
 
     private var inputWindow: NSWindow?
     private var inputField: NSTextField?
+    private var agentTokenWindow: NSWindow?
+    private var agentTokenField: NSSecureTextField?
+    private var agentTokenError: NSTextField?
     private var bridgeClient: BridgeClient?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -452,6 +455,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         menu.addItem(cdp)
         cdpStatusItem = cdp
         configureCdpItem(cdp, port: lastDetectedPort)
+        let agentSetup = NSMenuItem(title: "Configure Soundscape agent…", action: #selector(showAgentToken), keyEquivalent: "")
+        agentSetup.target = self
+        menu.addItem(agentSetup)
         menu.addItem(.separator())
 
         let status = NSMenuItem(title: statusLine, action: nil, keyEquivalent: "")
@@ -767,6 +773,92 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         rebuildMenu()
     }
 
+
+    // MARK: - Agent token window
+
+    @objc private func showAgentToken() {
+        if agentTokenWindow == nil {
+            buildAgentTokenWindow()
+        }
+        agentTokenError?.stringValue = ""
+        agentTokenField?.stringValue = ""
+        agentTokenWindow?.center()
+        agentTokenWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        agentTokenField?.becomeFirstResponder()
+    }
+
+    @objc private func saveAgentToken() {
+        let token = agentTokenField?.stringValue.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !token.isEmpty else {
+            agentTokenError?.stringValue = "Paste the token from Soundscape, then choose Save."
+            agentTokenField?.becomeFirstResponder()
+            return
+        }
+        do {
+            try bridgeClient?.updateAgentToken(token)
+            agentTokenWindow?.close()
+            statusLine = "Soundscape agent token saved"
+            rebuildMenu()
+        } catch {
+            agentTokenError?.stringValue = error.localizedDescription
+        }
+    }
+
+    private func buildAgentTokenWindow() {
+        let w: CGFloat = 560
+        let h: CGFloat = 190
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: w, height: h),
+            styleMask: [.titled, .closable],
+            backing: .buffered, defer: false)
+        window.title = "Configure Soundscape Agent"
+        window.isReleasedWhenClosed = false
+
+        let content = NSView(frame: NSRect(x: 0, y: 0, width: w, height: h))
+        let label = NSTextField(labelWithString: "Paste the agent token from Soundscape")
+        label.frame = NSRect(x: 20, y: 142, width: w - 40, height: 20)
+        content.addSubview(label)
+
+        let detail = NSTextField(labelWithString: "In Soundscape, open Agent, generate a token, copy it, and paste it here.")
+        detail.frame = NSRect(x: 20, y: 116, width: w - 40, height: 20)
+        detail.textColor = .secondaryLabelColor
+        detail.font = NSFont.systemFont(ofSize: 12)
+        content.addSubview(detail)
+
+        let field = NSSecureTextField(frame: NSRect(x: 20, y: 76, width: w - 40, height: 26))
+        field.placeholderString = "Agent token"
+        field.usesSingleLineMode = true
+        field.target = self
+        field.action = #selector(saveAgentToken)
+        content.addSubview(field)
+        agentTokenField = field
+
+        let error = NSTextField(labelWithString: "")
+        error.frame = NSRect(x: 20, y: 49, width: w - 40, height: 18)
+        error.textColor = .systemRed
+        error.font = NSFont.systemFont(ofSize: 12)
+        content.addSubview(error)
+        agentTokenError = error
+
+        let cancel = NSButton(frame: NSRect(x: w - 190, y: 16, width: 80, height: 28))
+        cancel.title = "Cancel"
+        cancel.bezelStyle = .rounded
+        cancel.target = window
+        cancel.action = #selector(NSWindow.performClose(_:))
+        content.addSubview(cancel)
+
+        let save = NSButton(frame: NSRect(x: w - 100, y: 16, width: 80, height: 28))
+        save.title = "Save"
+        save.bezelStyle = .rounded
+        save.keyEquivalent = "\r"
+        save.target = self
+        save.action = #selector(saveAgentToken)
+        content.addSubview(save)
+
+        window.contentView = content
+        agentTokenWindow = window
+    }
 
     // MARK: - Input window
 

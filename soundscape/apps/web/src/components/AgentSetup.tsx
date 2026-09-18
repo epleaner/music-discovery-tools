@@ -90,8 +90,8 @@ const AgentSetup: Component = () => {
             <div>
               <div class="text-xs font-medium text-fg">Local browser agent</div>
               <p class="mt-1 text-xs text-fg-muted">
-                Start the agent manually while your warm headed browser profile
-                is open.
+                Keep your browser profile open, then paste the token into the
+                RYM menu-bar app.
               </p>
             </div>
             <div class="text-xs text-fg-muted">
@@ -117,12 +117,15 @@ const AgentSetup: Component = () => {
               }
             >
               <ControlGroup>
-                <div class="text-xs font-medium text-fg">Copy this token</div>
+                <div class="text-xs font-medium text-fg">
+                  Copy this token into the menu-bar app
+                </div>
                 <code class="block break-all border border-border bg-bg-muted p-2 text-[0.65rem] text-fg">
                   {token()}
                 </code>
                 <p class="text-xs text-fg-muted">
-                  The token is shown once. Store it in the local agent command.
+                  Copy it, choose “Configure Soundscape agent…” from the
+                  menu-bar icon, and paste it there. The token is shown once.
                 </p>
               </ControlGroup>
             </Show>
