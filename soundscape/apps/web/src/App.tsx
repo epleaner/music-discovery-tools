@@ -194,12 +194,15 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) =
     updateState({ sites: JSON.stringify(sites) });
   };
 
+  // Top-right account dropdown state
+  const [showAccountDropdown, setShowAccountDropdown] = createSignal(false);
+  let accountMenuRef: HTMLDivElement | undefined;
+
   // Color theme dropdown state
   const [showColorThemeDropdown, setShowColorThemeDropdown] =
     createSignal(false);
   // oxlint-disable-next-line no-unassigned-vars
   let colorThemeContainerRef: HTMLDivElement | undefined;
-
   const colorThemes: Array<{ value: string; label: string }> = [
     { value: 'default', label: 'Default' },
     { value: 'blue', label: 'Blue' },
@@ -215,10 +218,17 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) =
     { value: 'fire', label: 'Fire' },
   ];
 
-  // Handle click outside for color theme dropdown
+  // Handle clicks outside the account and color theme dropdowns.
   onMount(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
+      if (
+        showAccountDropdown() &&
+        accountMenuRef?.contains(target) === false
+      ) {
+        setShowAccountDropdown(false);
+        setShowColorThemeDropdown(false);
+      }
       if (
         showColorThemeDropdown() &&
         colorThemeContainerRef?.contains(target) === false
@@ -226,10 +236,18 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) =
         setShowColorThemeDropdown(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowAccountDropdown(false);
+        setShowColorThemeDropdown(false);
+      }
+    };
 
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
     onCleanup(() => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     });
   });
 
@@ -270,100 +288,136 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) =
           />
 
           <div class="flex flex-1 gap-2 justify-end items-center w-full">
-
-            <AgentSetup />
-            <span class="text-xs text-fg-muted">{props.user.username}</span>
-            <Button
-              onClick={() => void props.onLogout()}
-              variant="secondary"
-              class="inline-flex items-center justify-center"
-            >
-              Sign out
-            </Button>
-
-            <div
-              class="control-size flex items-center gap-1 px-1.5 border border-border cursor-pointer hover:bg-bg-muted"
-              ref={colorThemeContainerRef}
-              onClick={() =>
-                setShowColorThemeDropdown(!showColorThemeDropdown())
-              }
-            >
+            <div class="relative flex-shrink-0" ref={accountMenuRef}>
               <Button
-                onClick={(e: MouseEvent) => {
-                  e.stopPropagation();
-                  toggleTheme();
+                onClick={() => {
+                  setShowAccountDropdown(!showAccountDropdown());
+                  setShowColorThemeDropdown(false);
                 }}
-                variant="icon"
-                class="flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg"
-                style={{ transform: `rotate(${getThemeRotation()})` }}
-                aria-label={`Switch theme (currently ${theme()})`}
-                title={`Switch theme (currently ${theme()})`}
+                variant="secondary"
+                class="inline-flex items-center justify-center gap-1"
+                aria-haspopup="true"
+                aria-expanded={showAccountDropdown()}
+                aria-controls="account-menu"
               >
-                <span class="theme-icon w-3 h-3" />
+                {props.user.username}
+                <span aria-hidden="true">⌄</span>
               </Button>
 
-              <div class="relative">
-                <Button
-                  onClick={(e: MouseEvent) => {
-                    e.stopPropagation();
-                    setShowColorThemeDropdown(!showColorThemeDropdown());
-                  }}
-                  variant="icon"
-                  class="flex items-center justify-center flex-shrink-0 text-fg-muted hover:text-fg transition-colors"
-                  aria-label="Choose accent color theme"
-                  title="Choose accent color theme"
+              <Show when={showAccountDropdown()}>
+                <div
+                  id="account-menu"
+                  class="absolute right-0 top-full z-40 mt-1 flex min-w-[220px] flex-col gap-2 border border-border bg-bg p-2 shadow-lg"
                 >
-                  <span
-                    class="w-2 h-2 rounded-full"
-                    style={{
-                      'background-color': getThemeColor(colorTheme()),
-                    }}
-                  ></span>
-                </Button>
+                  <div class="border-b border-border px-2 pb-2">
+                    <div class="text-xs font-medium text-fg">
+                      {props.user.username}
+                    </div>
+                  </div>
 
-                <Show when={showColorThemeDropdown()}>
-                  <div class="absolute right-0 top-full mt-1 bg-bg border border-border rounded z-50 min-w-[120px]">
-                    <For each={colorThemes}>
-                      {(item) => (
+                  <AgentSetup />
+
+                  <Button
+                    onClick={() => {
+                      setShowAccountDropdown(false);
+                      void props.onLogout();
+                    }}
+                    variant="secondary"
+                    class="w-full"
+                  >
+                    Sign out
+                  </Button>
+
+                  <div
+                    class="flex items-center justify-between gap-2 border-t border-border px-2 pt-2"
+                    ref={colorThemeContainerRef}
+                  >
+                    <span class="text-xs text-fg-muted">Appearance</span>
+                    <div class="flex items-center gap-1">
+                      <Button
+                        onClick={(e: MouseEvent) => {
+                          e.stopPropagation();
+                          toggleTheme();
+                        }}
+                        variant="icon"
+                        class="flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg"
+                        style={{ transform: `rotate(${getThemeRotation()})` }}
+                        aria-label={`Switch theme (currently ${theme()})`}
+                        title={`Switch theme (currently ${theme()})`}
+                      >
+                        <span class="theme-icon w-3 h-3" />
+                      </Button>
+
+                      <div class="relative">
                         <Button
-                          onClick={() => {
-                            setColorTheme(
-                              item.value as
-                                | 'default'
-                                | 'blue'
-                                | 'green'
-                                | 'purple'
-                                | 'amber'
-                                | 'rose'
-                                | 'slate'
-                                | 'sunset'
-                                | 'ocean'
-                                | 'forest'
-                                | 'twilight'
-                                | 'fire'
+                          onClick={(e: MouseEvent) => {
+                            e.stopPropagation();
+                            setShowColorThemeDropdown(
+                              !showColorThemeDropdown()
                             );
-                            setShowColorThemeDropdown(false);
                           }}
-                          variant="control"
-                          class="px-3 text-left hover:bg-bg-muted transition-colors flex items-center gap-2"
-                          classList={{
-                            'bg-bg-muted': colorTheme() === item.value,
-                          }}
+                          variant="icon"
+                          class="flex items-center justify-center flex-shrink-0 text-fg-muted hover:text-fg transition-colors"
+                          aria-label="Choose accent color theme"
+                          title="Choose accent color theme"
                         >
                           <span
-                            class="w-3 h-3 rounded-full flex-shrink-0 border border-border"
+                            class="w-2 h-2 rounded-full"
                             style={{
-                              'background-color': getThemeColor(item.value),
+                              'background-color': getThemeColor(colorTheme()),
                             }}
                           ></span>
-                          <span>{item.label}</span>
                         </Button>
-                      )}
-                    </For>
+
+                        <Show when={showColorThemeDropdown()}>
+                          <div class="absolute right-0 top-full mt-1 bg-bg border border-border rounded z-50 min-w-[120px]">
+                            <For each={colorThemes}>
+                              {(item) => (
+                                <Button
+                                  onClick={() => {
+                                    setColorTheme(
+                                      item.value as
+                                        | 'default'
+                                        | 'blue'
+                                        | 'green'
+                                        | 'purple'
+                                        | 'amber'
+                                        | 'rose'
+                                        | 'slate'
+                                        | 'sunset'
+                                        | 'ocean'
+                                        | 'forest'
+                                        | 'twilight'
+                                        | 'fire'
+                                    );
+                                    setShowColorThemeDropdown(false);
+                                  }}
+                                  variant="control"
+                                  class="px-3 text-left hover:bg-bg-muted transition-colors flex items-center gap-2"
+                                  classList={{
+                                    'bg-bg-muted': colorTheme() === item.value,
+                                  }}
+                                >
+                                  <span
+                                    class="w-3 h-3 rounded-full flex-shrink-0 border border-border"
+                                    style={{
+                                      'background-color': getThemeColor(
+                                        item.value
+                                      ),
+                                    }}
+                                  ></span>
+                                  <span>{item.label}</span>
+                                </Button>
+                              )}
+                            </For>
+                          </div>
+                        </Show>
+                      </div>
+                    </div>
                   </div>
-                </Show>
-              </div>
-              </div>
+                </div>
+              </Show>
+            </div>
           </div>
         </div>
       </div>
