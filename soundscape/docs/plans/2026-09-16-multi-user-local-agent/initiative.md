@@ -119,9 +119,10 @@ headed browser profile and receives only that user's scrape jobs.
   rows, authenticated API procedures, agent registry/dispatch, web auth and
   agent setup UI, deterministic PostgreSQL tests, root test entrypoint, and
   Railway startup compatibility.
-- Verification: `pnpm type-check`, `pnpm build`, and root `pnpm test` passed.
-  The root suite covered API (6), server (8), PostgreSQL-backed scrapes-db
-  (11), and web (16) tests. Deployment shell syntax passed.
+- Verification: `pnpm lint`, `pnpm type-check`, `pnpm build`, and root
+  `pnpm test` passed. The root suite covered API (6), server (8),
+  PostgreSQL-backed scrapes-db (11), and web (16) tests. Deployment shell
+  syntax passed.
 - Integration: a temporary PostgreSQL 16 container initialized the schema.
   Two unique users registered, received distinct agent tokens, connected over
   WebSocket, received only their own jobs, completed them, and could not read
@@ -132,6 +133,6 @@ headed browser profile and receives only that user's scrape jobs.
   health returned `status: ok`; `/auth/me` returned 401 without a session;
   OpenAPI advertised the production API URL; the deployed web rendered the
   sign-in screen.
-- `pnpm lint` remains unavailable as a clean gate because the existing
-  `@soundscape/types` lint script targets a missing `src/` directory.
+- `pnpm lint` now runs the TypeScript compiler checks for the shared
+  `@soundscape/types` and `@soundscape/utils` packages.
 - Next action: none for this change.
