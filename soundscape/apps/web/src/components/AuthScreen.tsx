@@ -66,9 +66,18 @@ const AuthScreen: Component<AuthScreenProps> = (props) => {
             onInput={(event) => setUsername(event.currentTarget.value)}
             autocomplete="username"
             required
+            aria-describedby={
+              mode() === 'register' ? 'auth-username-hint' : undefined
+            }
             minLength={3}
             maxLength={64}
           />
+          <Show when={mode() === 'register'}>
+            <p id="auth-username-hint" class="text-xs text-fg-muted">
+              3–64 characters: lowercase letters, numbers, dots, dashes, or
+              underscores.
+            </p>
+          </Show>
         </ControlGroup>
         <ControlGroup>
           <label class="text-xs font-medium text-fg" for="auth-password">
@@ -82,10 +91,18 @@ const AuthScreen: Component<AuthScreenProps> = (props) => {
             autocomplete={
               mode() === 'login' ? 'current-password' : 'new-password'
             }
+            aria-describedby={
+              mode() === 'register' ? 'auth-password-hint' : undefined
+            }
             required
             minLength={8}
             maxLength={200}
           />
+          <Show when={mode() === 'register'}>
+            <p id="auth-password-hint" class="text-xs text-fg-muted">
+              At least 8 characters.
+            </p>
+          </Show>
         </ControlGroup>
         <Show when={mode() === 'register'}>
           <ControlGroup>

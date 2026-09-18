@@ -533,10 +533,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         historyItem.submenu = historyMenu
         menu.addItem(historyItem)
 
-        menu.addItem(.separator())
-        let copyToken = NSMenuItem(title: "Copy pairing token", action: #selector(copyPairingToken), keyEquivalent: "")
-        copyToken.target = self
-        menu.addItem(copyToken)
 
         menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -771,10 +767,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         rebuildMenu()
     }
 
-    @objc private func copyPairingToken() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(PairingToken.current, forType: .string)
-    }
 
     // MARK: - Input window
 

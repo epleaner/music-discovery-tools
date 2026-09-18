@@ -9,7 +9,7 @@ private let bridgeLog = Logger(subsystem: "com.elipleaner.rym-menubar", category
 final class BridgeClient {
 
     private let serverURL: URL
-    private let agentToken: String
+    private let agentToken: String?
     private var task: URLSessionWebSocketTask?
     private let session: URLSession
     private var reconnectDelay: TimeInterval = 3
@@ -23,10 +23,9 @@ final class BridgeClient {
     init() {
         let environment = ProcessInfo.processInfo.environment
         let urlString = environment["SCRAPE_AGENT_WS_URL"]
-            ?? environment["SCRAPE_BRIDGE_URL"]
             ?? "ws://localhost:3001/ws"
         serverURL = URL(string: urlString)!
-        agentToken = environment["SCRAPE_AGENT_TOKEN"] ?? PairingToken.current
+        agentToken = environment["SCRAPE_AGENT_TOKEN"]
         session = URLSession(configuration: .default)
     }
 
@@ -43,6 +42,10 @@ final class BridgeClient {
 
     private func connect() {
         guard !stopped else { return }
+        guard let agentToken, !agentToken.isEmpty else {
+            bridgeLog.error("bridge: SCRAPE_AGENT_TOKEN is required")
+            return
+        }
         bridgeLog.info("bridge: connecting to \(self.serverURL.absoluteString, privacy: .public)")
         let t = session.webSocketTask(with: serverURL)
         task = t
@@ -52,6 +55,7 @@ final class BridgeClient {
     }
 
     private func sendRegister(task: URLSessionWebSocketTask) {
+        guard let agentToken, !agentToken.isEmpty else { return }
         let msg: [String: Any] = [
             "type": "register",
             "token": agentToken,
