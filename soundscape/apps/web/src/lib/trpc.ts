@@ -3,7 +3,7 @@ import type { TRPCLink } from '@trpc/client';
 import type { AppRouter } from '@soundscape/api';
 
 export function resolveApiUrl(apiUrl: string | undefined): string {
-  return apiUrl || 'http://localhost:3001';
+  return apiUrl === undefined ? 'http://localhost:3001' : apiUrl;
 }
 
 export function createTrpcClient(
