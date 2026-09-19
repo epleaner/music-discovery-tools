@@ -303,7 +303,7 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) =
                 {props.user.username}
                 <svg
                   aria-hidden="true"
-                  class="h-3 w-3"
+                  class="h-2.5 w-2.5"
                   fill="none"
                   viewBox="0 0 12 12"
                   stroke="currentColor"
