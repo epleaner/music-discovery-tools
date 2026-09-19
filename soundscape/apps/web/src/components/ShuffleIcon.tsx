@@ -3,7 +3,7 @@ import type { Component } from 'solid-js';
 const ShuffleIcon: Component = () => (
   <svg
     aria-hidden="true"
-    class="h-3.5 w-3.5"
+    class="h-3 w-3"
     fill="none"
     viewBox="0 0 24 24"
     stroke="currentColor"

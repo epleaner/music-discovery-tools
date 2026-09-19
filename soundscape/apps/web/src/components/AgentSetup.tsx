@@ -78,16 +78,22 @@ const AgentSetup: Component = () => {
     <div class="relative flex-shrink-0">
       <Button
         onClick={() => setOpen(!open())}
-        variant="secondary"
-        class="w-full text-left"
+        variant="link"
+        class="w-full px-2 py-1 text-left"
+        title="Browser helper"
+        aria-haspopup="dialog"
+        aria-expanded={open()}
       >
-        Agent {status().connected ? '●' : '○'}
+        Browser helper{' '}
+        <span class="text-fg-subtle">
+          {status().connected ? '●' : '○'}
+        </span>
       </Button>
       <Show when={open()}>
         <div class="absolute right-0 z-30 mt-1 w-80 border border-border bg-bg shadow-lg">
           <div class="flex flex-col gap-3 p-3">
             <div>
-              <div class="text-xs font-medium text-fg">Local browser agent</div>
+              <div class="text-xs font-medium text-fg">Browser helper</div>
               <p class="mt-1 text-xs text-fg-muted">
                 Keep your browser profile open, then paste the token into the
                 RYM menu-bar app.

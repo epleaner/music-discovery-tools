@@ -301,7 +301,18 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) =
                 aria-controls="account-menu"
               >
                 {props.user.username}
-                <span aria-hidden="true">⌄</span>
+                <svg
+                  aria-hidden="true"
+                  class="h-3 w-3"
+                  fill="none"
+                  viewBox="0 0 12 12"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="m2.5 4.5 3.5 3 3.5-3" />
+                </svg>
               </Button>
 
               <Show when={showAccountDropdown()}>
@@ -309,24 +320,23 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) =
                   id="account-menu"
                   class="absolute right-0 top-full z-40 mt-1 flex min-w-[220px] flex-col gap-2 border border-border bg-bg p-2 shadow-lg"
                 >
-                  <div class="border-b border-border px-2 pb-2">
+                  <div class="flex items-center justify-between border-b border-border px-2 pb-2">
                     <div class="text-xs font-medium text-fg">
                       {props.user.username}
                     </div>
+                    <Button
+                      onClick={() => {
+                        setShowAccountDropdown(false);
+                        void props.onLogout();
+                      }}
+                      variant="link"
+                      class="px-0 text-right"
+                    >
+                      Sign out
+                    </Button>
                   </div>
 
                   <AgentSetup />
-
-                  <Button
-                    onClick={() => {
-                      setShowAccountDropdown(false);
-                      void props.onLogout();
-                    }}
-                    variant="secondary"
-                    class="w-full text-left"
-                  >
-                    Sign out
-                  </Button>
 
                   <div
                     class="flex items-center justify-between gap-2 border-t border-border px-2 pt-2"
