@@ -331,10 +331,11 @@ const RymChartTool: Component = () => {
               <div class="flex flex-col gap-1">
                 <For each={recentResults()}>
                   {(job) => (
-                    <button
+                    <Button
                       type="button"
                       onClick={() => openRecent(job)}
-                      class="w-full min-w-0 border border-border p-2 text-left hover:bg-bg-muted"
+                      variant="link"
+                      class="w-full min-w-0 px-0 py-1 text-left"
                       title={recentSummary(job)}
                     >
                       <div class="truncate font-medium text-fg">
@@ -349,7 +350,7 @@ const RymChartTool: Component = () => {
                             : ''}
                         </Show>
                       </div>
-                    </button>
+                    </Button>
                   )}
                 </For>
               </div>
