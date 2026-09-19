@@ -88,6 +88,33 @@ const RymChartTool: Component = () => {
   });
 
   const recentSummary = (job: ScrapeJob) => {
+    const sourceUrl = job.targetUrl ?? job.url;
+    try {
+      const url = new URL(sourceUrl);
+      const chart = url.pathname.match(
+        /^\/charts\/top\/album\/([^/]+)\/ge:([^/]+)\/?$/
+      );
+      if (chart) {
+        const period =
+          chart[1] === 'all-time'
+            ? 'All Time'
+            : chart[1].replace(/s$/, '');
+        const genres = decodeURIComponent(chart[2])
+          .split(',')
+          .filter(Boolean)
+          .map((genre) =>
+            genre
+              .split('-')
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ')
+          )
+          .join(', ');
+        return `Top ${genres || 'All Genres'} ${period}`;
+      }
+    } catch {
+      // Fall through to the scraped result label.
+    }
+
     if (job.data?.kind === 'rym') {
       const first = job.data.entries[0];
       if (first) return `${first.artist} — ${first.album}`;
@@ -96,9 +123,9 @@ const RymChartTool: Component = () => {
       }
     }
     try {
-      return new URL(job.targetUrl ?? job.url).pathname;
+      return new URL(sourceUrl).pathname;
     } catch {
-      return job.targetUrl ?? job.url;
+      return sourceUrl;
     }
   };
 
@@ -278,7 +305,7 @@ const RymChartTool: Component = () => {
       </div>
 
       <div class="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-3 overflow-hidden lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside class="flex min-h-0 flex-col gap-2 overflow-hidden border-b border-border pb-3 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-3">
+        <aside class="flex h-full min-h-0 flex-col gap-2 overflow-hidden border-b border-border pb-3 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-3">
           <div class="flex flex-shrink-0 items-center justify-between">
             <h2 class="font-medium text-fg">Recent</h2>
             <Button
@@ -292,7 +319,7 @@ const RymChartTool: Component = () => {
               ↻
             </Button>
           </div>
-          <div class="min-h-0 overflow-y-auto">
+          <div class="min-h-0 flex-1 overflow-y-auto">
             <Show
               when={recentResults().length > 0}
               fallback={
