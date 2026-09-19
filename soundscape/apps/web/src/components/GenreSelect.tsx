@@ -22,6 +22,7 @@ import Button from './Button';
 import Chip from './Chip';
 import ControlGroup from './ControlGroup';
 import { inputClassName } from './Input';
+import ShuffleIcon from './ShuffleIcon';
 
 interface GenreSelectProps {
   value: string[];
@@ -264,7 +265,7 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
             class="text-fg-muted hover:text-fg"
             title="Shuffle genres"
           >
-            ↻
+            <ShuffleIcon />
           </Button>
         </div>
         <Combobox.Control class="relative flex items-center min-h-6">

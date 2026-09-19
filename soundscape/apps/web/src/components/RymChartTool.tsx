@@ -16,6 +16,7 @@ import Button from './Button';
 import Select from './Select';
 import ControlGroup from './ControlGroup';
 import RymResults from './RymResults';
+import ShuffleIcon from './ShuffleIcon';
 import CacheAge from './CacheAge';
 
 const RymChartTool: Component = () => {
@@ -241,7 +242,7 @@ const RymChartTool: Component = () => {
                   class="text-fg-muted hover:text-fg"
                   title="Shuffle year/decade"
                 >
-                  ↻
+                  <ShuffleIcon />
                 </Button>
               </div>
               <Select
