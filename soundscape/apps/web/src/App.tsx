@@ -323,7 +323,7 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) =
                       void props.onLogout();
                     }}
                     variant="secondary"
-                    class="w-full"
+                    class="w-full text-left"
                   >
                     Sign out
                   </Button>

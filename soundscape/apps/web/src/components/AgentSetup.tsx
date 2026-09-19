@@ -79,8 +79,7 @@ const AgentSetup: Component = () => {
       <Button
         onClick={() => setOpen(!open())}
         variant="secondary"
-        class="inline-flex items-center justify-center"
-        title="Local browser agent"
+        class="w-full text-left"
       >
         Agent {status().connected ? '●' : '○'}
       </Button>
