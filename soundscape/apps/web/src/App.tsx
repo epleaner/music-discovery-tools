@@ -448,7 +448,7 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) =
                   onClick={() => setBottomTab('rym-charts')}
                   active={bottomTab() === 'rym-charts'}
                 >
-                  RYM Charts
+                  RYM
                 </PanelTab>
                 <PanelTab
                   onClick={() => setBottomTab('bandcamp')}
