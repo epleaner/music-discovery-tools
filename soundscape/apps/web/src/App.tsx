@@ -481,7 +481,10 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                       </For>
 
                       <Show when={currentView() === 'recent'}>
-                        <span class="px-1 text-fg-subtle">|</span>
+                        <span
+                          class="mx-1 h-6 border-l border-border/50"
+                          aria-hidden="true"
+                        />
                         <For
                           each={
                             [
@@ -503,7 +506,10 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                       </Show>
 
                       <Show when={currentView() === 'top'}>
-                        <span class="px-1 text-fg-subtle">|</span>
+                        <span
+                          class="mx-1 h-6 border-l border-border/50"
+                          aria-hidden="true"
+                        />
                         <For
                           each={
                             [
@@ -524,7 +530,10 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                             </PanelTab>
                           )}
                         </For>
-                        <span class="px-1 text-fg-subtle">|</span>
+                        <span
+                          class="mx-1 h-6 border-l border-border/50"
+                          aria-hidden="true"
+                        />
                         <For
                           each={Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]}
                         >
