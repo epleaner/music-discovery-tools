@@ -22,8 +22,7 @@ import EveryNoiseViewer from './components/EveryNoiseViewer';
 import AgentSetup from './components/AgentSetup';
 import AuthScreen from './components/AuthScreen';
 import ScrapeSections from './components/ScrapeSections';
-import RymChartTool from './components/RymChartTool';
-import BandcampUrlTool from './components/BandcampUrlTool';
+import ScrapeTool from './components/ScrapeTool';
 import Breadcrumbs from './components/Breadcrumbs';
 import Button from './components/Button';
 import PanelTab from './components/PanelTab';
@@ -65,7 +64,9 @@ interface AppState extends Record<string, string> {
   sites: string; // JSON-encoded array of sites
 }
 
-const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) => {
+const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
+  props
+) => {
   const defaultSites = [
     {
       id: 'secret-ambient',
@@ -86,7 +87,7 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) =
   const nav = useNav();
 
   const [bottomTab, setBottomTab] = createSignal<
-    'history' | 'sites' | 'rym-charts' | 'bandcamp'
+    'history' | 'sites' | 'scrape'
   >('history');
 
   const { theme, toggleTheme, colorTheme, setColorTheme } = useTheme();
@@ -222,10 +223,7 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) =
   onMount(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (
-        showAccountDropdown() &&
-        accountMenuRef?.contains(target) === false
-      ) {
+      if (showAccountDropdown() && accountMenuRef?.contains(target) === false) {
         setShowAccountDropdown(false);
         setShowColorThemeDropdown(false);
       }
@@ -455,237 +453,229 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) =
                   Sites
                 </PanelTab>
                 <PanelTab
-                  onClick={() => setBottomTab('rym-charts')}
-                  active={bottomTab() === 'rym-charts'}
+                  onClick={() => setBottomTab('scrape')}
+                  active={bottomTab() === 'scrape'}
                 >
-                  RYM
-                </PanelTab>
-                <PanelTab
-                  onClick={() => setBottomTab('bandcamp')}
-                  active={bottomTab() === 'bandcamp'}
-                >
-                  Bandcamp
+                  Scrape
                 </PanelTab>
               </div>
               <div class="overflow-hidden flex-1 min-h-0">
                 <div
                   style={{
-                    display:
-                      bottomTab() === 'history' ? 'block' : 'none',
-                  }}>
-                    <div class="flex flex-col h-full">
-                      {/* Sticky Header */}
-                      <div class="flex-shrink-0 bg-bg">
-                        {/* Tabs */}
-                        <div class="panel-tab-row">
-                          <For each={tabs}>
-                            {(tab) => (
+                    display: bottomTab() === 'history' ? 'block' : 'none',
+                  }}
+                >
+                  <div class="flex flex-col h-full">
+                    {/* Sticky Header */}
+                    <div class="flex-shrink-0 bg-bg">
+                      {/* Tabs */}
+                      <div class="panel-tab-row">
+                        <For each={tabs}>
+                          {(tab) => (
+                            <PanelTab
+                              onClick={() => updateState({ view: tab.id })}
+                              active={currentView() === tab.id}
+                              underline
+                            >
+                              {tab.label}
+                            </PanelTab>
+                          )}
+                        </For>
+                      </div>
+
+                      {/* View type selector for recent */}
+                      <Show when={currentView() === 'recent'}>
+                        <div class="flex gap-1 p-2 border-b border-border">
+                          <For
+                            each={
+                              [
+                                { id: 'tracks', label: 'Tracks' },
+                                { id: 'albums', label: 'Albums' },
+                                { id: 'artists', label: 'Artists' },
+                              ] as { id: RecentViewType; label: string }[]
+                            }
+                          >
+                            {(view) => (
                               <PanelTab
-                                onClick={() => updateState({ view: tab.id })}
-                                active={currentView() === tab.id}
-                                underline
+                                onClick={() =>
+                                  updateState({ subview: view.id })
+                                }
+                                active={recentViewType() === view.id}
                               >
-                                {tab.label}
+                                {view.label}
                               </PanelTab>
                             )}
                           </For>
                         </div>
+                      </Show>
 
-                        {/* View type selector for recent */}
-                        <Show when={currentView() === 'recent'}>
-                          <div class="flex gap-1 p-2 border-b border-border">
-                            <For
-                              each={
-                                [
-                                  { id: 'tracks', label: 'Tracks' },
-                                  { id: 'albums', label: 'Albums' },
-                                  { id: 'artists', label: 'Artists' },
-                                ] as { id: RecentViewType; label: string }[]
-                              }
-                            >
-                              {(view) => (
-                                <PanelTab
-                                  onClick={() =>
-                                    updateState({ subview: view.id })
-                                  }
-                                  active={recentViewType() === view.id}
-                                >
-                                  {view.label}
-                                </PanelTab>
-                              )}
-                            </For>
-                          </div>
-                        </Show>
+                      {/* Subview selector for top */}
+                      <Show when={currentView() === 'top'}>
+                        <div class="flex gap-1 p-2 border-b border-border">
+                          <For
+                            each={
+                              [
+                                { id: 'artists', label: 'Artists' },
+                                { id: 'tracks', label: 'Tracks' },
+                                { id: 'albums', label: 'Albums' },
+                              ] as { id: TopViewType; label: string }[]
+                            }
+                          >
+                            {(view) => (
+                              <PanelTab
+                                onClick={() =>
+                                  updateState({ topSubview: view.id })
+                                }
+                                active={topViewType() === view.id}
+                              >
+                                {view.label}
+                              </PanelTab>
+                            )}
+                          </For>
+                        </div>
+                      </Show>
 
-                        {/* Subview selector for top */}
-                        <Show when={currentView() === 'top'}>
-                          <div class="flex gap-1 p-2 border-b border-border">
-                            <For
-                              each={
-                                [
-                                  { id: 'artists', label: 'Artists' },
-                                  { id: 'tracks', label: 'Tracks' },
-                                  { id: 'albums', label: 'Albums' },
-                                ] as { id: TopViewType; label: string }[]
-                              }
-                            >
-                              {(view) => (
-                                <PanelTab
-                                  onClick={() =>
-                                    updateState({ topSubview: view.id })
-                                  }
-                                  active={topViewType() === view.id}
-                                >
-                                  {view.label}
-                                </PanelTab>
-                              )}
-                            </For>
-                          </div>
-                        </Show>
-
-                        {/* Period selector for top */}
-                        <Show when={currentView() === 'top'}>
-                          <div class="flex overflow-x-auto gap-1 items-center p-2 border-b border-border">
-                            <For
-                              each={
-                                Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]
-                              }
-                            >
-                              {(p) => (
-                                <PanelTab
-                                  onClick={() => updateState({ period: p })}
-                                  active={period() === p}
-                                >
-                                  {TIME_PERIOD_LABELS[p]}
-                                </PanelTab>
-                              )}
-                            </For>
-                            <Show
-                              when={
-                                topArtists.isLoading() ||
-                                topTracks.isLoading() ||
-                                topAlbums.isLoading()
-                              }
-                            >
-                              <div class="ml-1 text-xs animate-spin text-fg-muted">
-                                ◐
-                              </div>
-                            </Show>
-                          </div>
-                        </Show>
-                      </div>
-
-                      {/* Content */}
-                      <div class="overflow-y-auto flex-1">
-                        <Show when={appLayoutModel().showLibraryEmptyState}>
-                          <div class="flex justify-center items-center h-full">
-                            <EmptyState class="text-center">
-                              Enter a username to load Last.fm data
-                            </EmptyState>
-                          </div>
-                        </Show>
-
-                        <Show when={!appLayoutModel().showLibraryEmptyState}>
-                          <Switch>
-                            <Match when={currentView() === 'recent'}>
-                              <div>
-                                <Switch>
-                                  <Match when={recentViewType() === 'tracks'}>
-                                    <TrackList
-                                      tracks={recentTracks.tracks()}
-                                      isLoading={recentTracks.isLoading()}
-                                      error={recentTracks.error()}
-                                      onTrackClick={handleTrackResolveClick}
-                                    />
-                                  </Match>
-                                  <Match when={recentViewType() === 'albums'}>
-                                    <AlbumList
-                                      albums={recentAlbums()}
-                                      tracks={recentTracks.tracks()}
-                                      isLoading={recentTracks.isLoading()}
-                                      error={recentTracks.error()}
-                                      onAlbumClick={handleAlbumResolveClick}
-                                    />
-                                  </Match>
-                                  <Match when={recentViewType() === 'artists'}>
-                                    <RecentArtistList
-                                      artists={recentArtists()}
-                                      tracks={recentTracks.tracks()}
-                                      isLoading={recentTracks.isLoading()}
-                                      error={recentTracks.error()}
-                                      onArtistRowClick={
-                                        handleArtistResolveClick
-                                      }
-                                    />
-                                  </Match>
-                                </Switch>
-                                <Show
-                                  when={
-                                    recentViewType() === 'tracks' &&
-                                    !recentTracks.isLoading() &&
-                                    parseInt(
-                                      recentTracks.currentPage().toString()
-                                    ) < parseInt(recentTracks.totalPages())
-                                  }
-                                >
-                                  <div class="p-4 text-center border-t border-border">
-                                    <Button
-                                      onClick={() => recentTracks.loadMore()}
-                                      class="text-xs btn"
-                                    >
-                                      Load More
-                                    </Button>
-                                  </div>
-                                </Show>
-                              </div>
-                            </Match>
-
-                            <Match when={currentView() === 'top'}>
-                              <div class="p-2">
-                                <Switch>
-                                  <Match when={topViewType() === 'artists'}>
-                                    <ArtistList
-                                      artists={topArtists.artists()}
-                                      isLoading={topArtists.isLoading()}
-                                      error={topArtists.error()}
-                                      onArtistClick={handleArtistClick}
-                                      showPlaycount={true}
-                                    />
-                                  </Match>
-                                  <Match when={topViewType() === 'tracks'}>
-                                    <TopTrackList
-                                      tracks={topTracks.tracks()}
-                                      isLoading={topTracks.isLoading()}
-                                      error={topTracks.error()}
-                                      onTrackClick={(track) =>
-                                        nav.navigateToItem({
-                                          artist: track.artist.name,
-                                          itemKind: 'artist',
-                                        })
-                                      }
-                                    />
-                                  </Match>
-                                  <Match when={topViewType() === 'albums'}>
-                                    <TopAlbumList
-                                      albums={topAlbums.albums()}
-                                      isLoading={topAlbums.isLoading()}
-                                      error={topAlbums.error()}
-                                      onAlbumClick={(album) =>
-                                        nav.navigateToItem({
-                                          artist: album.artist.name,
-                                          album: album.name,
-                                          itemKind: 'album',
-                                        })
-                                      }
-                                    />
-                                  </Match>
-                                </Switch>
-                              </div>
-                            </Match>
-                          </Switch>
-                        </Show>
-                      </div>
+                      {/* Period selector for top */}
+                      <Show when={currentView() === 'top'}>
+                        <div class="flex overflow-x-auto gap-1 items-center p-2 border-b border-border">
+                          <For
+                            each={
+                              Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]
+                            }
+                          >
+                            {(p) => (
+                              <PanelTab
+                                onClick={() => updateState({ period: p })}
+                                active={period() === p}
+                              >
+                                {TIME_PERIOD_LABELS[p]}
+                              </PanelTab>
+                            )}
+                          </For>
+                          <Show
+                            when={
+                              topArtists.isLoading() ||
+                              topTracks.isLoading() ||
+                              topAlbums.isLoading()
+                            }
+                          >
+                            <div class="ml-1 text-xs animate-spin text-fg-muted">
+                              ◐
+                            </div>
+                          </Show>
+                        </div>
+                      </Show>
                     </div>
+
+                    {/* Content */}
+                    <div class="overflow-y-auto flex-1">
+                      <Show when={appLayoutModel().showLibraryEmptyState}>
+                        <div class="flex justify-center items-center h-full">
+                          <EmptyState class="text-center">
+                            Enter a username to load Last.fm data
+                          </EmptyState>
+                        </div>
+                      </Show>
+
+                      <Show when={!appLayoutModel().showLibraryEmptyState}>
+                        <Switch>
+                          <Match when={currentView() === 'recent'}>
+                            <div>
+                              <Switch>
+                                <Match when={recentViewType() === 'tracks'}>
+                                  <TrackList
+                                    tracks={recentTracks.tracks()}
+                                    isLoading={recentTracks.isLoading()}
+                                    error={recentTracks.error()}
+                                    onTrackClick={handleTrackResolveClick}
+                                  />
+                                </Match>
+                                <Match when={recentViewType() === 'albums'}>
+                                  <AlbumList
+                                    albums={recentAlbums()}
+                                    tracks={recentTracks.tracks()}
+                                    isLoading={recentTracks.isLoading()}
+                                    error={recentTracks.error()}
+                                    onAlbumClick={handleAlbumResolveClick}
+                                  />
+                                </Match>
+                                <Match when={recentViewType() === 'artists'}>
+                                  <RecentArtistList
+                                    artists={recentArtists()}
+                                    tracks={recentTracks.tracks()}
+                                    isLoading={recentTracks.isLoading()}
+                                    error={recentTracks.error()}
+                                    onArtistRowClick={handleArtistResolveClick}
+                                  />
+                                </Match>
+                              </Switch>
+                              <Show
+                                when={
+                                  recentViewType() === 'tracks' &&
+                                  !recentTracks.isLoading() &&
+                                  parseInt(
+                                    recentTracks.currentPage().toString()
+                                  ) < parseInt(recentTracks.totalPages())
+                                }
+                              >
+                                <div class="p-4 text-center border-t border-border">
+                                  <Button
+                                    onClick={() => recentTracks.loadMore()}
+                                    class="text-xs btn"
+                                  >
+                                    Load More
+                                  </Button>
+                                </div>
+                              </Show>
+                            </div>
+                          </Match>
+
+                          <Match when={currentView() === 'top'}>
+                            <div class="p-2">
+                              <Switch>
+                                <Match when={topViewType() === 'artists'}>
+                                  <ArtistList
+                                    artists={topArtists.artists()}
+                                    isLoading={topArtists.isLoading()}
+                                    error={topArtists.error()}
+                                    onArtistClick={handleArtistClick}
+                                    showPlaycount={true}
+                                  />
+                                </Match>
+                                <Match when={topViewType() === 'tracks'}>
+                                  <TopTrackList
+                                    tracks={topTracks.tracks()}
+                                    isLoading={topTracks.isLoading()}
+                                    error={topTracks.error()}
+                                    onTrackClick={(track) =>
+                                      nav.navigateToItem({
+                                        artist: track.artist.name,
+                                        itemKind: 'artist',
+                                      })
+                                    }
+                                  />
+                                </Match>
+                                <Match when={topViewType() === 'albums'}>
+                                  <TopAlbumList
+                                    albums={topAlbums.albums()}
+                                    isLoading={topAlbums.isLoading()}
+                                    error={topAlbums.error()}
+                                    onAlbumClick={(album) =>
+                                      nav.navigateToItem({
+                                        artist: album.artist.name,
+                                        album: album.name,
+                                        itemKind: 'album',
+                                      })
+                                    }
+                                  />
+                                </Match>
+                              </Switch>
+                            </div>
+                          </Match>
+                        </Switch>
+                      </Show>
+                    </div>
+                  </div>
                 </div>
                 <Switch>
                   <Match when={bottomTab() === 'sites'}>
@@ -694,11 +684,8 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (props) =
                       onSitesChange={handleSitesChange}
                     />
                   </Match>
-                  <Match when={bottomTab() === 'rym-charts'}>
-                    <RymChartTool />
-                  </Match>
-                  <Match when={bottomTab() === 'bandcamp'}>
-                    <BandcampUrlTool />
+                  <Match when={bottomTab() === 'scrape'}>
+                    <ScrapeTool />
                   </Match>
                 </Switch>
               </div>
