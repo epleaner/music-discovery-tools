@@ -693,39 +693,41 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
           }
           rightPanel={
             <div class="flex flex-col h-full overflow-y-auto">
-              {/* LastFM: Similar section */}
-              <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
-                <h2 class="text-xs font-medium text-fg-muted">
-                  LastFM: Similar
-                </h2>
-                <Show when={rightPanelModel().showSimilarArtists}>
-                  <div class="flex-shrink-0">
-                    <EveryNoiseViewer
-                      genre={everyNoiseGenre.genre()}
-                      isLoading={everyNoiseGenre.isLoading()}
-                      artistName={selectedArtist()}
+              <Show when={bottomTab() === 'history'}>
+                {/* LastFM: Similar section */}
+                <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
+                  <h2 class="text-xs font-medium text-fg-muted">
+                    LastFM: Similar
+                  </h2>
+                  <Show when={rightPanelModel().showSimilarArtists}>
+                    <div class="flex-shrink-0">
+                      <EveryNoiseViewer
+                        genre={everyNoiseGenre.genre()}
+                        isLoading={everyNoiseGenre.isLoading()}
+                        artistName={selectedArtist()}
+                      />
+                    </div>
+                  </Show>
+                </div>
+                <div class="flex-shrink-0">
+                  <Show
+                    when={selectedArtist()}
+                    fallback={
+                      <EmptyState class="py-8 text-center">
+                        {rightPanelModel().emptyMessage}
+                      </EmptyState>
+                    }
+                  >
+                    <ArtistList
+                      artists={similarArtists.artists()}
+                      isLoading={similarArtists.isLoading()}
+                      error={similarArtists.error()}
+                      onArtistClick={handleArtistClick}
+                      showMatch={true}
                     />
-                  </div>
-                </Show>
-              </div>
-              <div class="flex-shrink-0">
-                <Show
-                  when={selectedArtist()}
-                  fallback={
-                    <EmptyState class="py-8 text-center">
-                      {rightPanelModel().emptyMessage}
-                    </EmptyState>
-                  }
-                >
-                  <ArtistList
-                    artists={similarArtists.artists()}
-                    isLoading={similarArtists.isLoading()}
-                    error={similarArtists.error()}
-                    onArtistClick={handleArtistClick}
-                    showMatch={true}
-                  />
-                </Show>
-              </div>
+                  </Show>
+                </div>
+              </Show>
 
               <ScrapeSections />
             </div>
