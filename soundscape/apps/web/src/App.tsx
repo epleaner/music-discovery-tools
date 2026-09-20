@@ -503,24 +503,24 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                           class="mx-1 h-6 border-l border-border/50"
                           aria-hidden="true"
                         />
-                        <For
-                          each={
-                            [
-                              { id: 'tracks', label: 'Tracks' },
-                              { id: 'albums', label: 'Albums' },
-                              { id: 'artists', label: 'Artists' },
-                            ] as { id: RecentViewType; label: string }[]
-                          }
+                        <PanelTab
+                          onClick={() => selectEntityType('tracks')}
+                          active={() => recentViewType() === 'tracks'}
                         >
-                          {(view) => (
-                            <PanelTab
-                              onClick={() => selectEntityType(view.id)}
-                              active={() => recentViewType() === view.id}
-                            >
-                              {view.label}
-                            </PanelTab>
-                          )}
-                        </For>
+                          Tracks
+                        </PanelTab>
+                        <PanelTab
+                          onClick={() => selectEntityType('albums')}
+                          active={() => recentViewType() === 'albums'}
+                        >
+                          Albums
+                        </PanelTab>
+                        <PanelTab
+                          onClick={() => selectEntityType('artists')}
+                          active={() => recentViewType() === 'artists'}
+                        >
+                          Artists
+                        </PanelTab>
                       </Show>
 
                       <Show when={currentView() === 'top'}>
@@ -528,24 +528,24 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                           class="mx-1 h-6 border-l border-border/50"
                           aria-hidden="true"
                         />
-                        <For
-                          each={
-                            [
-                              { id: 'tracks', label: 'Tracks' },
-                              { id: 'albums', label: 'Albums' },
-                              { id: 'artists', label: 'Artists' },
-                            ] as { id: TopViewType; label: string }[]
-                          }
+                        <PanelTab
+                          onClick={() => selectEntityType('tracks')}
+                          active={() => topViewType() === 'tracks'}
                         >
-                          {(view) => (
-                            <PanelTab
-                              onClick={() => selectEntityType(view.id)}
-                              active={() => topViewType() === view.id}
-                            >
-                              {view.label}
-                            </PanelTab>
-                          )}
-                        </For>
+                          Tracks
+                        </PanelTab>
+                        <PanelTab
+                          onClick={() => selectEntityType('albums')}
+                          active={() => topViewType() === 'albums'}
+                        >
+                          Albums
+                        </PanelTab>
+                        <PanelTab
+                          onClick={() => selectEntityType('artists')}
+                          active={() => topViewType() === 'artists'}
+                        >
+                          Artists
+                        </PanelTab>
                         <span
                           class="mx-1 h-6 border-l border-border/50"
                           aria-hidden="true"
