@@ -697,7 +697,7 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                 {/* LastFM: Similar section */}
                 <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
                   <h2 class="text-xs font-medium text-fg-muted">
-                    LastFM: Similar
+                    Similar (last.fm)
                   </h2>
                   <Show when={rightPanelModel().showSimilarArtists}>
                     <div class="flex-shrink-0">
@@ -710,14 +710,7 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                   </Show>
                 </div>
                 <div class="flex-shrink-0">
-                  <Show
-                    when={selectedArtist()}
-                    fallback={
-                      <EmptyState class="py-8 text-center">
-                        {rightPanelModel().emptyMessage}
-                      </EmptyState>
-                    }
-                  >
+                  <Show when={selectedArtist()}>
                     <ArtistList
                       artists={similarArtists.artists()}
                       isLoading={similarArtists.isLoading()}
