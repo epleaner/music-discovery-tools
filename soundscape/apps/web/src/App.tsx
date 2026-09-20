@@ -23,7 +23,6 @@ import AgentSetup from './components/AgentSetup';
 import AuthScreen from './components/AuthScreen';
 import ScrapeSections from './components/ScrapeSections';
 import ScrapeTool from './components/ScrapeTool';
-import Breadcrumbs from './components/Breadcrumbs';
 import Button from './components/Button';
 import PanelTab from './components/PanelTab';
 import EmptyState from './components/EmptyState';
@@ -50,7 +49,6 @@ import { groupTracksByAlbum, groupTracksByArtist } from '@soundscape/utils';
 import { useSearchState } from './lib/use-search-state';
 import { useNav } from './lib/use-nav';
 import { useTheme } from './lib/use-theme';
-import { requestScrapeRefresh } from './lib/scrape-jobs';
 import { getSession, logout, type AuthUser } from './lib/auth';
 
 type View = 'recent' | 'top' | 'similar';
@@ -451,8 +449,6 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
           </div>
         </div>
       </div>
-
-      <Breadcrumbs onRefresh={requestScrapeRefresh} />
 
       <Show when={appLayoutModel().showMainLayout}>
         <ResizablePanels

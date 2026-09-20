@@ -6,10 +6,6 @@ const POLL_INTERVAL_MS = 1_000;
 
 const [refreshTick, setRefreshTick] = createSignal(0);
 
-export function requestScrapeRefresh() {
-  setRefreshTick((tick) => tick + 1);
-}
-
 export { refreshTick };
 
 export type ScrapeJobParams = ScrapeRequest & { idempotencyKey?: string };
