@@ -180,6 +180,28 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
     { id: 'recent', label: 'Recent' },
     { id: 'top', label: 'Top' },
   ];
+  const selectHistoryView = (view: View) => {
+    if (view === 'recent' || view === 'top') {
+      const entityType =
+        currentView() === 'top'
+          ? topViewType()
+          : (recentViewType() as RecentViewType);
+      updateState({
+        view,
+        subview: entityType,
+        topSubview: entityType,
+      });
+      return;
+    }
+    updateState({ view });
+  };
+
+  const selectEntityType = (entityType: RecentViewType) => {
+    updateState({
+      subview: entityType,
+      topSubview: entityType,
+    });
+  };
 
   const getThemeRotation = () => {
     const t = theme();
@@ -471,7 +493,7 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                       <For each={tabs}>
                         {(tab) => (
                           <PanelTab
-                            onClick={() => updateState({ view: tab.id })}
+                            onClick={() => selectHistoryView(tab.id)}
                             active={currentView() === tab.id}
                             underline
                           >
@@ -496,7 +518,7 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                         >
                           {(view) => (
                             <PanelTab
-                              onClick={() => updateState({ subview: view.id })}
+                              onClick={() => selectEntityType(view.id)}
                               active={recentViewType() === view.id}
                             >
                               {view.label}
@@ -513,17 +535,15 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                         <For
                           each={
                             [
-                              { id: 'artists', label: 'Artists' },
                               { id: 'tracks', label: 'Tracks' },
                               { id: 'albums', label: 'Albums' },
+                              { id: 'artists', label: 'Artists' },
                             ] as { id: TopViewType; label: string }[]
                           }
                         >
                           {(view) => (
                             <PanelTab
-                              onClick={() =>
-                                updateState({ topSubview: view.id })
-                              }
+                              onClick={() => selectEntityType(view.id)}
                               active={topViewType() === view.id}
                             >
                               {view.label}
