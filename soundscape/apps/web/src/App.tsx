@@ -727,9 +727,9 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                     />
                   </Show>
                 </div>
-              </Show>
 
-              <ScrapeSections />
+                <ScrapeSections />
+              </Show>
             </div>
           }
         />
