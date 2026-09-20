@@ -199,68 +199,74 @@ const ScrapeSections: Component = () => {
 
   return (
     <>
-      <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
-        <h2 class="text-xs font-medium text-fg-muted">RYM</h2>
-        <CacheAge
-          fetchedAt={rymFetchedAt()}
-          onRefresh={() => {
-            const item = nav.lastItem();
-            if (item?.restore.type === 'item')
-              scrapeItemRym(
-                {
-                  artist: item.restore.artist,
-                  album: item.restore.album,
-                  itemKind: item.restore.itemKind,
-                },
-                true
-              );
-          }}
-        />
+      <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
+          <h2 class="text-xs font-medium text-fg-muted">RYM</h2>
+          <CacheAge
+            fetchedAt={rymFetchedAt()}
+            onRefresh={() => {
+              const item = nav.lastItem();
+              if (item?.restore.type === 'item')
+                scrapeItemRym(
+                  {
+                    artist: item.restore.artist,
+                    album: item.restore.album,
+                    itemKind: item.restore.itemKind,
+                  },
+                  true
+                );
+            }}
+          />
+        </div>
+        <div class="min-h-0 flex-1 overflow-y-auto p-3 text-xs">
+          <RymResults
+            entries={entries()}
+            album={rymAlbum()}
+            status={rymStatus()}
+          />
+        </div>
       </div>
-      <div class="flex flex-col gap-4 p-3 text-xs">
-        <RymResults
-          entries={entries()}
-          album={rymAlbum()}
-          status={rymStatus()}
-        />
-      </div>
-      <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
-        <h2 class="text-xs font-medium text-fg-muted">Bandcamp</h2>
-        <CacheAge
-          fetchedAt={bcFetchedAt()}
-          onRefresh={() => {
-            const item = nav.lastItem();
-            if (item?.restore.type === 'item')
-              scrapeItemBandcamp(
-                {
-                  artist: item.restore.artist,
-                  album: item.restore.album,
-                  itemKind: item.restore.itemKind,
-                },
-                true
-              );
-          }}
-        />
-      </div>
-      <div class="flex flex-col gap-4 p-3 text-xs">
-        <BandcampResults
-          releases={releases()}
-          album={album()}
-          currentLabel={currentLabel()}
-          status={bcStatus()}
-          isLabelResult={isLabelResult()}
-          isRelatedResult={isRelatedResult()}
-          showExploreLabel={
-            !!currentLabel() && !isLabelResult() && !isRelatedResult()
-          }
-          showRelated={
-            isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()
-          }
-          onExploreLabel={() =>
-            scrapeBandcampUrl(lastScrapedUrl() ?? '', 'label')
-          }
-          onRelated={() => scrapeBandcampUrl(lastScrapedUrl() ?? '', 'related')}
-        />
+      <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
+          <h2 class="text-xs font-medium text-fg-muted">Bandcamp</h2>
+          <CacheAge
+            fetchedAt={bcFetchedAt()}
+            onRefresh={() => {
+              const item = nav.lastItem();
+              if (item?.restore.type === 'item')
+                scrapeItemBandcamp(
+                  {
+                    artist: item.restore.artist,
+                    album: item.restore.album,
+                    itemKind: item.restore.itemKind,
+                  },
+                  true
+                );
+            }}
+          />
+        </div>
+        <div class="min-h-0 flex-1 overflow-y-auto p-3 text-xs">
+          <BandcampResults
+            releases={releases()}
+            album={album()}
+            currentLabel={currentLabel()}
+            status={bcStatus()}
+            isLabelResult={isLabelResult()}
+            isRelatedResult={isRelatedResult()}
+            showExploreLabel={
+              !!currentLabel() && !isLabelResult() && !isRelatedResult()
+            }
+            showRelated={
+              isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()
+            }
+            onExploreLabel={() =>
+              scrapeBandcampUrl(lastScrapedUrl() ?? '', 'label')
+            }
+            onRelated={() =>
+              scrapeBandcampUrl(lastScrapedUrl() ?? '', 'related')
+            }
+          />
+        </div>
       </div>
     </>
   );

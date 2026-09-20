@@ -467,103 +467,87 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                 >
                   <div class="flex flex-col h-full">
                     {/* Sticky Header */}
-                    <div class="flex-shrink-0 bg-bg">
-                      {/* Tabs */}
-                      <div class="panel-tab-row">
-                        <For each={tabs}>
-                          {(tab) => (
+                    <div class="flex items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-border px-2">
+                      <For each={tabs}>
+                        {(tab) => (
+                          <PanelTab
+                            onClick={() => updateState({ view: tab.id })}
+                            active={currentView() === tab.id}
+                            underline
+                          >
+                            {tab.label}
+                          </PanelTab>
+                        )}
+                      </For>
+
+                      <Show when={currentView() === 'recent'}>
+                        <span class="px-1 text-fg-subtle">|</span>
+                        <For
+                          each={
+                            [
+                              { id: 'tracks', label: 'Tracks' },
+                              { id: 'albums', label: 'Albums' },
+                              { id: 'artists', label: 'Artists' },
+                            ] as { id: RecentViewType; label: string }[]
+                          }
+                        >
+                          {(view) => (
                             <PanelTab
-                              onClick={() => updateState({ view: tab.id })}
-                              active={currentView() === tab.id}
-                              underline
+                              onClick={() => updateState({ subview: view.id })}
+                              active={recentViewType() === view.id}
                             >
-                              {tab.label}
+                              {view.label}
                             </PanelTab>
                           )}
                         </For>
-                      </div>
-
-                      {/* View type selector for recent */}
-                      <Show when={currentView() === 'recent'}>
-                        <div class="flex gap-1 p-2 border-b border-border">
-                          <For
-                            each={
-                              [
-                                { id: 'tracks', label: 'Tracks' },
-                                { id: 'albums', label: 'Albums' },
-                                { id: 'artists', label: 'Artists' },
-                              ] as { id: RecentViewType; label: string }[]
-                            }
-                          >
-                            {(view) => (
-                              <PanelTab
-                                onClick={() =>
-                                  updateState({ subview: view.id })
-                                }
-                                active={recentViewType() === view.id}
-                              >
-                                {view.label}
-                              </PanelTab>
-                            )}
-                          </For>
-                        </div>
                       </Show>
 
-                      {/* Subview selector for top */}
                       <Show when={currentView() === 'top'}>
-                        <div class="flex gap-1 p-2 border-b border-border">
-                          <For
-                            each={
-                              [
-                                { id: 'artists', label: 'Artists' },
-                                { id: 'tracks', label: 'Tracks' },
-                                { id: 'albums', label: 'Albums' },
-                              ] as { id: TopViewType; label: string }[]
-                            }
-                          >
-                            {(view) => (
-                              <PanelTab
-                                onClick={() =>
-                                  updateState({ topSubview: view.id })
-                                }
-                                active={topViewType() === view.id}
-                              >
-                                {view.label}
-                              </PanelTab>
-                            )}
-                          </For>
-                        </div>
-                      </Show>
-
-                      {/* Period selector for top */}
-                      <Show when={currentView() === 'top'}>
-                        <div class="flex overflow-x-auto gap-1 items-center p-2 border-b border-border">
-                          <For
-                            each={
-                              Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]
-                            }
-                          >
-                            {(p) => (
-                              <PanelTab
-                                onClick={() => updateState({ period: p })}
-                                active={period() === p}
-                              >
-                                {TIME_PERIOD_LABELS[p]}
-                              </PanelTab>
-                            )}
-                          </For>
-                          <Show
-                            when={
-                              topArtists.isLoading() ||
-                              topTracks.isLoading() ||
-                              topAlbums.isLoading()
-                            }
-                          >
-                            <div class="ml-1 text-xs animate-spin text-fg-muted">
-                              ◐
-                            </div>
-                          </Show>
-                        </div>
+                        <span class="px-1 text-fg-subtle">|</span>
+                        <For
+                          each={
+                            [
+                              { id: 'artists', label: 'Artists' },
+                              { id: 'tracks', label: 'Tracks' },
+                              { id: 'albums', label: 'Albums' },
+                            ] as { id: TopViewType; label: string }[]
+                          }
+                        >
+                          {(view) => (
+                            <PanelTab
+                              onClick={() =>
+                                updateState({ topSubview: view.id })
+                              }
+                              active={topViewType() === view.id}
+                            >
+                              {view.label}
+                            </PanelTab>
+                          )}
+                        </For>
+                        <span class="px-1 text-fg-subtle">|</span>
+                        <For
+                          each={Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]}
+                        >
+                          {(p) => (
+                            <PanelTab
+                              onClick={() => updateState({ period: p })}
+                              active={period() === p}
+                            >
+                              {TIME_PERIOD_LABELS[p]}
+                            </PanelTab>
+                          )}
+                        </For>
+                        <Show
+                          when={
+                            topArtists.isLoading() ||
+                            topTracks.isLoading() ||
+                            topAlbums.isLoading()
+                          }
+                        >
+                          <div class="ml-1 text-xs animate-spin text-fg-muted">
+                            ◐
+                          </div>
+                        </Show>
                       </Show>
                     </div>
 
@@ -692,36 +676,40 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
             </div>
           }
           rightPanel={
-            <div class="flex flex-col h-full overflow-y-auto">
+            <div class="flex h-full min-h-0 flex-col overflow-hidden">
               <Show when={bottomTab() === 'history'}>
-                {/* LastFM: Similar section */}
-                <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
-                  <h2 class="text-xs font-medium text-fg-muted">
-                    Similar (last.fm)
-                  </h2>
-                  <Show when={rightPanelModel().showSimilarArtists}>
-                    <div class="flex-shrink-0">
-                      <EveryNoiseViewer
-                        genre={everyNoiseGenre.genre()}
-                        isLoading={everyNoiseGenre.isLoading()}
-                        artistName={selectedArtist()}
-                      />
+                <div class="flex h-full min-h-0 flex-col">
+                  <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+                    {/* LastFM: Similar section */}
+                    <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
+                      <h2 class="text-xs font-medium text-fg-muted">
+                        Similar (last.fm)
+                      </h2>
+                      <Show when={rightPanelModel().showSimilarArtists}>
+                        <div class="flex-shrink-0">
+                          <EveryNoiseViewer
+                            genre={everyNoiseGenre.genre()}
+                            isLoading={everyNoiseGenre.isLoading()}
+                            artistName={selectedArtist()}
+                          />
+                        </div>
+                      </Show>
                     </div>
-                  </Show>
-                </div>
-                <div class="flex-shrink-0">
-                  <Show when={selectedArtist()}>
-                    <ArtistList
-                      artists={similarArtists.artists()}
-                      isLoading={similarArtists.isLoading()}
-                      error={similarArtists.error()}
-                      onArtistClick={handleArtistClick}
-                      showMatch={true}
-                    />
-                  </Show>
-                </div>
+                    <div class="min-h-0 flex-1 overflow-y-auto">
+                      <Show when={selectedArtist()}>
+                        <ArtistList
+                          artists={similarArtists.artists()}
+                          isLoading={similarArtists.isLoading()}
+                          error={similarArtists.error()}
+                          onArtistClick={handleArtistClick}
+                          showMatch={true}
+                        />
+                      </Show>
+                    </div>
+                  </div>
 
-                <ScrapeSections />
+                  <ScrapeSections />
+                </div>
               </Show>
             </div>
           }
