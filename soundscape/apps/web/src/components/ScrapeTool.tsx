@@ -164,6 +164,23 @@ const ScrapeTool: Component = () => {
             .join(', ');
           return `Top ${chartType}${genres ? ` — ${genres}` : ''} — ${period}`;
         }
+        const list = new URL(sourceUrl).pathname.match(
+          /^\/list\/[^/]+\/([^/]+)\/?$/
+        );
+        if (list) {
+          return decodeURIComponent(list[1])
+            .replace(/[-_]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .split(' ')
+            .map((word, index) =>
+              index > 0 &&
+              ['a', 'an', 'and', 'the', 'of', 'in', 'on', 'to'].includes(word)
+                ? word
+                : word.charAt(0).toUpperCase() + word.slice(1)
+            )
+            .join(' ');
+        }
       } catch {
         // Fall through to the scraped result label.
       }
