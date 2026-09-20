@@ -143,12 +143,16 @@ const ScrapeTool: Component = () => {
     if (job.data?.kind === 'rym') {
       try {
         const chart = new URL(sourceUrl).pathname.match(
-          /^\/charts\/top\/album\/([^/]+)\/ge:([^/]+)\/?$/
+          /^\/charts\/top\/([^/]+)\/([^/]+)\/ge:([^/]*)\/?$/
         );
         if (chart) {
+          const chartType =
+            chart[1] === 'album'
+              ? 'Albums'
+              : chart[1].charAt(0).toUpperCase() + chart[1].slice(1);
           const period =
-            chart[1] === 'all-time' ? 'All Time' : chart[1].replace(/s$/, '');
-          const genres = decodeURIComponent(chart[2])
+            chart[2] === 'all-time' ? 'All Time' : chart[2].replace(/s$/, '');
+          const genres = decodeURIComponent(chart[3])
             .split(',')
             .filter(Boolean)
             .map((genre) =>
@@ -158,7 +162,7 @@ const ScrapeTool: Component = () => {
                 .join(' ')
             )
             .join(', ');
-          return `Top ${genres || 'All Genres'} ${period}`;
+          return `Top ${chartType}${genres ? ` — ${genres}` : ''} — ${period}`;
         }
       } catch {
         // Fall through to the scraped result label.
