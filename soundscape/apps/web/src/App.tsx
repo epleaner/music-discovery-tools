@@ -86,23 +86,6 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
 
   const nav = useNav();
 
-  const [historyState, setHistoryState] = createSignal({
-    view: state().view,
-    subview: state().subview,
-    topSubview: state().topSubview,
-    period: state().period,
-  });
-  const updateHistoryState = (
-    next: Partial<{
-      view: string;
-      subview: string;
-      topSubview: string;
-      period: string;
-    }>
-  ) => {
-    setHistoryState((previous) => ({ ...previous, ...next }));
-  };
-
   const [bottomTab, setBottomTab] = createSignal<
     'history' | 'sites' | 'scrape'
   >('history');
@@ -111,10 +94,10 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
 
   // Getters for reactive access
   const username = () => state().username;
-  const currentView = () => historyState().view;
-  const recentViewType = () => historyState().subview;
-  const topViewType = () => historyState().topSubview as TopViewType;
-  const period = () => historyState().period as TimePeriod;
+  const currentView = () => state().view;
+  const recentViewType = () => state().subview;
+  const topViewType = () => state().topSubview as TopViewType;
+  const period = () => state().period as TimePeriod;
   const selectedArtist = () => {
     const restore = nav.lastItem()?.restore;
     return restore?.type === 'item' ? restore.artist : '';
@@ -159,10 +142,6 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
   );
 
   const handleUsernameSubmit = (newUsername: string) => {
-    updateHistoryState({
-      view: 'recent',
-      subview: 'tracks',
-    });
     updateState({
       username: newUsername,
       view: 'recent',
@@ -207,11 +186,6 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
         currentView() === 'top'
           ? topViewType()
           : (recentViewType() as RecentViewType);
-      updateHistoryState({
-        view,
-        subview: entityType,
-        topSubview: entityType,
-      });
       updateState({
         view,
         subview: entityType,
@@ -219,15 +193,10 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
       });
       return;
     }
-    updateHistoryState({ view });
     updateState({ view });
   };
 
   const selectEntityType = (entityType: RecentViewType) => {
-    updateHistoryState({
-      subview: entityType,
-      topSubview: entityType,
-    });
     updateState({
       subview: entityType,
       topSubview: entityType,
@@ -590,10 +559,7 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                         >
                           {(p) => (
                             <PanelTab
-                              onClick={() => {
-                                updateHistoryState({ period: p });
-                                updateState({ period: p });
-                              }}
+                              onClick={() => updateState({ period: p })}
                               active={() => period() === p}
                             >
                               {TIME_PERIOD_LABELS[p]}
