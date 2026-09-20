@@ -470,7 +470,7 @@ const ScrapeTool: Component = () => {
                       type="button"
                       onClick={() => openRecent(job)}
                       variant="link"
-                      class="w-full min-w-0 px-0 py-1 text-left"
+                      class="flex h-auto min-h-0 w-full min-w-0 flex-col items-stretch px-0 py-1 text-left"
                       title={recentSummary(job)}
                     >
                       <div class="flex items-center justify-between gap-2">
