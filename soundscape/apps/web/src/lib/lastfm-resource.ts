@@ -25,6 +25,30 @@ import {
   fetchEveryNoiseGenre,
 } from '@soundscape/utils';
 
+function normalizeError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+function createHandledResource<T, S>(
+  source: () => S | null,
+  fetcher: (source: S) => Promise<T>
+) {
+  const [error, setError] = createSignal<Error | null>(null);
+  const [data, controls] = createResource<T | null, S>(
+    source,
+    async (value) => {
+      setError(null);
+      try {
+        return await fetcher(value);
+      } catch (cause) {
+        setError(normalizeError(cause));
+        return null;
+      }
+    }
+  );
+
+  return { data, error, controls };
+}
 const POLLING_INTERVAL = 3 * 60 * 1000; // 3 minutes
 
 /**
@@ -34,8 +58,8 @@ export function createRecentTracksResource(username: () => string) {
   const [page, setPage] = createSignal(1);
   const [allTracks, setAllTracks] = createSignal<Track[]>([]);
 
-  const [data, { mutate, refetch }] = createResource<
-    RecentTracksResponse | null,
+  const { data, error, controls } = createHandledResource<
+    RecentTracksResponse,
     { username: string; page: number }
   >(
     () => {
@@ -65,7 +89,7 @@ export function createRecentTracksResource(username: () => string) {
     const intervalId = setInterval(() => {
       // Only refetch page 1 if not currently loading
       if (!data.loading && page() === 1) {
-        refetch();
+        controls.refetch();
       }
     }, POLLING_INTERVAL);
 
@@ -73,7 +97,7 @@ export function createRecentTracksResource(username: () => string) {
   });
 
   const loadMore = () => {
-    if (data() && !data.loading) {
+    if (data.latest && !data.loading) {
       setPage((p) => p + 1);
     }
   };
@@ -81,18 +105,18 @@ export function createRecentTracksResource(username: () => string) {
   const reset = () => {
     setPage(1);
     setAllTracks([]);
-    mutate(null);
+    controls.mutate(null);
   };
 
   return {
     tracks: allTracks,
-    totalPages: () => data()?.recenttracks['@attr'].totalPages || '0',
+    totalPages: () => data.latest?.recenttracks['@attr'].totalPages || '0',
     currentPage: page,
     isLoading: () => data.loading,
-    error: () => data.error,
+    error: error,
     loadMore,
     reset,
-    refetch,
+    refetch: controls.refetch,
   };
 }
 
@@ -103,8 +127,8 @@ export function createTopArtistsResource(
   username: () => string,
   period: () => TimePeriod = () => '7day'
 ) {
-  const [data, { mutate, refetch }] = createResource<
-    TopArtistsResponse | null,
+  const { data, error, controls } = createHandledResource<
+    TopArtistsResponse,
     { username: string; period: TimePeriod }
   >(
     () => {
@@ -112,18 +136,16 @@ export function createTopArtistsResource(
       const timePeriod = period();
       return user?.trim() ? { username: user, period: timePeriod } : null;
     },
-    async ({ username, period }) => {
-      return await fetchTopArtists(username, period);
-    }
+    async ({ username, period }) => fetchTopArtists(username, period)
   );
 
   return {
-    artists: (): Artist[] => data()?.topartists.artist || [],
-    totalArtists: () => data()?.topartists['@attr'].total || '0',
+    artists: (): Artist[] => data.latest?.topartists.artist || [],
+    totalArtists: () => data.latest?.topartists['@attr'].total || '0',
     isLoading: () => data.loading,
-    error: () => data.error,
-    refetch,
-    mutate,
+    error,
+    refetch: controls.refetch,
+    mutate: controls.mutate,
   };
 }
 
@@ -131,23 +153,21 @@ export function createTopArtistsResource(
  * Create a resource for fetching similar artists
  */
 export function createSimilarArtistsResource(artistName: () => string) {
-  const [data, { mutate, refetch }] = createResource(
+  const { data, error, controls } = createHandledResource(
     () => {
       const artist = artistName();
       return artist?.trim() ? artist : null;
     },
-    async (artist) => {
-      return await fetchSimilarArtists(artist);
-    }
+    async (artist) => fetchSimilarArtists(artist)
   );
 
   return {
-    artists: () => data()?.similarartists.artist || [],
-    sourceArtist: () => data()?.similarartists['@attr'].artist || '',
+    artists: () => data.latest?.similarartists.artist || [],
+    sourceArtist: () => data.latest?.similarartists['@attr'].artist || '',
     isLoading: () => data.loading,
-    error: () => data.error,
-    refetch,
-    mutate,
+    error,
+    refetch: controls.refetch,
+    mutate: controls.mutate,
   };
 }
 
@@ -158,8 +178,8 @@ export function createTopTracksResource(
   username: () => string,
   period: () => TimePeriod = () => '7day'
 ) {
-  const [data, { mutate, refetch }] = createResource<
-    TopTracksResponse | null,
+  const { data, error, controls } = createHandledResource<
+    TopTracksResponse,
     { username: string; period: TimePeriod }
   >(
     () => {
@@ -167,18 +187,16 @@ export function createTopTracksResource(
       const timePeriod = period();
       return user?.trim() ? { username: user, period: timePeriod } : null;
     },
-    async ({ username, period }) => {
-      return await fetchTopTracks(username, period);
-    }
+    async ({ username, period }) => fetchTopTracks(username, period)
   );
 
   return {
-    tracks: (): TopTrack[] => data()?.toptracks.track || [],
-    totalTracks: () => data()?.toptracks['@attr'].total || '0',
+    tracks: (): TopTrack[] => data.latest?.toptracks.track || [],
+    totalTracks: () => data.latest?.toptracks['@attr'].total || '0',
     isLoading: () => data.loading,
-    error: () => data.error,
-    refetch,
-    mutate,
+    error,
+    refetch: controls.refetch,
+    mutate: controls.mutate,
   };
 }
 
@@ -189,8 +207,8 @@ export function createTopAlbumsResource(
   username: () => string,
   period: () => TimePeriod = () => '7day'
 ) {
-  const [data, { mutate, refetch }] = createResource<
-    TopAlbumsResponse | null,
+  const { data, error, controls } = createHandledResource<
+    TopAlbumsResponse,
     { username: string; period: TimePeriod }
   >(
     () => {
@@ -198,18 +216,16 @@ export function createTopAlbumsResource(
       const timePeriod = period();
       return user?.trim() ? { username: user, period: timePeriod } : null;
     },
-    async ({ username, period }) => {
-      return await fetchTopAlbums(username, period);
-    }
+    async ({ username, period }) => fetchTopAlbums(username, period)
   );
 
   return {
-    albums: (): TopAlbum[] => data()?.topalbums.album || [],
-    totalAlbums: () => data()?.topalbums['@attr'].total || '0',
+    albums: (): TopAlbum[] => data.latest?.topalbums.album || [],
+    totalAlbums: () => data.latest?.topalbums['@attr'].total || '0',
     isLoading: () => data.loading,
-    error: () => data.error,
-    refetch,
-    mutate,
+    error,
+    refetch: controls.refetch,
+    mutate: controls.mutate,
   };
 }
 
@@ -217,21 +233,19 @@ export function createTopAlbumsResource(
  * Create a resource for fetching EveryNoise genre data
  */
 export function createEveryNoiseResource(artistName: () => string) {
-  const [data, { mutate, refetch }] = createResource(
+  const { data, error, controls } = createHandledResource(
     () => {
       const artist = artistName();
       return artist?.trim() ? artist : null;
     },
-    async (artist) => {
-      return await fetchEveryNoiseGenre(artist);
-    }
+    async (artist) => fetchEveryNoiseGenre(artist)
   );
 
   return {
-    genre: (): EveryNoiseGenre | null => data() || null,
+    genre: (): EveryNoiseGenre | null => data.latest || null,
     isLoading: () => data.loading,
-    error: () => data.error,
-    refetch,
-    mutate,
+    error,
+    refetch: controls.refetch,
+    mutate: controls.mutate,
   };
 }
