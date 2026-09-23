@@ -3,7 +3,7 @@ import Button from './Button';
 import {
   getAgentStatus,
   pairAgent,
-  revokeAgentToken,
+  unpairAgent,
   type AgentStatus,
 } from '../lib/auth';
 
@@ -60,13 +60,13 @@ const AgentSetup: Component = () => {
     setWorking(true);
     setError('');
     try {
-      await revokeAgentToken();
+      await unpairAgent();
       setPassphrase('');
       await refresh();
-    } catch (revokeError) {
+    } catch (unpairError) {
       setError(
-        revokeError instanceof Error
-          ? revokeError.message
+        unpairError instanceof Error
+          ? unpairError.message
           : 'Unable to unpair the browser helper.'
       );
     } finally {

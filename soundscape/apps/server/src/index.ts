@@ -168,7 +168,7 @@ wss.on('connection', (ws) => {
       }
       const user = await db.getUserByAgentTokenHash(hashToken(parsed.token));
       if (!user) {
-        ws.close(1008, 'invalid agent token');
+        ws.close(1008, 'invalid pairing passphrase');
         return;
       }
       const ownerKey = ownerKeyForUser(user.id);

@@ -76,6 +76,6 @@ export async function pairAgent(passphrase: string): Promise<void> {
   await request<void>('/auth/agent', jsonBody({ passphrase }));
 }
 
-export async function revokeAgentToken(): Promise<void> {
+export async function unpairAgent(): Promise<void> {
   await request<void>('/auth/agent', { method: 'DELETE' });
 }

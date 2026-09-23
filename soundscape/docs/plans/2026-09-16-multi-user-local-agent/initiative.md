@@ -21,10 +21,11 @@ headed browser profile and receives only that user's scrape jobs.
 ## Acceptance
 
 - Web users authenticate through server-backed sessions.
-- A user can generate/revoke one agent token from the web UI.
-- The local agent can register over outbound WSS using that token.
-- The server maps the token to exactly one user and exposes agent status only to
-  that user.
+- The local agent generates a pairing passphrase and registers over outbound
+  WSS with that passphrase.
+- A signed-in user can bind or unpair that passphrase from the web UI.
+- The server maps the passphrase to exactly one user and exposes agent status
+  only to that user.
 - Scrape creation, reads, listing, idempotency, and dispatch are user-scoped.
 - Jobs remain queued when that user's agent is offline.
 - A user's agent cannot receive or read another user's jobs.
@@ -54,7 +55,8 @@ headed browser profile and receives only that user's scrape jobs.
 1. Use a minimal username/password account flow with HTTP-only database-backed
    sessions; no external provider is configured in this repository.
 2. Use one long-lived random agent credential per user. Store only its SHA-256
-   hash. Generate and display the raw token once; allow replacement/revocation.
+   hash. Generate and display the raw passphrase in the local agent; allow
+   replacement and unpairing.
 3. Keep the existing `scrapes` table as the queue, add `user_id`, and migrate
    its token-based ownership to user ownership. Keep the agent credential out
    of normal web scrape requests.
@@ -75,7 +77,7 @@ headed browser profile and receives only that user's scrape jobs.
 
 ### Agent ownership
 
-- Add per-user agent credential generation, hashing, rotation, and status.
+- Add per-user agent credential binding, hashing, replacement, and status.
 - Authenticate WebSocket registration and map the connection to a user.
 - Preserve outbound WSS and warm-browser ownership boundary.
 
@@ -89,7 +91,7 @@ headed browser profile and receives only that user's scrape jobs.
 ### Web
 
 - Add login/register/session UI.
-- Replace raw pairing-token entry with generate/revoke agent setup.
+- Replace raw pairing-token entry with authenticated passphrase pairing.
 - Show connection state and preserve queued/offline behavior.
 
 ### Verification
@@ -160,7 +162,7 @@ Acceptance:
   explicitly generate a replacement.
 - The web Agent control accepts the local passphrase, binds only the signed-in
   user's agent, never receives the raw passphrase back, and retains status and
-  revoke behavior.
+  unpair behavior.
 - Invalid passphrases are rejected without changing the configured agent.
 - The server test, web build/type check, Swift build, and a deterministic
   authenticated HTTP/WebSocket smoke flow pass.
