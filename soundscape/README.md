@@ -171,13 +171,6 @@ See `soundscape/AGENTS.md` for:
 - SolidJS best practices
 - API integration patterns
 
-## Planning & Tracking
-
-- Use OpenSpec for any net-new capability, breaking change, or architectural shift. Scaffold `openspec/changes/<change-id>/` with `proposal.md`, `tasks.md`, and spec deltas before coding.
-- Track execution with the Beads CLI (`bd`). Create a root bead for each OpenSpec change (`bd create "Add discovery queue" -p 1`) and reference its ID in the proposal/tasks files.
-- Mirror each checklist item in `tasks.md` as bead subtasks (`bd-a3f8.1`, `bd-a3f8.2`, …) so `bd ready` reflects the same order the spec expects. Update both the markdown checkboxes and bead statuses as work completes.
-- When collaborating with AI agents, always share the bead ID you want help with. Agents can inspect or update the bead graph through the provided `beads-task-agent` for precise, dependency-aware planning.
-
 ## License
 
 MIT

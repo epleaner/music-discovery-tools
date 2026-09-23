@@ -1,25 +1,3 @@
-<!-- OPENSPEC:START -->
-
-# OpenSpec Instructions
-
-These instructions are for AI assistants working in this project.
-
-Always open `@/openspec/AGENTS.md` when the request:
-
-- Mentions planning or proposals (words like proposal, spec, change, plan)
-- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
-- Sounds ambiguous and you need the authoritative spec before coding
-
-Use `@/openspec/AGENTS.md` to learn:
-
-- How to create and apply change proposals
-- Spec format and conventions
-- Project structure and guidelines
-
-Keep this managed block so 'openspec update' can refresh the instructions.
-
-<!-- OPENSPEC:END -->
-
 # AGENTS.md
 
 This guide is for agentic contributors working anywhere in the Soundscape monorepo.
@@ -31,15 +9,6 @@ Keep it handy whenever you run commands, edit code, or make architectural decisi
 - Turborepo drives orchestration; prefer `pnpm --filter <package> <script>` for targeted work.
 - Shared packages live under `packages/`; apps are under `apps/`; scripts sit in `scripts/`.
 - Keep UI monochrome (black/white/grays) and respect the shared Tailwind preset.
-
-## Planning + Task Tracking (OpenSpec × Beads)
-
-- OpenSpec captures capability-level changes; Beads (`bd` CLI) tracks day-to-day tasks. Every net-new feature still needs an approved OpenSpec change, and its execution should live under a bead tree.
-- Before coding, check both queues: `openspec list`/`openspec list --specs` for specs and `bd ready` for unblocked tasks. Share the bead ID (e.g., `bd-a3f8.2`) in the chat so agents know what they are working on.
-- When creating a change, scaffold `openspec/changes/<id>/` **and** create a matching bead via `bd create "<title>" -p <priority>`. Add the bead ID near the top of `proposal.md` and `tasks.md` for traceability.
-- Mirror `tasks.md` items as bead subtasks using `bd create` + `bd dep add <child> <parent>`; keep the ordering the same so `bd ready` matches the OpenSpec checklist. Update both the markdown checklist and bead statuses as you finish work.
-- Agents should prefer beads over ad-hoc TODO lists for multi-step work. Use the `beads-task-agent` (see Task tool) to inspect or update the bead graph when you need structured planning inside the repo.
-- Close beads only after the associated spec delta ships (or is archived). When archiving an OpenSpec change, ensure the parent bead (and subtasks) are marked complete so future agents see the work as done.
 
 ## Build, Dev, and Tooling Commands
 
