@@ -56,10 +56,10 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 ### Test scrape job communication
 
 1. Start the API with `DATABASE_URL` configured.
-2. Sign in to the web app and open the Agent control.
-3. Choose **Generate token**, then copy the token shown once.
-4. Open the RYM menu-bar app, choose **Configure Soundscape agent…**, and
-   paste the token. The app stores it in the macOS Keychain and reconnects.
+2. Open the RYM menu-bar app and choose **Pair with Soundscape…**.
+3. Copy the passphrase generated and stored by the local app.
+4. Sign in to the web app, open **Browser helper**, paste the passphrase, and
+   choose **Pair agent**.
 5. Log into RateYourMusic in the debug Chrome profile if prompted.
 6. Create a scrape from the web app.
 7. Confirm the API reports `queued`, then `running`, then `done` (or a visible
@@ -68,13 +68,14 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
    the agent and confirm it is eventually dispatched.
 
 For a menu-less foreground daemon or a launchd service, use the advanced
-environment-variable setup instead:
+environment-variable setup instead. Generate a high-entropy passphrase, submit
+it through the web pairing form, and pass the same value to the agent:
 
 ```bash
 cd ../rym-menubar
 swift build -c debug
 SCRAPE_AGENT_WS_URL=ws://localhost:3001/ws \
-SCRAPE_AGENT_TOKEN='paste-token-here' \
+SCRAPE_AGENT_TOKEN='your-local-pairing-passphrase' \
 .build/debug/RYMMenuBar --daemon
 ```
 

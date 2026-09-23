@@ -4,12 +4,12 @@ import os
 private let bridgeLog = Logger(subsystem: "com.elipleaner.rym-menubar", category: "bridge")
 
 /// Outbound WebSocket client that connects to the Soundscape server,
-/// registers this local browser agent with its account token, and handles
+/// registers this local browser agent with its pairing passphrase, and handles
 /// dispatched scrape commands by driving the local RYM fetcher.
 final class BridgeClient {
 
     private let serverURL: URL
-    private var agentToken: String?
+    private var pairingPassphrase: String?
     private var task: URLSessionWebSocketTask?
     private let session: URLSession
     private var reconnectDelay: TimeInterval = 3
@@ -25,16 +25,16 @@ final class BridgeClient {
         let urlString = environment["SCRAPE_AGENT_WS_URL"]
             ?? "ws://localhost:3001/ws"
         serverURL = URL(string: urlString)!
-        if let environmentToken = environment["SCRAPE_AGENT_TOKEN"]?
+        if let environmentPassphrase = environment["SCRAPE_AGENT_TOKEN"]?
             .trimmingCharacters(in: .whitespacesAndNewlines),
-           !environmentToken.isEmpty {
-            agentToken = environmentToken
+           !environmentPassphrase.isEmpty {
+            pairingPassphrase = environmentPassphrase
         } else {
             do {
-                agentToken = try AgentTokenStore.load()
+                pairingPassphrase = try AgentTokenStore.loadOrCreate()
             } catch {
-                agentToken = nil
-                bridgeLog.error("bridge: unable to load saved agent token: \(error.localizedDescription, privacy: .public)")
+                pairingPassphrase = nil
+                bridgeLog.error("bridge: unable to load pairing passphrase: \(error.localizedDescription, privacy: .public)")
             }
         }
         session = URLSession(configuration: .default)
@@ -49,21 +49,25 @@ final class BridgeClient {
         task?.cancel(with: .normalClosure, reason: nil)
     }
 
-    func updateAgentToken(_ token: String) throws {
-        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        try AgentTokenStore.save(trimmed)
-        agentToken = trimmed
+    var currentPairingPassphrase: String? {
+        pairingPassphrase
+    }
+
+    func rotatePairingPassphrase() throws -> String {
+        let passphrase = try AgentTokenStore.generateAndSave()
+        pairingPassphrase = passphrase
         task?.cancel(with: .normalClosure, reason: nil)
         task = nil
         connect()
+        return passphrase
     }
 
     // MARK: - Connection
 
     private func connect() {
         guard !stopped else { return }
-        guard let agentToken, !agentToken.isEmpty else {
-            bridgeLog.error("bridge: SCRAPE_AGENT_TOKEN is required")
+        guard let pairingPassphrase, !pairingPassphrase.isEmpty else {
+            bridgeLog.error("bridge: a pairing passphrase is required")
             return
         }
         bridgeLog.info("bridge: connecting to \(self.serverURL.absoluteString, privacy: .public)")
@@ -75,10 +79,10 @@ final class BridgeClient {
     }
 
     private func sendRegister(task: URLSessionWebSocketTask) {
-        guard let agentToken, !agentToken.isEmpty else { return }
+        guard let pairingPassphrase, !pairingPassphrase.isEmpty else { return }
         let msg: [String: Any] = [
             "type": "register",
-            "token": agentToken,
+            "token": pairingPassphrase,
             "clientType": "agent"
         ]
         send(msg, via: task)

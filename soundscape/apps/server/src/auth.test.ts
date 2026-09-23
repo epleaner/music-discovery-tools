@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import test from 'node:test';
 import express from 'express';
-import type { Database, UserRecord } from '@soundscape/scrapes-db';
+import {
+  hashToken,
+  type Database,
+  type UserRecord,
+} from '@soundscape/scrapes-db';
 import { createAuthRouter } from './auth.js';
 
 function makeDb(): Database {
@@ -113,6 +117,7 @@ async function startAuthServer() {
   if (!address || typeof address === 'string')
     throw new Error('server did not start');
   return {
+    db,
     baseUrl: `http://127.0.0.1:${address.port}`,
     close: () =>
       new Promise<void>((resolve, reject) =>
@@ -131,7 +136,7 @@ async function json(response: Response): Promise<Record<string, any>> {
   return (await response.json()) as Record<string, any>;
 }
 
-test('sessions and agent tokens are isolated per account', async () => {
+test('sessions and agent passphrases are isolated per account', async () => {
   const server = await startAuthServer();
   try {
     const aliceRegistration = await fetch(`${server.baseUrl}/auth/register`, {
@@ -143,15 +148,40 @@ test('sessions and agent tokens are isolated per account', async () => {
     const aliceCookie = cookieFrom(aliceRegistration);
     const alice = await json(aliceRegistration);
 
-    const aliceTokenResponse = await fetch(`${server.baseUrl}/auth/agent`, {
-      method: 'POST',
-      headers: { cookie: aliceCookie },
-      body: '{}',
-    });
-    assert.equal(aliceTokenResponse.status, 200);
-    const aliceToken = (await json(aliceTokenResponse)).token;
-    assert.equal(typeof aliceToken, 'string');
+    const invalidPassphraseResponse = await fetch(
+      `${server.baseUrl}/auth/agent`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: aliceCookie,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ passphrase: 'too-short' }),
+      }
+    );
+    assert.equal(invalidPassphraseResponse.status, 400);
+    const statusAfterInvalidPassphrase = await json(
+      await fetch(`${server.baseUrl}/auth/agent`, {
+        headers: { cookie: aliceCookie },
+      })
+    );
+    assert.equal(statusAfterInvalidPassphrase.configured, false);
 
+    const alicePassphrase = 'alice-local-agent-passphrase-00000001';
+    const alicePairingResponse = await fetch(`${server.baseUrl}/auth/agent`, {
+      method: 'POST',
+      headers: {
+        cookie: aliceCookie,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ passphrase: alicePassphrase }),
+    });
+    assert.equal(alicePairingResponse.status, 204);
+    assert.equal(await alicePairingResponse.text(), '');
+    const pairedUser = await server.db.getUserByAgentTokenHash(
+      hashToken(alicePassphrase)
+    );
+    assert.equal(pairedUser?.id, alice.user.id);
     const bobRegistration = await fetch(`${server.baseUrl}/auth/register`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

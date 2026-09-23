@@ -1,9 +1,8 @@
 import { Component, Show, createSignal, onCleanup, onMount } from 'solid-js';
 import Button from './Button';
-import ControlGroup from './ControlGroup';
 import {
-  generateAgentToken,
   getAgentStatus,
+  pairAgent,
   revokeAgentToken,
   type AgentStatus,
 } from '../lib/auth';
@@ -15,7 +14,7 @@ const AgentSetup: Component = () => {
     connected: false,
     lastSeenAt: null,
   });
-  const [token, setToken] = createSignal('');
+  const [passphrase, setPassphrase] = createSignal('');
   const [error, setError] = createSignal('');
   const [working, setWorking] = createSignal(false);
   let timer: ReturnType<typeof setInterval> | undefined;
@@ -39,17 +38,18 @@ const AgentSetup: Component = () => {
   });
   onCleanup(() => clearInterval(timer));
 
-  const createToken = async () => {
+  const pair = async () => {
     setWorking(true);
     setError('');
     try {
-      setToken(await generateAgentToken());
+      await pairAgent(passphrase());
+      setPassphrase('');
       await refresh();
-    } catch (tokenError) {
+    } catch (pairingError) {
       setError(
-        tokenError instanceof Error
-          ? tokenError.message
-          : 'Unable to create agent token.'
+        pairingError instanceof Error
+          ? pairingError.message
+          : 'Unable to pair the browser helper.'
       );
     } finally {
       setWorking(false);
@@ -61,13 +61,13 @@ const AgentSetup: Component = () => {
     setError('');
     try {
       await revokeAgentToken();
-      setToken('');
+      setPassphrase('');
       await refresh();
     } catch (revokeError) {
       setError(
         revokeError instanceof Error
           ? revokeError.message
-          : 'Unable to revoke agent token.'
+          : 'Unable to unpair the browser helper.'
       );
     } finally {
       setWorking(false);
@@ -90,61 +90,79 @@ const AgentSetup: Component = () => {
         </span>
       </Button>
       <Show when={open()}>
-        <div class="absolute right-0 z-30 mt-1 w-80 border border-border bg-bg shadow-lg">
+        <div class="absolute right-0 z-30 mt-1 w-80 max-w-[calc(100vw-2rem)] border border-border bg-bg shadow-lg">
           <div class="flex flex-col gap-3 p-3">
             <div>
               <div class="text-xs font-medium text-fg">Browser helper</div>
               <p class="mt-1 text-xs text-fg-muted">
-                Keep your browser profile open, then paste the token into the
-                RYM menu-bar app.
+                In the menu-bar app, choose “Pair with Soundscape…”, copy its
+                passphrase, then paste it below.
               </p>
             </div>
             <div class="text-xs text-fg-muted">
               Status:{' '}
               <span class="font-medium text-fg">
-                {status().connected ? 'connected' : 'offline'}
+                {status().connected
+                  ? 'connected'
+                  : status().configured
+                    ? 'paired · offline'
+                    : 'not paired'}
               </span>
             </div>
-            <Show
-              when={token()}
-              fallback={
-                <Button
-                  onClick={() => void createToken()}
-                  variant="primary"
-                  disabled={working()}
-                >
-                  {working()
-                    ? 'Working…'
-                    : status().configured
-                      ? 'Rotate token'
-                      : 'Generate token'}
-                </Button>
-              }
+            <form
+              class="flex flex-col gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void pair();
+              }}
             >
-              <ControlGroup>
-                <div class="text-xs font-medium text-fg">
-                  Copy this token into the menu-bar app
-                </div>
-                <code class="block break-all border border-border bg-bg-muted p-2 text-[0.65rem] text-fg">
-                  {token()}
-                </code>
-                <p class="text-xs text-fg-muted">
-                  Copy it, choose “Configure Soundscape agent…” from the
-                  menu-bar icon, and paste it there. The token is shown once.
-                </p>
-              </ControlGroup>
-            </Show>
+              <label
+                for="agent-pairing-passphrase"
+                class="text-xs font-medium text-fg"
+              >
+                Pairing passphrase
+              </label>
+              <input
+                id="agent-pairing-passphrase"
+                name="agent-pairing-passphrase"
+                type="password"
+                autocomplete="off"
+                minLength={32}
+                required
+                value={passphrase()}
+                onInput={(event) => setPassphrase(event.currentTarget.value)}
+                class="min-w-0 border border-border bg-bg px-2 py-1 text-sm text-fg"
+                aria-describedby="agent-pairing-help"
+              />
+              <p id="agent-pairing-help" class="text-xs text-fg-muted">
+                Pairing replaces any passphrase previously linked to this
+                account.
+              </p>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={working() || !passphrase().trim()}
+              >
+                {working()
+                  ? 'Pairing…'
+                  : status().configured
+                    ? 'Replace pairing'
+                    : 'Pair agent'}
+              </Button>
+            </form>
             <Show when={status().configured}>
               <Button
                 onClick={() => void revoke()}
                 variant="secondary"
                 disabled={working()}
               >
-                Revoke token
+                Unpair agent
               </Button>
             </Show>
             <Show when={error()}>
-              <p class="text-xs text-red-600">{error()}</p>
+              <p class="text-xs text-red-600" role="alert">
+                {error()}
+              </p>
             </Show>
           </div>
         </div>

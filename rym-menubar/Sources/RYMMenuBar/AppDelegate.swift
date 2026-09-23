@@ -39,9 +39,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
 
     private var inputWindow: NSWindow?
     private var inputField: NSTextField?
-    private var agentTokenWindow: NSWindow?
-    private var agentTokenField: NSSecureTextField?
-    private var agentTokenError: NSTextField?
+    private var pairingWindow: NSWindow?
+    private var pairingField: NSTextField?
+    private var pairingError: NSTextField?
     private var bridgeClient: BridgeClient?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -455,7 +455,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         menu.addItem(cdp)
         cdpStatusItem = cdp
         configureCdpItem(cdp, port: lastDetectedPort)
-        let agentSetup = NSMenuItem(title: "Configure Soundscape agent…", action: #selector(showAgentToken), keyEquivalent: "")
+        let agentSetup = NSMenuItem(title: "Pair with Soundscape…", action: #selector(showPairingPassphrase), keyEquivalent: "")
         agentSetup.target = self
         menu.addItem(agentSetup)
         menu.addItem(.separator())
@@ -774,90 +774,106 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
     }
 
 
-    // MARK: - Agent token window
+    // MARK: - Soundscape pairing window
 
-    @objc private func showAgentToken() {
-        if agentTokenWindow == nil {
-            buildAgentTokenWindow()
+    @objc private func showPairingPassphrase() {
+        if pairingWindow == nil {
+            buildPairingWindow()
         }
-        agentTokenError?.stringValue = ""
-        agentTokenField?.stringValue = ""
-        agentTokenWindow?.center()
-        agentTokenWindow?.makeKeyAndOrderFront(nil)
+        pairingError?.stringValue = ""
+        pairingField?.stringValue = bridgeClient?.currentPairingPassphrase ?? ""
+        pairingWindow?.center()
+        pairingWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        agentTokenField?.becomeFirstResponder()
     }
 
-    @objc private func saveAgentToken() {
-        let token = agentTokenField?.stringValue.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !token.isEmpty else {
-            agentTokenError?.stringValue = "Paste the token from Soundscape, then choose Save."
-            agentTokenField?.becomeFirstResponder()
+    @objc private func copyPairingPassphrase() {
+        guard let passphrase = bridgeClient?.currentPairingPassphrase,
+              !passphrase.isEmpty else {
+            pairingError?.stringValue = "No pairing passphrase is available."
             return
         }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(passphrase, forType: .string)
+        statusLine = "Soundscape pairing passphrase copied"
+        rebuildMenu()
+    }
+
+    @objc private func rotatePairingPassphrase() {
         do {
-            try bridgeClient?.updateAgentToken(token)
-            agentTokenWindow?.close()
-            statusLine = "Soundscape agent token saved"
+            guard let passphrase = try bridgeClient?.rotatePairingPassphrase() else {
+                pairingError?.stringValue = "The Soundscape agent is unavailable."
+                return
+            }
+            pairingField?.stringValue = passphrase
+            pairingError?.stringValue = ""
+            statusLine = "New Soundscape pairing passphrase generated"
             rebuildMenu()
         } catch {
-            agentTokenError?.stringValue = error.localizedDescription
+            pairingError?.stringValue = error.localizedDescription
         }
     }
 
-    private func buildAgentTokenWindow() {
+    private func buildPairingWindow() {
         let w: CGFloat = 560
-        let h: CGFloat = 190
+        let h: CGFloat = 220
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: w, height: h),
             styleMask: [.titled, .closable],
             backing: .buffered, defer: false)
-        window.title = "Configure Soundscape Agent"
+        window.title = "Pair with Soundscape"
         window.isReleasedWhenClosed = false
 
         let content = NSView(frame: NSRect(x: 0, y: 0, width: w, height: h))
-        let label = NSTextField(labelWithString: "Paste the agent token from Soundscape")
-        label.frame = NSRect(x: 20, y: 142, width: w - 40, height: 20)
+        let label = NSTextField(labelWithString: "Copy this passphrase into Soundscape")
+        label.frame = NSRect(x: 20, y: 172, width: w - 40, height: 20)
         content.addSubview(label)
 
-        let detail = NSTextField(labelWithString: "In Soundscape, open Agent, generate a token, copy it, and paste it here.")
-        detail.frame = NSRect(x: 20, y: 116, width: w - 40, height: 20)
+        let detail = NSTextField(labelWithString: "Open Browser helper in Soundscape, paste the passphrase, and choose Pair agent.")
+        detail.frame = NSRect(x: 20, y: 146, width: w - 40, height: 20)
         detail.textColor = .secondaryLabelColor
         detail.font = NSFont.systemFont(ofSize: 12)
         content.addSubview(detail)
 
-        let field = NSSecureTextField(frame: NSRect(x: 20, y: 76, width: w - 40, height: 26))
-        field.placeholderString = "Agent token"
+        let field = NSTextField(frame: NSRect(x: 20, y: 106, width: w - 40, height: 26))
+        field.isEditable = false
+        field.isSelectable = true
         field.usesSingleLineMode = true
-        field.target = self
-        field.action = #selector(saveAgentToken)
         content.addSubview(field)
-        agentTokenField = field
+        pairingField = field
 
         let error = NSTextField(labelWithString: "")
-        error.frame = NSRect(x: 20, y: 49, width: w - 40, height: 18)
+        error.frame = NSRect(x: 20, y: 79, width: w - 40, height: 18)
         error.textColor = .systemRed
         error.font = NSFont.systemFont(ofSize: 12)
         content.addSubview(error)
-        agentTokenError = error
+        pairingError = error
 
-        let cancel = NSButton(frame: NSRect(x: w - 190, y: 16, width: 80, height: 28))
-        cancel.title = "Cancel"
-        cancel.bezelStyle = .rounded
-        cancel.target = window
-        cancel.action = #selector(NSWindow.performClose(_:))
-        content.addSubview(cancel)
+        let rotate = NSButton(frame: NSRect(x: 20, y: 20, width: 190, height: 28))
+        rotate.title = "Generate New Passphrase"
+        rotate.bezelStyle = .rounded
+        rotate.target = self
+        rotate.action = #selector(rotatePairingPassphrase)
+        content.addSubview(rotate)
 
-        let save = NSButton(frame: NSRect(x: w - 100, y: 16, width: 80, height: 28))
-        save.title = "Save"
-        save.bezelStyle = .rounded
-        save.keyEquivalent = "\r"
-        save.target = self
-        save.action = #selector(saveAgentToken)
-        content.addSubview(save)
+        let close = NSButton(frame: NSRect(x: w - 190, y: 20, width: 80, height: 28))
+        close.title = "Close"
+        close.bezelStyle = .rounded
+        close.target = window
+        close.action = #selector(NSWindow.performClose(_:))
+        content.addSubview(close)
+
+        let copy = NSButton(frame: NSRect(x: w - 100, y: 20, width: 80, height: 28))
+        copy.title = "Copy"
+        copy.bezelStyle = .rounded
+        copy.keyEquivalent = "\r"
+        copy.target = self
+        copy.action = #selector(copyPairingPassphrase)
+        content.addSubview(copy)
 
         window.contentView = content
-        agentTokenWindow = window
+        pairingWindow = window
     }
 
     // MARK: - Input window

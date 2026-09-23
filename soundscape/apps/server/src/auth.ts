@@ -23,6 +23,10 @@ const credentialsSchema = z.object({
   password: z.string().min(8).max(200),
 });
 
+const agentPairingSchema = z.object({
+  passphrase: z.string().trim().min(32).max(200),
+});
+
 export interface AgentConnectionState {
   isConnected(ownerKey: string): boolean;
   unregisterOwner(ownerKey: string): void;
@@ -168,11 +172,15 @@ export function createAuthRouter(deps: {
     if (!user || !db)
       return res.status(401).json({ message: 'not authenticated' });
 
-    const token = createToken();
+    const parsed = agentPairingSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: 'invalid agent passphrase' });
+    }
+
     const ownerKey = ownerKeyForUser(user.id);
     deps.agentRegistry.unregisterOwner(ownerKey);
-    await db.setAgentTokenHash(user.id, hashToken(token));
-    return res.json({ token });
+    await db.setAgentTokenHash(user.id, hashToken(parsed.data.passphrase));
+    return res.status(204).end();
   });
 
   router.delete('/agent', async (req, res) => {

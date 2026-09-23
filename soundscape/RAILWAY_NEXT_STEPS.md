@@ -81,14 +81,14 @@ railway variables set VITE_API_URL=https://your-api-url.railway.app
 
 **On the local desktop agent:**
 
-1. Sign in to the deployed web UI.
-2. Generate an agent token from the Agent control.
-3. Start the local agent with:
+1. Start the RYM menu-bar app with `SCRAPE_AGENT_WS_URL` set to the deployed
+   API's WSS endpoint.
+2. Choose **Pair with Soundscape…** and copy the locally generated passphrase.
+3. Sign in to the deployed web UI and submit that passphrase through the
+   **Browser helper** control.
 
-```bash
-export SCRAPE_AGENT_WS_URL=wss://your-api-url.railway.app/ws
-export SCRAPE_AGENT_TOKEN=the-token-generated-in-the-web-ui
-```
+For a menu-less agent, set a high-entropy `SCRAPE_AGENT_TOKEN` locally and
+submit that same value through the web pairing form.
 
 ### 6. Monitor Logs
 

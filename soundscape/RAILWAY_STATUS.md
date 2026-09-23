@@ -91,8 +91,8 @@ After services are running:
 
 3. **Update Environment Variables:**
    - In `soundscape-web`: Set `VITE_API_URL` to the API service URL
-   - Sign in to the deployed web UI and generate a per-user agent token
-   - Start the local agent with `SCRAPE_AGENT_WS_URL` and that token
+   - Start the local agent with `SCRAPE_AGENT_WS_URL`, copy its generated
+     passphrase, and submit that passphrase in the signed-in web UI
 
 ## Next Steps
 

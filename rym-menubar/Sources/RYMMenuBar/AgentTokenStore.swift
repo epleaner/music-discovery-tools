@@ -7,22 +7,47 @@ enum AgentTokenStore {
 
     enum StoreError: LocalizedError {
         case keychain(OSStatus)
-        case invalidToken
-        case invalidStoredToken
+        case randomGeneration(OSStatus)
+        case invalidPassphrase
+        case invalidStoredPassphrase
 
         var errorDescription: String? {
             switch self {
             case .keychain(let status):
                 return "Keychain error (status \(status))."
-            case .invalidToken:
-                return "Enter a non-empty agent token."
-            case .invalidStoredToken:
-                return "The saved agent token is not valid text."
+            case .randomGeneration(let status):
+                return "Unable to generate a secure pairing passphrase (status \(status))."
+            case .invalidPassphrase:
+                return "The pairing passphrase is empty."
+            case .invalidStoredPassphrase:
+                return "The saved pairing passphrase is not valid text."
             }
         }
     }
 
-    static func load() throws -> String? {
+    static func loadOrCreate() throws -> String {
+        if let passphrase = try load() {
+            return passphrase
+        }
+        return try generateAndSave()
+    }
+
+    static func generateAndSave() throws -> String {
+        var bytes = [UInt8](repeating: 0, count: 32)
+        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        guard status == errSecSuccess else {
+            throw StoreError.randomGeneration(status)
+        }
+        let passphrase = Data(bytes)
+            .base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        try save(passphrase)
+        return passphrase
+    }
+
+    private static func load() throws -> String? {
         var query = baseQuery()
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -34,14 +59,14 @@ enum AgentTokenStore {
         guard let data = result as? Data,
               let token = String(data: data, encoding: .utf8),
               !token.isEmpty else {
-            throw StoreError.invalidStoredToken
+            throw StoreError.invalidStoredPassphrase
         }
         return token
     }
 
-    static func save(_ token: String) throws {
-        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw StoreError.invalidToken }
+    private static func save(_ passphrase: String) throws {
+        let trimmed = passphrase.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw StoreError.invalidPassphrase }
         let valueData = Data(trimmed.utf8)
         let status = SecItemUpdate(
             baseQuery() as CFDictionary,

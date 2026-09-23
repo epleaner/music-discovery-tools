@@ -139,3 +139,51 @@ headed browser profile and receives only that user's scrape jobs.
 - Next action: run real-browser QA with the external local agent. This
   initiative intentionally does not implement a daemon, menu-bar UI, or native
   desktop shell.
+
+## Local-generated pairing follow-up
+
+Status: complete; native window visual QA remains manual
+Updated: 2026-09-23
+
+Goal: reverse the setup flow so the native local agent creates and stores the
+high-entropy pairing passphrase, then the authenticated web user submits that
+passphrase to bind the agent to their account.
+
+Non-goals: no WebSocket protocol change, multi-agent management, queue changes,
+or removal of the `SCRAPE_AGENT_TOKEN` environment override.
+
+Acceptance:
+
+- A local agent without a Keychain credential generates a 32-byte random
+  base64url passphrase, stores it in Keychain, and uses it for registration.
+- The menu-bar pairing window lets the user copy the current passphrase and
+  explicitly generate a replacement.
+- The web Agent control accepts the local passphrase, binds only the signed-in
+  user's agent, never receives the raw passphrase back, and retains status and
+  revoke behavior.
+- Invalid passphrases are rejected without changing the configured agent.
+- The server test, web build/type check, Swift build, and a deterministic
+  authenticated HTTP/WebSocket smoke flow pass.
+
+Constraints: the raw passphrase remains a secret transported only in the
+authenticated HTTPS pairing request and WSS registration message; PostgreSQL
+continues to store only its SHA-256 hash.
+
+Verification:
+
+- `swift build` passed for the native menu-bar app.
+- `pnpm lint`, `pnpm type-check`, `pnpm test`, and `pnpm build` passed. The
+  database-backed scrapes-db cases were skipped because
+  `SCRAPES_TEST_DATABASE_URL` was not set; the changed server route uses the
+  in-memory auth test and passed.
+- A real PostgreSQL 16 + server smoke flow registered a user over HTTP, paired
+  the local passphrase with a 204 response, registered an agent over WebSocket,
+  and observed `configured: true` and `connected: true`.
+- Browser QA exercised pair and unpair through the rendered web control. At
+  320 CSS px, the pairing panel stayed within the viewport with no horizontal
+  overflow. The app's existing shell overflows at 200% root text size before
+  the pairing panel is considered.
+
+Next action: visually inspect the native AppKit pairing window on a desktop
+session; this harness verified its compiled implementation but cannot inspect
+native windows.
