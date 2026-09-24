@@ -842,8 +842,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
     }
 
     private func buildPairingWindow() {
-        let w: CGFloat = 560
-        let h: CGFloat = 310
+        let w: CGFloat = 640
+        let h: CGFloat = 270
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: w, height: h),
             styleMask: [.titled, .closable],
@@ -855,13 +855,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         let label = NSTextField(
             labelWithString: "Create a passphrase here, or paste one created on Soundscape Web"
         )
-        label.frame = NSRect(x: 20, y: 270, width: w - 40, height: 20)
+        label.frame = NSRect(x: 20, y: 230, width: w - 40, height: 20)
         content.addSubview(label)
 
         let detail = NSTextField(wrappingLabelWithString:
             "Both apps connect with the same passphrase. Scrape history belongs to that passphrase, not to this Mac."
         )
-        detail.frame = NSRect(x: 20, y: 224, width: w - 40, height: 38)
+        detail.frame = NSRect(x: 20, y: 188, width: w - 40, height: 34)
         detail.textColor = .secondaryLabelColor
         detail.font = NSFont.systemFont(ofSize: 12)
         content.addSubview(detail)
@@ -869,12 +869,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         let safety = NSTextField(wrappingLabelWithString:
             "Store it in a password manager or another secure place. Losing it means losing access to that history."
         )
-        safety.frame = NSRect(x: 20, y: 182, width: w - 40, height: 34)
+        safety.frame = NSRect(x: 20, y: 148, width: w - 40, height: 32)
         safety.textColor = .secondaryLabelColor
         safety.font = NSFont.systemFont(ofSize: 12)
         content.addSubview(safety)
 
-        let field = NSTextField(frame: NSRect(x: 20, y: 140, width: w - 40, height: 26))
+        let field = NSTextField(frame: NSRect(x: 20, y: 108, width: w - 40, height: 26))
         field.isEditable = true
         field.isSelectable = true
         field.usesSingleLineMode = true
@@ -882,7 +882,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         content.addSubview(field)
         pairingField = field
 
-        let use = NSButton(frame: NSRect(x: 20, y: 96, width: 180, height: 28))
+        let use = NSButton(frame: NSRect(x: w - 200, y: 20, width: 180, height: 28))
         use.title = "Use This Passphrase"
         use.bezelStyle = .rounded
         use.keyEquivalent = "\r"
@@ -891,27 +891,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         content.addSubview(use)
 
         let error = NSTextField(wrappingLabelWithString: "")
-        error.frame = NSRect(x: 210, y: 88, width: w - 230, height: 42)
+        error.frame = NSRect(x: 20, y: 62, width: w - 40, height: 34)
         error.textColor = .systemRed
         error.font = NSFont.systemFont(ofSize: 12)
         content.addSubview(error)
         pairingError = error
 
-        let rotate = NSButton(frame: NSRect(x: 20, y: 20, width: 190, height: 28))
+        let rotate = NSButton(frame: NSRect(x: 20, y: 20, width: 184, height: 28))
         rotate.title = "Generate New Passphrase"
         rotate.bezelStyle = .rounded
         rotate.target = self
         rotate.action = #selector(rotatePairingPassphrase)
         content.addSubview(rotate)
 
-        let close = NSButton(frame: NSRect(x: w - 190, y: 20, width: 80, height: 28))
+        let close = NSButton(frame: NSRect(x: w - 280, y: 20, width: 72, height: 28))
         close.title = "Close"
         close.bezelStyle = .rounded
         close.target = window
         close.action = #selector(NSWindow.performClose(_:))
         content.addSubview(close)
 
-        let copy = NSButton(frame: NSRect(x: w - 100, y: 20, width: 80, height: 28))
+        let copy = NSButton(frame: NSRect(x: 212, y: 20, width: 72, height: 28))
         copy.title = "Copy"
         copy.bezelStyle = .rounded
         copy.target = self
