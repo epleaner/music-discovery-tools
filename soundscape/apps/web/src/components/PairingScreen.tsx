@@ -3,7 +3,7 @@ import Button from './Button';
 import Input from './Input';
 import ControlGroup from './ControlGroup';
 import {
-  generatePairingPassphrase,
+  preparePairingPassphrase,
   startSession,
   type SessionUser,
 } from '../lib/auth';
@@ -43,12 +43,23 @@ const PairingScreen: Component<PairingScreenProps> = (props) => {
     void authenticate(passphrase());
   };
 
-  const createNew = () => {
-    setPassphrase(generatePairingPassphrase());
-    setSaved(false);
-    setCopyStatus('');
+  const createNew = async () => {
     setError('');
-    setStage('save-new');
+    setSubmitting(true);
+    try {
+      setPassphrase(await preparePairingPassphrase());
+      setSaved(false);
+      setCopyStatus('');
+      setStage('save-new');
+    } catch (createError) {
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : 'Unable to create a passphrase.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const copyPassphrase = async () => {
@@ -205,8 +216,13 @@ const PairingScreen: Component<PairingScreenProps> = (props) => {
                 the menu-bar app.
               </p>
             </div>
-            <Button type="button" variant="secondary" onClick={createNew}>
-              Create new passphrase
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={submitting()}
+              onClick={() => void createNew()}
+            >
+              {submitting() ? 'Creating…' : 'Create new passphrase'}
             </Button>
           </div>
         </section>

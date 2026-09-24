@@ -9,6 +9,7 @@ private let bridgeLog = Logger(subsystem: "com.elipleaner.rym-menubar", category
 final class BridgeClient {
 
     private let serverURL: URL
+    private let pairingAPI: PairingPassphraseAPI?
     private var pairingPassphrase: String?
     private var task: URLSessionWebSocketTask?
     private let session: URLSession
@@ -25,13 +26,14 @@ final class BridgeClient {
         let urlString = environment["SCRAPE_AGENT_WS_URL"]
             ?? "ws://localhost:3001/ws"
         serverURL = URL(string: urlString)!
+        pairingAPI = try? PairingPassphraseAPI(webSocketURL: serverURL)
         if let environmentPassphrase = environment["SCRAPE_AGENT_TOKEN"]?
             .trimmingCharacters(in: .whitespacesAndNewlines),
            !environmentPassphrase.isEmpty {
             pairingPassphrase = environmentPassphrase
         } else {
             do {
-                pairingPassphrase = try AgentTokenStore.loadOrCreate()
+                pairingPassphrase = try AgentTokenStore.load()
             } catch {
                 pairingPassphrase = nil
                 bridgeLog.error("bridge: unable to load pairing passphrase: \(error.localizedDescription, privacy: .public)")
@@ -41,7 +43,7 @@ final class BridgeClient {
     }
 
     func start() {
-        connect()
+        prepareInitialPassphrase()
     }
 
     func stop() {
@@ -53,20 +55,59 @@ final class BridgeClient {
         pairingPassphrase
     }
 
-    func rotatePairingPassphrase() throws -> String {
-        reconnect(using: try AgentTokenStore.generateAndSave())
+    func generatePairingPassphrase(
+        completion: @escaping (Result<String, Error>) -> Void
+    ) {
+        preparePairingPassphrase(nil, completion: completion)
     }
 
-    func usePairingPassphrase(_ passphrase: String) throws -> String {
-        reconnect(using: try AgentTokenStore.save(passphrase))
+    func usePairingPassphrase(
+        _ passphrase: String,
+        completion: @escaping (Result<String, Error>) -> Void
+    ) {
+        preparePairingPassphrase(passphrase, completion: completion)
     }
 
-    private func reconnect(using passphrase: String) -> String {
+    private func preparePairingPassphrase(
+        _ passphrase: String?,
+        completion: @escaping (Result<String, Error>) -> Void
+    ) {
+        guard let pairingAPI else {
+            completion(.failure(PairingPassphraseAPIError.invalidServerURL))
+            return
+        }
+        pairingAPI.prepare(passphrase) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self, !self.stopped else { return }
+                do {
+                    let prepared = try AgentTokenStore.save(result.get())
+                    self.reconnect(using: prepared)
+                    completion(.success(prepared))
+                } catch {
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    private func prepareInitialPassphrase() {
+        preparePairingPassphrase(pairingPassphrase) { [weak self] result in
+            guard let self else { return }
+            if case .failure(let error) = result {
+                bridgeLog.error("bridge: unable to prepare pairing passphrase: \(error.localizedDescription, privacy: .public)")
+                DispatchQueue.main.asyncAfter(deadline: .now() + self.reconnectDelay) {
+                    guard !self.stopped, self.task == nil else { return }
+                    self.prepareInitialPassphrase()
+                }
+            }
+        }
+    }
+
+    private func reconnect(using passphrase: String) {
         pairingPassphrase = passphrase
         task?.cancel(with: .normalClosure, reason: nil)
         task = nil
         connect()
-        return passphrase
     }
 
     // MARK: - Connection

@@ -801,35 +801,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
     }
 
     @objc private func usePairingPassphrase() {
-        do {
-            guard let bridgeClient else {
-                pairingError?.stringValue = "The Soundscape agent is unavailable."
-                return
+        guard let bridgeClient else {
+            pairingError?.stringValue = "The Soundscape agent is unavailable."
+            return
+        }
+        pairingError?.stringValue = "Checking passphrase…"
+        bridgeClient.usePairingPassphrase(pairingField?.stringValue ?? "") {
+            [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let passphrase):
+                self.pairingField?.stringValue = passphrase
+                self.pairingError?.stringValue = ""
+                self.statusLine = "Soundscape pairing passphrase updated"
+                self.rebuildMenu()
+            case .failure(let error):
+                self.pairingError?.stringValue = error.localizedDescription
             }
-            let passphrase = try bridgeClient.usePairingPassphrase(
-                pairingField?.stringValue ?? ""
-            )
-            pairingField?.stringValue = passphrase
-            pairingError?.stringValue = ""
-            statusLine = "Soundscape pairing passphrase updated"
-            rebuildMenu()
-        } catch {
-            pairingError?.stringValue = error.localizedDescription
         }
     }
 
     @objc private func rotatePairingPassphrase() {
-        do {
-            guard let passphrase = try bridgeClient?.rotatePairingPassphrase() else {
-                pairingError?.stringValue = "The Soundscape agent is unavailable."
-                return
+        guard let bridgeClient else {
+            pairingError?.stringValue = "The Soundscape agent is unavailable."
+            return
+        }
+        pairingError?.stringValue = "Creating passphrase…"
+        bridgeClient.generatePairingPassphrase { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let passphrase):
+                self.pairingField?.stringValue = passphrase
+                self.pairingError?.stringValue = ""
+                self.statusLine = "New Soundscape pairing passphrase generated"
+                self.rebuildMenu()
+            case .failure(let error):
+                self.pairingError?.stringValue = error.localizedDescription
             }
-            pairingField?.stringValue = passphrase
-            pairingError?.stringValue = ""
-            statusLine = "New Soundscape pairing passphrase generated"
-            rebuildMenu()
-        } catch {
-            pairingError?.stringValue = error.localizedDescription
         }
     }
 

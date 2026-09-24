@@ -144,6 +144,47 @@ async function createSession(baseUrl: string, passphrase: string) {
   };
 }
 
+test('shared passphrase API generates and normalizes credentials', async () => {
+  const server = await startAuthServer();
+  try {
+    const generate = () =>
+      fetch(`${server.baseUrl}/auth/passphrase`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      }).then((response) => json<{ passphrase: string }>(response));
+    const first = await generate();
+    const second = await generate();
+    assert.match(first.passphrase, /^[0-9a-f]{48}$/);
+    assert.match(second.passphrase, /^[0-9a-f]{48}$/);
+    assert.notEqual(first.passphrase, second.passphrase);
+
+    const existing = 'abacus abdomen ability abrasion abrasive absentee';
+    const normalizedResponse = await fetch(
+      `${server.baseUrl}/auth/passphrase`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ passphrase: `  ${existing} \n` }),
+      }
+    );
+    assert.equal(normalizedResponse.status, 200);
+    assert.equal(
+      (await json<{ passphrase: string }>(normalizedResponse)).passphrase,
+      existing
+    );
+
+    const invalid = await fetch(`${server.baseUrl}/auth/passphrase`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ passphrase: 'too-short' }),
+    });
+    assert.equal(invalid.status, 400);
+  } finally {
+    await server.close();
+  }
+});
+
 test('pairing passphrases provision isolated repeatable sessions', async () => {
   const server = await startAuthServer();
   try {

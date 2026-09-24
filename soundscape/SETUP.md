@@ -59,7 +59,8 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 ### Test scrape job communication
 
 1. Start the API with `DATABASE_URL` configured.
-2. Create the pairing passphrase from either side:
+2. Create the pairing passphrase from either side. Both clients call
+   `POST /auth/passphrase`:
    - Menu bar first: choose **Pair with Soundscape Web…**, generate and copy a
      passphrase, then enter it on Soundscape Web.
    - Web first: choose **Create a new passphrase**, save and copy it, then paste

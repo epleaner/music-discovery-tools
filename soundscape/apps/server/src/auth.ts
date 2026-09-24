@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { Router } from 'express';
 import { z } from 'zod';
@@ -12,8 +12,12 @@ import {
 export const SESSION_COOKIE = 'soundscape_session';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1_000;
 
+const passphraseValueSchema = z.string().trim().min(32).max(200);
 const passphraseSchema = z.object({
-  passphrase: z.string().trim().min(32).max(200),
+  passphrase: passphraseValueSchema,
+});
+const preparePassphraseSchema = z.object({
+  passphrase: passphraseValueSchema.optional(),
 });
 
 export interface AgentConnectionState {
@@ -85,6 +89,16 @@ export function createAuthRouter(deps: {
   agentRegistry: AgentConnectionState;
 }): Router {
   const router = Router();
+
+  router.post('/passphrase', (req, res) => {
+    const parsed = preparePassphraseSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({ message: 'invalid pairing passphrase' });
+    }
+    return res.json({
+      passphrase: parsed.data.passphrase ?? randomBytes(24).toString('hex'),
+    });
+  });
 
   router.post('/session', async (req, res) => {
     const db = deps.getDb();

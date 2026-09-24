@@ -12,12 +12,14 @@ export interface AgentStatus {
 
 const apiUrl = resolveApiUrl(import.meta.env?.VITE_API_URL);
 
-export function generatePairingPassphrase(): string {
-  const bytes = new Uint8Array(24);
-  globalThis.crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join(
-    ''
+export async function preparePairingPassphrase(
+  passphrase?: string
+): Promise<string> {
+  const result = await request<{ passphrase: string }>(
+    '/auth/passphrase',
+    jsonBody(passphrase === undefined ? {} : { passphrase })
   );
+  return result.passphrase;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -50,9 +52,10 @@ export async function getSession(): Promise<SessionUser | null> {
 }
 
 export async function startSession(passphrase: string): Promise<SessionUser> {
+  const preparedPassphrase = await preparePairingPassphrase(passphrase);
   const result = await request<{ user: SessionUser }>(
     '/auth/session',
-    jsonBody({ passphrase })
+    jsonBody({ passphrase: preparedPassphrase })
   );
   return result.user;
 }
@@ -66,5 +69,9 @@ export function getAgentStatus(): Promise<AgentStatus> {
 }
 
 export async function pairAgent(passphrase: string): Promise<void> {
-  await request<void>('/auth/agent', jsonBody({ passphrase }));
+  const preparedPassphrase = await preparePairingPassphrase(passphrase);
+  await request<void>(
+    '/auth/agent',
+    jsonBody({ passphrase: preparedPassphrase })
+  );
 }

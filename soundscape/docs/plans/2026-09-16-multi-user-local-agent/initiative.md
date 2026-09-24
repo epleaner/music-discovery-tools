@@ -300,3 +300,43 @@ Residual: this harness cannot visually inspect the native AppKit window; its
 layout was compiled and launched but not screenshot-reviewed.
 
 Next action: none.
+
+## Shared pairing API correction
+
+Status: complete
+Updated: 2026-09-24
+
+Goal: make Soundscape Web and the macOS daemon use one server-owned API for
+both passphrase generation and existing-passphrase normalization.
+
+Acceptance:
+
+- `POST /auth/passphrase` accepts either an empty object to generate a
+  passphrase or `{ "passphrase": "…" }` to trim and validate an existing one.
+- Both clients call that endpoint before saving or using a passphrase.
+- Both clients receive the same 48-character, 192-bit format when generating.
+- The web retains its save-confirmation gate before creating a session.
+- The daemon does not replace its Keychain credential unless the shared API
+  succeeds, then reconnects its WebSocket with the returned value.
+- Local browser and Swift passphrase generators and the bundled EFF word list
+  are removed.
+
+Failure behavior: API errors remain visible on both pairing surfaces. A failed
+daemon request leaves the current credential and connection unchanged. On first
+launch without a credential, the daemon retries API generation while running.
+
+Verification:
+
+- Server tests passed 10 cases, including shared API generation, uniqueness,
+  normalization, and invalid-input rejection.
+- Swift tests passed a local HTTP fixture proving generate and existing-value
+  requests both use `POST /auth/passphrase`; Keychain-boundary validation also
+  passed.
+- Rendered Chromium QA observed `POST /auth/passphrase` for web generation and
+  existing-passphrase sign-in, followed by session creation. Whitespace
+  normalization restored the same user ID.
+- `swift test`, `./build-app.sh`, `pnpm lint`, `pnpm type-check`, `pnpm test`,
+  and `pnpm build` passed.
+- The local web and daemon processes were rebuilt from the shared-API clients.
+
+Next action: none.

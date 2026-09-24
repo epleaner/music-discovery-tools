@@ -7,8 +7,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "RYMMenuBar",
-            path: "Sources/RYMMenuBar",
-            resources: [.copy("Resources/eff_large_wordlist.txt")]
+            path: "Sources/RYMMenuBar"
         ),
         .testTarget(
             name: "RYMMenuBarTests",

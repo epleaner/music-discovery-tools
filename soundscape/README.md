@@ -60,14 +60,16 @@ VITE_API_URL=http://localhost:3001
 
 **Local browser agent**:
 
-Soundscape Web and the RYM menu-bar app can each create the pairing passphrase:
+Soundscape Web and the RYM menu-bar app use the same
+`POST /auth/passphrase` API to create or normalize a pairing passphrase:
 
-- To start from the menu-bar app, choose **Pair with Soundscape Web…**, copy its
-  six-word passphrase, and enter it on the web.
+- To start from the menu-bar app, choose **Pair with Soundscape Web…**, generate
+  and copy a passphrase, then enter it on the web.
 - To start from the web, choose **Create a new passphrase**, save and copy it,
   then paste it into the menu-bar pairing window and choose **Use This
   Passphrase**.
 
+Generated passphrases have the same 48-character format on both surfaces.
 Scrape history is tied to this passphrase. Store it in a password manager or
 another secure place; losing it means losing access to that history. The
 menu-bar app stores its active passphrase in the macOS Keychain.

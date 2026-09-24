@@ -105,6 +105,8 @@ Choose **Pair with Soundscape Web…** from the menu bar. Either direction works
 - Or create a passphrase on Soundscape Web, paste it into the pairing window,
   and choose **Use This Passphrase**.
 
+Both operations use Soundscape's `POST /auth/passphrase` API, so the web and
+menu-bar app generate the same 48-character format and apply the same validation.
 Both apps must use the same passphrase. Soundscape scrape history is tied to
 that passphrase, not to this Mac or a username. Store it in a password manager
 or another secure place; losing it means losing access to that history. The
