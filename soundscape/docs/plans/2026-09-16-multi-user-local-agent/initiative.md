@@ -243,3 +243,60 @@ Verification:
   explicit PostgreSQL run above covered them.
 
 Next action: none.
+
+## Bidirectional passphrase initiation follow-up
+
+Status: complete
+Updated: 2026-09-24
+
+Goal: let either Soundscape Web or the macOS menu-bar app create the shared
+pairing passphrase, and let the other side connect by entering that passphrase.
+
+Acceptance:
+
+- Soundscape Web offers both **Use an existing passphrase** and **Create a new
+  passphrase** before a session starts.
+- A web-created passphrase is generated with browser cryptographic randomness,
+  shown before account creation, and requires explicit confirmation that it was
+  saved before continuing.
+- The menu-bar pairing window accepts and stores a passphrase created on the
+  web, reconnecting the daemon with that credential.
+- The menu-bar app retains its existing ability to generate and copy a
+  passphrase for entry on the web.
+- Both surfaces state that scrape history belongs to the passphrase and that
+  losing it means losing access to that history. Both recommend storing it in a
+  password manager or another secure place.
+- Existing sessions, passphrases, user IDs, and scrape ownership remain
+  unchanged.
+
+Design:
+
+- Web-created passphrases are 24 cryptographically random bytes encoded as 48
+  lowercase hexadecimal characters. They satisfy the existing 32–200 character
+  server contract without adding a second word-list asset.
+- The web does not create a server session until the user confirms the newly
+  generated passphrase has been saved. The raw value remains local until that
+  confirmation.
+- The menu-bar app trims and validates imported passphrases before saving them
+  in Keychain, then reconnects its WebSocket using the replacement value.
+
+Verification:
+
+- Web tests passed 17 cases, including 32 independently generated 192-bit
+  passphrases with the required lowercase hexadecimal format.
+- Swift tests passed both the six-word generator and imported passphrase
+  trimming and 32–200 character validation.
+- Rendered Chromium QA exercised existing-passphrase sign-in and web-created
+  passphrase generation, copy, mandatory save confirmation, session creation,
+  sign-out, and reconnection to the same user ID.
+- A real browser WebSocket registered as the daemon with the web-created
+  passphrase; the authenticated agent status reported configured and connected.
+- The initial web screen had no horizontal overflow at 320 CSS px or at 200%
+  root text size.
+- `swift test`, `./build-app.sh`, `pnpm lint`, `pnpm type-check`, `pnpm test`,
+  and `pnpm build` passed. The rebuilt debug menu-bar process remained running.
+
+Residual: this harness cannot visually inspect the native AppKit window; its
+layout was compiled and launched but not screenshot-reviewed.
+
+Next action: none.

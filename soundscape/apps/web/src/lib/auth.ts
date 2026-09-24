@@ -12,6 +12,14 @@ export interface AgentStatus {
 
 const apiUrl = resolveApiUrl(import.meta.env?.VITE_API_URL);
 
+export function generatePairingPassphrase(): string {
+  const bytes = new Uint8Array(24);
+  globalThis.crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join(
+    ''
+  );
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${apiUrl}${path}`, {
     ...init,

@@ -54,7 +54,14 @@ final class BridgeClient {
     }
 
     func rotatePairingPassphrase() throws -> String {
-        let passphrase = try AgentTokenStore.generateAndSave()
+        reconnect(using: try AgentTokenStore.generateAndSave())
+    }
+
+    func usePairingPassphrase(_ passphrase: String) throws -> String {
+        reconnect(using: try AgentTokenStore.save(passphrase))
+    }
+
+    private func reconnect(using passphrase: String) -> String {
         pairingPassphrase = passphrase
         task?.cancel(with: .normalClosure, reason: nil)
         task = nil

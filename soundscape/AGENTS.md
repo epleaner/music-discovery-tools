@@ -115,7 +115,7 @@ Keep it handy whenever you run commands, edit code, or make architectural decisi
 ## Environment Variables
 
 - Web app expects `VITE_LASTFM_API_KEY` and `VITE_API_URL` in `apps/web/.env.local`; scrape status uses authenticated HTTP polling.
-- Local desktop scrape agent generates and stores the sole web pairing passphrase; the web UI exchanges it for an HTTP-only session.
+- The web app and local desktop scrape agent can each create the shared pairing passphrase; the other surface connects with it, and the web exchanges it for an HTTP-only session.
 
 ## Final Reminders
 

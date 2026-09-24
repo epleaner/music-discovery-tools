@@ -800,6 +800,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         rebuildMenu()
     }
 
+    @objc private func usePairingPassphrase() {
+        do {
+            guard let bridgeClient else {
+                pairingError?.stringValue = "The Soundscape agent is unavailable."
+                return
+            }
+            let passphrase = try bridgeClient.usePairingPassphrase(
+                pairingField?.stringValue ?? ""
+            )
+            pairingField?.stringValue = passphrase
+            pairingError?.stringValue = ""
+            statusLine = "Soundscape pairing passphrase updated"
+            rebuildMenu()
+        } catch {
+            pairingError?.stringValue = error.localizedDescription
+        }
+    }
+
     @objc private func rotatePairingPassphrase() {
         do {
             guard let passphrase = try bridgeClient?.rotatePairingPassphrase() else {
@@ -817,7 +835,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
 
     private func buildPairingWindow() {
         let w: CGFloat = 560
-        let h: CGFloat = 220
+        let h: CGFloat = 310
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: w, height: h),
             styleMask: [.titled, .closable],
@@ -826,25 +844,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         window.isReleasedWhenClosed = false
 
         let content = NSView(frame: NSRect(x: 0, y: 0, width: w, height: h))
-        let label = NSTextField(labelWithString: "Copy this passphrase into Soundscape")
-        label.frame = NSRect(x: 20, y: 172, width: w - 40, height: 20)
+        let label = NSTextField(
+            labelWithString: "Create a passphrase here, or paste one created on Soundscape Web"
+        )
+        label.frame = NSRect(x: 20, y: 270, width: w - 40, height: 20)
         content.addSubview(label)
 
-        let detail = NSTextField(labelWithString: "Open Browser helper in Soundscape, paste the passphrase, and choose Pair agent.")
-        detail.frame = NSRect(x: 20, y: 146, width: w - 40, height: 20)
+        let detail = NSTextField(wrappingLabelWithString:
+            "Both apps connect with the same passphrase. Scrape history belongs to that passphrase, not to this Mac."
+        )
+        detail.frame = NSRect(x: 20, y: 224, width: w - 40, height: 38)
         detail.textColor = .secondaryLabelColor
         detail.font = NSFont.systemFont(ofSize: 12)
         content.addSubview(detail)
 
-        let field = NSTextField(frame: NSRect(x: 20, y: 106, width: w - 40, height: 26))
-        field.isEditable = false
+        let safety = NSTextField(wrappingLabelWithString:
+            "Store it in a password manager or another secure place. Losing it means losing access to that history."
+        )
+        safety.frame = NSRect(x: 20, y: 182, width: w - 40, height: 34)
+        safety.textColor = .secondaryLabelColor
+        safety.font = NSFont.systemFont(ofSize: 12)
+        content.addSubview(safety)
+
+        let field = NSTextField(frame: NSRect(x: 20, y: 140, width: w - 40, height: 26))
+        field.isEditable = true
         field.isSelectable = true
         field.usesSingleLineMode = true
+        field.placeholderString = "Paste a 32–200 character pairing passphrase"
         content.addSubview(field)
         pairingField = field
 
-        let error = NSTextField(labelWithString: "")
-        error.frame = NSRect(x: 20, y: 79, width: w - 40, height: 18)
+        let use = NSButton(frame: NSRect(x: 20, y: 96, width: 180, height: 28))
+        use.title = "Use This Passphrase"
+        use.bezelStyle = .rounded
+        use.keyEquivalent = "\r"
+        use.target = self
+        use.action = #selector(usePairingPassphrase)
+        content.addSubview(use)
+
+        let error = NSTextField(wrappingLabelWithString: "")
+        error.frame = NSRect(x: 210, y: 88, width: w - 230, height: 42)
         error.textColor = .systemRed
         error.font = NSFont.systemFont(ofSize: 12)
         content.addSubview(error)
@@ -867,7 +906,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         let copy = NSButton(frame: NSRect(x: w - 100, y: 20, width: 80, height: 28))
         copy.title = "Copy"
         copy.bezelStyle = .rounded
-        copy.keyEquivalent = "\r"
         copy.target = self
         copy.action = #selector(copyPairingPassphrase)
         content.addSubview(copy)

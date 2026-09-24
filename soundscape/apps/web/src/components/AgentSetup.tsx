@@ -70,8 +70,8 @@ const AgentSetup: Component = () => {
             <div>
               <div class="text-xs font-medium text-fg">Browser helper</div>
               <p class="mt-1 text-xs text-fg-muted">
-                In the menu-bar app, choose “Pair with Soundscape Web…”, copy
-                its passphrase, then paste it below.
+                Create a passphrase in either Soundscape Web or the menu-bar
+                app, then use the same value in both.
               </p>
             </div>
             <div class="text-xs text-fg-muted">
@@ -110,8 +110,8 @@ const AgentSetup: Component = () => {
                 aria-describedby="agent-pairing-help"
               />
               <p id="agent-pairing-help" class="text-xs text-fg-muted">
-                Generate a replacement locally, then enter it here before
-                signing out to preserve this account's history.
+                This passphrase is the key to this account's scrape history.
+                Save it in a password manager before replacing the current one.
               </p>
               <Button
                 type="submit"

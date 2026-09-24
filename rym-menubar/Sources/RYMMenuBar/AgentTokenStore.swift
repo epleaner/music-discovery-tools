@@ -19,7 +19,7 @@ enum AgentTokenStore {
             case .randomGeneration(let status):
                 return "Unable to generate a secure pairing passphrase (status \(status))."
             case .invalidPassphrase:
-                return "The pairing passphrase is empty."
+                return "The pairing passphrase must be between 32 and 200 characters."
             case .invalidStoredPassphrase:
                 return "The saved pairing passphrase is not valid text."
             case .invalidWordList:
@@ -36,9 +36,7 @@ enum AgentTokenStore {
     }
 
     static func generateAndSave() throws -> String {
-        let passphrase = try generatePassphrase()
-        try save(passphrase)
-        return passphrase
+        try save(generatePassphrase())
     }
 
     static func generatePassphrase() throws -> String {
@@ -46,6 +44,14 @@ enum AgentTokenStore {
         return try (0..<6)
             .map { _ in words[try randomIndex(upperBound: words.count)] }
             .joined(separator: " ")
+    }
+
+    static func validatedPassphrase(_ passphrase: String) throws -> String {
+        let trimmed = passphrase.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (32...200).contains(trimmed.count) else {
+            throw StoreError.invalidPassphrase
+        }
+        return trimmed
     }
 
     private static func loadWords() throws -> [String] {
@@ -111,9 +117,8 @@ enum AgentTokenStore {
         return token
     }
 
-    private static func save(_ passphrase: String) throws {
-        let trimmed = passphrase.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw StoreError.invalidPassphrase }
+    static func save(_ passphrase: String) throws -> String {
+        let trimmed = try validatedPassphrase(passphrase)
         let valueData = Data(trimmed.utf8)
         let status = SecItemUpdate(
             baseQuery() as CFDictionary,
@@ -128,6 +133,7 @@ enum AgentTokenStore {
         } else if status != errSecSuccess {
             throw StoreError.keychain(status)
         }
+        return trimmed
     }
 
     private static func baseQuery() -> [String: Any] {

@@ -97,6 +97,21 @@ the menu, so it tells you when Chrome is down instead of failing silently.
 
 ---
 
+## Pair with Soundscape Web
+
+Choose **Pair with Soundscape Web…** from the menu bar. Either direction works:
+
+- Choose **Generate New Passphrase**, copy it, and enter it on Soundscape Web.
+- Or create a passphrase on Soundscape Web, paste it into the pairing window,
+  and choose **Use This Passphrase**.
+
+Both apps must use the same passphrase. Soundscape scrape history is tied to
+that passphrase, not to this Mac or a username. Store it in a password manager
+or another secure place; losing it means losing access to that history. The
+menu-bar app stores its active passphrase in the macOS Keychain.
+
+---
+
 ## Features
 
 ### Load a URL
