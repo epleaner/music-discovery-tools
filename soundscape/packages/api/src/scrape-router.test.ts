@@ -99,8 +99,8 @@ function makeScrapesDb(
   };
 }
 
-const userA: UserIdentity = { id: 'user-a', username: 'alice' };
-const userB: UserIdentity = { id: 'user-b', username: 'bob' };
+const userA: UserIdentity = { id: 'user-a' };
+const userB: UserIdentity = { id: 'user-b' };
 
 function caller(
   scrapesDb: ScrapesDb,

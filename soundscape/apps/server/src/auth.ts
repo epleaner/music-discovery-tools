@@ -3,27 +3,16 @@ import type { Request, Response } from 'express';
 import { Router } from 'express';
 import { z } from 'zod';
 import {
-  createToken,
-  hashPassword,
+  createSessionToken,
   hashToken,
   type Database,
   type UserRecord,
-  verifyPassword,
 } from '@soundscape/scrapes-db';
 
 export const SESSION_COOKIE = 'soundscape_session';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1_000;
 
-const credentialsSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .regex(/^[a-z0-9][a-z0-9_.-]{2,63}$/),
-  password: z.string().min(8).max(200),
-});
-
-const agentPairingSchema = z.object({
+const passphraseSchema = z.object({
   passphrase: z.string().trim().min(32).max(200),
 });
 
@@ -37,7 +26,7 @@ export function ownerKeyForUser(userId: string): string {
 }
 
 export function publicUser(user: UserRecord) {
-  return { id: user.id, username: user.username };
+  return { id: user.id };
 }
 
 export function getCookie(req: Request, name: string): string | null {
@@ -73,7 +62,7 @@ async function startSession(
   userId: string,
   res: Response
 ): Promise<void> {
-  const token = createToken();
+  const token = createSessionToken();
   await db.createSession({
     tokenHash: hashToken(token),
     userId,
@@ -97,52 +86,28 @@ export function createAuthRouter(deps: {
 }): Router {
   const router = Router();
 
-  router.post('/register', async (req, res) => {
+  router.post('/session', async (req, res) => {
     const db = deps.getDb();
     if (!db) return res.status(503).json({ message: 'database unavailable' });
-    const parsed = credentialsSchema.safeParse(req.body);
+    const parsed = passphraseSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ message: 'invalid username or password' });
+      return res.status(400).json({ message: 'invalid pairing passphrase' });
     }
 
     try {
-      const user = await db.createUser({
+      const user = await db.getOrCreateUserByAgentTokenHash({
         id: randomUUID(),
-        username: parsed.data.username,
-        passwordHash: await hashPassword(parsed.data.password),
+        tokenHash: hashToken(parsed.data.passphrase),
       });
       await startSession(db, user.id, res);
       return res.json({ user: publicUser(user) });
     } catch (error) {
-      if ((error as { code?: string }).code === '23505') {
-        return res.status(409).json({ message: 'username already exists' });
-      }
-      console.error('[auth] registration failed:', error);
-      return res.status(500).json({ message: 'unable to create account' });
+      console.error('[auth] passphrase sign-in failed:', error);
+      return res.status(500).json({ message: 'unable to start session' });
     }
   });
 
-  router.post('/login', async (req, res) => {
-    const db = deps.getDb();
-    if (!db) return res.status(503).json({ message: 'database unavailable' });
-    const parsed = credentialsSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ message: 'invalid username or password' });
-    }
-
-    const user = await db.getUserByUsername(parsed.data.username);
-    if (
-      !user ||
-      !(await verifyPassword(parsed.data.password, user.password_hash))
-    ) {
-      return res.status(401).json({ message: 'invalid username or password' });
-    }
-
-    await startSession(db, user.id, res);
-    return res.json({ user: publicUser(user) });
-  });
-
-  router.post('/logout', async (req, res) => {
+  router.delete('/session', async (req, res) => {
     const db = deps.getDb();
     const token = getCookie(req, SESSION_COOKIE);
     if (db && token) await db.deleteSession(hashToken(token));
@@ -150,7 +115,7 @@ export function createAuthRouter(deps: {
     return res.status(204).end();
   });
 
-  router.get('/me', async (req, res) => {
+  router.get('/session', async (req, res) => {
     const user = await getRequestUser(req, deps.getDb());
     if (!user) return res.status(401).json({ message: 'not authenticated' });
     return res.json({ user: publicUser(user) });
@@ -172,26 +137,28 @@ export function createAuthRouter(deps: {
     if (!user || !db)
       return res.status(401).json({ message: 'not authenticated' });
 
-    const parsed = agentPairingSchema.safeParse(req.body);
+    const parsed = passphraseSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ message: 'invalid agent passphrase' });
     }
 
-    const ownerKey = ownerKeyForUser(user.id);
-    deps.agentRegistry.unregisterOwner(ownerKey);
-    await db.setAgentTokenHash(user.id, hashToken(parsed.data.passphrase));
-    return res.status(204).end();
-  });
-
-  router.delete('/agent', async (req, res) => {
-    const db = deps.getDb();
-    const user = await getRequestUser(req, db);
-    if (!user || !db)
-      return res.status(401).json({ message: 'not authenticated' });
-
-    deps.agentRegistry.unregisterOwner(ownerKeyForUser(user.id));
-    await db.clearAgentTokenHash(user.id);
-    return res.status(204).end();
+    try {
+      await db.setAgentTokenHash(user.id, hashToken(parsed.data.passphrase));
+      deps.agentRegistry.unregisterOwner(ownerKeyForUser(user.id));
+      return res.status(204).end();
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === '23505'
+      ) {
+        return res
+          .status(409)
+          .json({ message: 'passphrase is already paired' });
+      }
+      throw error;
+    }
   });
 
   return router;

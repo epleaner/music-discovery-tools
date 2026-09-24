@@ -7,9 +7,7 @@ export const createContext = async (req?: Request): Promise<Context> => {
   const userRecord = req ? await getRequestUser(req, scrapesDb) : null;
   return {
     scrapesDb,
-    user: userRecord
-      ? { id: userRecord.id, username: userRecord.username }
-      : null,
+    user: userRecord ? { id: userRecord.id } : null,
     onScrapeJobCreated: notifyScrapeJobCreated,
   };
 };

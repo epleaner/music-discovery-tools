@@ -9,34 +9,28 @@ import {
 } from '@soundscape/scrapes-db';
 import { createAuthRouter } from './auth.js';
 
+class UniqueViolation extends Error {
+  code = '23505';
+}
+
 function makeDb(): Database {
   const users = new Map<string, UserRecord>();
   const sessions = new Map<string, string>();
   return {
     async init() {},
-    async createUser({ id, username, passwordHash }) {
-      if ([...users.values()].some((user) => user.username === username)) {
-        const error = new Error('duplicate username') as Error & {
-          code: string;
-        };
-        error.code = '23505';
-        throw error;
-      }
+    async getOrCreateUserByAgentTokenHash({ id, tokenHash }) {
+      const existing = [...users.values()].find(
+        (user) => user.agent_token_hash === tokenHash
+      );
+      if (existing) return existing;
       const user: UserRecord = {
         id,
-        username,
-        password_hash: passwordHash,
-        agent_token_hash: null,
+        agent_token_hash: tokenHash,
         agent_last_seen_at: null,
         created_at: new Date(),
       };
       users.set(id, user);
       return user;
-    },
-    async getUserByUsername(username) {
-      return (
-        [...users.values()].find((user) => user.username === username) ?? null
-      );
     },
     async getUserBySession(tokenHash) {
       const userId = sessions.get(tokenHash);
@@ -49,15 +43,15 @@ function makeDb(): Database {
       sessions.delete(tokenHash);
     },
     async setAgentTokenHash(userId, tokenHash) {
+      const conflict = [...users.values()].some(
+        (user) => user.id !== userId && user.agent_token_hash === tokenHash
+      );
+      if (conflict) throw new UniqueViolation('duplicate passphrase');
       const user = users.get(userId);
       if (!user) throw new Error('user not found');
       user.agent_token_hash = tokenHash;
       user.agent_last_seen_at = null;
       return user;
-    },
-    async clearAgentTokenHash(userId) {
-      const user = users.get(userId);
-      if (user) user.agent_token_hash = null;
     },
     async getUserByAgentTokenHash(tokenHash) {
       return (
@@ -114,8 +108,9 @@ async function startAuthServer() {
   const server = createServer(app);
   await new Promise<void>((resolve) => server.listen(0, resolve));
   const address = server.address();
-  if (!address || typeof address === 'string')
+  if (!address || typeof address === 'string') {
     throw new Error('server did not start');
+  }
   return {
     db,
     baseUrl: `http://127.0.0.1:${address.port}`,
@@ -132,95 +127,135 @@ function cookieFrom(response: Response): string {
   return cookie.split(';', 1)[0];
 }
 
-async function json(response: Response): Promise<Record<string, any>> {
-  return (await response.json()) as Record<string, any>;
+async function json<T>(response: Response): Promise<T> {
+  return (await response.json()) as T;
 }
 
-test('sessions and agent passphrases are isolated per account', async () => {
+async function createSession(baseUrl: string, passphrase: string) {
+  const response = await fetch(`${baseUrl}/auth/session`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ passphrase }),
+  });
+  assert.equal(response.status, 200);
+  return {
+    cookie: cookieFrom(response),
+    body: await json<{ user: { id: string } }>(response),
+  };
+}
+
+test('pairing passphrases provision isolated repeatable sessions', async () => {
   const server = await startAuthServer();
   try {
-    const aliceRegistration = await fetch(`${server.baseUrl}/auth/register`, {
+    const invalid = await fetch(`${server.baseUrl}/auth/session`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: 'Alice', password: 'password-one' }),
+      body: JSON.stringify({ passphrase: 'too-short' }),
     });
-    assert.equal(aliceRegistration.status, 200);
-    const aliceCookie = cookieFrom(aliceRegistration);
-    const alice = await json(aliceRegistration);
+    assert.equal(invalid.status, 400);
 
-    const invalidPassphraseResponse = await fetch(
-      `${server.baseUrl}/auth/agent`,
-      {
-        method: 'POST',
-        headers: {
-          cookie: aliceCookie,
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ passphrase: 'too-short' }),
-      }
+    const alicePassphrase = 'abacus abdomen ability abrasion abrasive absentee';
+    const alice = await createSession(server.baseUrl, alicePassphrase);
+    const aliceAgain = await createSession(server.baseUrl, alicePassphrase);
+    assert.equal(aliceAgain.body.user.id, alice.body.user.id);
+    assert.notEqual(aliceAgain.cookie, alice.cookie);
+
+    const bob = await createSession(
+      server.baseUrl,
+      'backdrop bagpipe banter barefoot beehive bicycle'
     );
-    assert.equal(invalidPassphraseResponse.status, 400);
-    const statusAfterInvalidPassphrase = await json(
+    assert.notEqual(bob.body.user.id, alice.body.user.id);
+
+    const aliceSession = await json<{ user: { id: string } }>(
+      await fetch(`${server.baseUrl}/auth/session`, {
+        headers: { cookie: alice.cookie },
+      })
+    );
+    assert.equal(aliceSession.user.id, alice.body.user.id);
+
+    const aliceAgent = await json<{ configured: boolean }>(
       await fetch(`${server.baseUrl}/auth/agent`, {
-        headers: { cookie: aliceCookie },
-      })
-    );
-    assert.equal(statusAfterInvalidPassphrase.configured, false);
-
-    const alicePassphrase = 'alice-local-agent-passphrase-00000001';
-    const alicePairingResponse = await fetch(`${server.baseUrl}/auth/agent`, {
-      method: 'POST',
-      headers: {
-        cookie: aliceCookie,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ passphrase: alicePassphrase }),
-    });
-    assert.equal(alicePairingResponse.status, 204);
-    assert.equal(await alicePairingResponse.text(), '');
-    const pairedUser = await server.db.getUserByAgentTokenHash(
-      hashToken(alicePassphrase)
-    );
-    assert.equal(pairedUser?.id, alice.user.id);
-    const bobRegistration = await fetch(`${server.baseUrl}/auth/register`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: 'Bob', password: 'password-two' }),
-    });
-    assert.equal(bobRegistration.status, 200);
-    const bobCookie = cookieFrom(bobRegistration);
-    const bob = await json(bobRegistration);
-    assert.notEqual(bobCookie, aliceCookie);
-
-    const aliceMe = await json(
-      await fetch(`${server.baseUrl}/auth/me`, {
-        headers: { cookie: aliceCookie },
-      })
-    );
-    const bobMe = await json(
-      await fetch(`${server.baseUrl}/auth/me`, {
-        headers: { cookie: bobCookie },
-      })
-    );
-    assert.equal(aliceMe.user.username, 'alice');
-    assert.equal(bobMe.user.username, 'bob');
-    assert.notEqual(alice.user.id, bob.user.id);
-
-    const aliceAgent = await json(
-      await fetch(`${server.baseUrl}/auth/agent`, {
-        headers: { cookie: aliceCookie },
-      })
-    );
-    const bobAgent = await json(
-      await fetch(`${server.baseUrl}/auth/agent`, {
-        headers: { cookie: bobCookie },
+        headers: { cookie: alice.cookie },
       })
     );
     assert.equal(aliceAgent.configured, true);
-    assert.equal(bobAgent.configured, false);
 
-    const unauthenticated = await fetch(`${server.baseUrl}/auth/agent`);
-    assert.equal(unauthenticated.status, 401);
+    assert.equal(
+      (await fetch(`${server.baseUrl}/auth/register`, { method: 'POST' }))
+        .status,
+      404
+    );
+    assert.equal(
+      (await fetch(`${server.baseUrl}/auth/login`, { method: 'POST' })).status,
+      404
+    );
+    assert.equal((await fetch(`${server.baseUrl}/auth/agent`)).status, 401);
+  } finally {
+    await server.close();
+  }
+});
+
+test('authenticated sessions can replace but not remove their passphrase', async () => {
+  const server = await startAuthServer();
+  try {
+    const original = 'cabbage cabinet cactus cadence camera canary';
+    const replacement = 'daring daylight deacon decade december dolphin';
+    const account = await createSession(server.baseUrl, original);
+
+    const replace = await fetch(`${server.baseUrl}/auth/agent`, {
+      method: 'POST',
+      headers: {
+        cookie: account.cookie,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ passphrase: replacement }),
+    });
+    assert.equal(replace.status, 204);
+    assert.equal(
+      (await server.db.getUserByAgentTokenHash(hashToken(replacement)))?.id,
+      account.body.user.id
+    );
+    assert.equal(
+      await server.db.getUserByAgentTokenHash(hashToken(original)),
+      null
+    );
+
+    const other = await createSession(
+      server.baseUrl,
+      'earache early earthly easel eating eclipse'
+    );
+    const conflict = await fetch(`${server.baseUrl}/auth/agent`, {
+      method: 'POST',
+      headers: {
+        cookie: other.cookie,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ passphrase: replacement }),
+    });
+    assert.equal(conflict.status, 409);
+    assert.equal(
+      (
+        await fetch(`${server.baseUrl}/auth/agent`, {
+          method: 'DELETE',
+          headers: { cookie: account.cookie },
+        })
+      ).status,
+      404
+    );
+
+    const logout = await fetch(`${server.baseUrl}/auth/session`, {
+      method: 'DELETE',
+      headers: { cookie: account.cookie },
+    });
+    assert.equal(logout.status, 204);
+    assert.equal(
+      (
+        await fetch(`${server.baseUrl}/auth/session`, {
+          headers: { cookie: account.cookie },
+        })
+      ).status,
+      401
+    );
   } finally {
     await server.close();
   }

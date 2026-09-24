@@ -175,9 +175,7 @@ wss.on('connection', (ws) => {
       const agentId = randomUUID();
       registry.register(ownerKey, user.id, agentId, sender);
       await db.touchAgent(user.id);
-      console.log(
-        `[agent] registered ${agentId.slice(0, 8)}… for user ${user.username}`
-      );
+      console.log(`[agent] registered ${agentId.slice(0, 8)}…`);
       void dispatcher.dispatch(ownerKey);
       return;
     }

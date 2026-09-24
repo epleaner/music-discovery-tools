@@ -23,9 +23,9 @@ headed browser profile and receives only that user's scrape jobs.
 - Web users authenticate through server-backed sessions.
 - The local agent generates a pairing passphrase and registers over outbound
   WSS with that passphrase.
-- A signed-in user can bind or unpair that passphrase from the web UI.
+- Entering that passphrase on the web starts an HTTP-only session.
 - The server maps the passphrase to exactly one user and exposes agent status
-  only to that user.
+  only through that user's session.
 - Scrape creation, reads, listing, idempotency, and dispatch are user-scoped.
 - Jobs remain queued when that user's agent is offline.
 - A user's agent cannot receive or read another user's jobs.
@@ -52,11 +52,12 @@ headed browser profile and receives only that user's scrape jobs.
 
 ## Decisions
 
-1. Use a minimal username/password account flow with HTTP-only database-backed
-   sessions; no external provider is configured in this repository.
-2. Use one long-lived random agent credential per user. Store only its SHA-256
-   hash. Generate and display the raw passphrase in the local agent; allow
-   replacement and unpairing.
+1. Use the local pairing passphrase as the sole web credential. Exchange it for
+   an HTTP-only database-backed session so normal API requests never carry the
+   bearer secret.
+2. Store only the passphrase's SHA-256 hash. Generate and display the raw
+   passphrase in the local agent; allow authenticated replacement but not
+   unpairing without a replacement.
 3. Keep the existing `scrapes` table as the queue, add `user_id`, and migrate
    its token-based ownership to user ownership. Keep the agent credential out
    of normal web scrape requests.
@@ -71,9 +72,9 @@ headed browser profile and receives only that user's scrape jobs.
 
 ### Identity
 
-- Add user/session persistence and password hashing with Node built-ins.
-- Add login, logout, registration/bootstrap behavior, and session middleware.
-- Add authenticated tRPC context and HTTP-only cookie handling.
+- Add passphrase-based user provisioning and session persistence.
+- Remove username/password credentials and legacy authentication routes.
+- Keep authenticated tRPC context and HTTP-only cookie handling.
 
 ### Agent ownership
 
@@ -90,9 +91,9 @@ headed browser profile and receives only that user's scrape jobs.
 
 ### Web
 
-- Add login/register/session UI.
-- Replace raw pairing-token entry with authenticated passphrase pairing.
-- Show connection state and preserve queued/offline behavior.
+- Add a passphrase-only session screen.
+- Keep authenticated replacement and agent connection status.
+- Preserve queued/offline behavior.
 
 ### Verification
 
@@ -103,15 +104,16 @@ headed browser profile and receives only that user's scrape jobs.
 
 ## Risks and mitigations
 
-- Password/session security: use scrypt, high-entropy random session tokens,
-  hashed-at-rest tokens, HTTP-only cookies, expiry, and constant-time checks.
+- Passphrase/session security: keep the passphrase local except during session
+  creation or replacement; use high-entropy random session tokens, hashed
+  credentials at rest, expiry, and HTTP-only cookies.
 - Cross-user leakage: derive ownership from authenticated context and test two
   users through create/read/list/dispatch paths.
-- Agent impersonation: never accept a web session as an agent credential; revoke
-  and rotate agent credentials independently.
-- Existing database deployments: use additive `CREATE TABLE`/`ALTER TABLE`
-  initialization and preserve existing queued rows only where ownership can be
-  assigned explicitly; do not silently attribute legacy rows to a user.
+- Agent impersonation: never accept a web session as an agent credential;
+  replace agent credentials only through an authenticated session.
+- Existing database deployments: retain users, sessions, ownership, and scrape
+  rows while dropping obsolete username/password columns. Existing users
+  without an agent credential cannot start a new session after cutover.
 
 ## Execution state
 
@@ -161,9 +163,9 @@ Acceptance:
   passphrase in Keychain, and uses it for registration.
 - The menu-bar pairing window lets the user copy the current passphrase and
   explicitly generate a replacement.
-- The web Agent control accepts the local passphrase, binds only the signed-in
-  user's agent, never receives the raw passphrase back, and retains status and
-  unpair behavior.
+- The web session screen accepts the local passphrase, retains status and
+  replacement behavior, and never receives the raw passphrase back after the
+  session starts.
 - Invalid passphrases are rejected without changing the configured agent.
 - The server test, web build/type check, Swift build, and a deterministic
   authenticated HTTP/WebSocket smoke flow pass.
@@ -192,3 +194,52 @@ Verification:
 Next action: visually inspect the native AppKit pairing window on a desktop
 session; this harness verified its compiled implementation but cannot inspect
 native windows.
+
+## Passphrase-only web sessions follow-up
+
+Status: complete
+Updated: 2026-09-24
+
+Goal: remove username/password authentication and use the local agent's pairing
+passphrase as the sole web credential. The server exchanges the passphrase for
+the existing HTTP-only session cookie; normal API requests never carry the
+passphrase.
+
+Acceptance:
+
+- The initial web screen asks only for the passphrase shown by **Pair with
+  Soundscape Web…**.
+- A known passphrase signs into its existing user and retains that user's scrape
+  history; first use of an unknown valid passphrase provisions a new user.
+- Username/password routes, UI, database fields, hashing helpers, tests, and
+  copy are removed.
+- Authenticated users may replace their pairing passphrase without changing
+  user ownership or history.
+- Unpairing without a replacement is removed because it would destroy the sole
+  login path.
+- Sessions remain random, hashed at rest, HTTP-only, and independent from the
+  pairing passphrase.
+
+Migration:
+
+- Existing users with an `agent_token_hash` sign in with their current local
+  passphrase and retain the same user ID and scrape rows.
+- Existing users without an agent credential remain in the database but cannot
+  start a new session after the username/password cutover.
+- New schemas omit `username` and `password_hash`; initialization drops those
+  obsolete columns from existing deployments.
+
+Verification:
+
+- Server auth tests cover first-use provisioning, repeat sign-in, invalid input,
+  session isolation, credential replacement, and removed legacy routes.
+- PostgreSQL integration passed all 11 tests after seeding the legacy
+  username/password schema, proving column removal and atomic passphrase
+  get-or-create behavior.
+- Rendered Chromium QA covered passphrase-only sign-in and sign-out at desktop
+  and mobile widths. Re-entering the same passphrase returned the same user ID.
+- `pnpm lint`, `pnpm type-check`, `pnpm test`, and `pnpm build` passed. The
+  workspace test command skipped DB-backed tests without its opt-in URL; the
+  explicit PostgreSQL run above covered them.
+
+Next action: none.

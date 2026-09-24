@@ -2,7 +2,6 @@ import type { ScrapesDb } from '@soundscape/scrapes-db';
 
 export interface UserIdentity {
   id: string;
-  username: string;
 }
 
 export interface Context {

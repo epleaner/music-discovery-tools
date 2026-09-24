@@ -92,7 +92,7 @@ After services are running:
 3. **Update Environment Variables:**
    - In `soundscape-web`: Set `VITE_API_URL` to the API service URL
    - Start the local agent with `SCRAPE_AGENT_WS_URL`, copy its generated
-     passphrase, and submit that passphrase in the signed-in web UI
+     passphrase, and enter that passphrase on the web UI
 
 ## Next Steps
 

@@ -84,8 +84,7 @@ railway variables set VITE_API_URL=https://your-api-url.railway.app
 1. Start the RYM menu-bar app with `SCRAPE_AGENT_WS_URL` set to the deployed
    API's WSS endpoint.
 2. Choose **Pair with Soundscape Web…** and copy the locally generated passphrase.
-3. Sign in to the deployed web UI and submit that passphrase through the
-   **Browser helper** control.
+3. Enter that passphrase on the deployed web UI to start a session.
 
 For a menu-less agent, set a high-entropy `SCRAPE_AGENT_TOKEN` locally and
 submit that same value through the web pairing form.

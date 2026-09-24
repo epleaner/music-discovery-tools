@@ -20,7 +20,7 @@ import SiteViewer from './components/SiteViewer';
 import ResizablePanels from './components/ResizablePanels';
 import EveryNoiseViewer from './components/EveryNoiseViewer';
 import AgentSetup from './components/AgentSetup';
-import AuthScreen from './components/AuthScreen';
+import PairingScreen from './components/PairingScreen';
 import ScrapeSections from './components/ScrapeSections';
 import ScrapeTool from './components/ScrapeTool';
 import Button from './components/Button';
@@ -49,7 +49,7 @@ import { groupTracksByAlbum, groupTracksByArtist } from '@soundscape/utils';
 import { useSearchState } from './lib/use-search-state';
 import { useNav } from './lib/use-nav';
 import { useTheme } from './lib/use-theme';
-import { getSession, logout, type AuthUser } from './lib/auth';
+import { getSession, logout, type SessionUser } from './lib/auth';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -62,9 +62,7 @@ interface AppState extends Record<string, string> {
   sites: string; // JSON-encoded array of sites
 }
 
-const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
-  props
-) => {
+const Workspace: Component<{ onLogout: () => void }> = (props) => {
   const defaultSites = [
     {
       id: 'secret-ambient',
@@ -318,7 +316,7 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                 aria-expanded={showAccountDropdown()}
                 aria-controls="account-menu"
               >
-                {props.user.username}
+                Soundscape Web
                 <svg
                   aria-hidden="true"
                   class="h-2.5 w-2.5"
@@ -340,7 +338,7 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
                 >
                   <div class="flex items-center justify-between border-b border-border px-2 pb-2">
                     <div class="text-xs font-medium text-fg">
-                      {props.user.username}
+                      Paired session
                     </div>
                     <Button
                       onClick={() => {
@@ -745,7 +743,7 @@ const Workspace: Component<{ user: AuthUser; onLogout: () => void }> = (
 };
 
 const App: Component = () => {
-  const [user, setUser] = createSignal<AuthUser | null>(null);
+  const [user, setUser] = createSignal<SessionUser | null>(null);
   const [loading, setLoading] = createSignal(true);
 
   onMount(async () => {
@@ -770,14 +768,12 @@ const App: Component = () => {
       <Show
         when={user()}
         fallback={
-          <AuthScreen
+          <PairingScreen
             onAuthenticated={(authenticated) => setUser(authenticated)}
           />
         }
       >
-        {(authenticated) => (
-          <Workspace user={authenticated()} onLogout={handleLogout} />
-        )}
+        <Workspace onLogout={handleLogout} />
       </Show>
     </Show>
   );

@@ -1,8 +1,7 @@
 import { resolveApiUrl } from './trpc';
 
-export interface AuthUser {
+export interface SessionUser {
   id: string;
-  username: string;
 }
 
 export interface AgentStatus {
@@ -33,39 +32,25 @@ function jsonBody(value: unknown): RequestInit {
   return { method: 'POST', body: JSON.stringify(value) };
 }
 
-export async function getSession(): Promise<AuthUser | null> {
+export async function getSession(): Promise<SessionUser | null> {
   try {
-    const result = await request<{ user: AuthUser }>('/auth/me');
+    const result = await request<{ user: SessionUser }>('/auth/session');
     return result.user;
   } catch {
     return null;
   }
 }
 
-export async function register(
-  username: string,
-  password: string
-): Promise<AuthUser> {
-  const result = await request<{ user: AuthUser }>(
-    '/auth/register',
-    jsonBody({ username, password })
-  );
-  return result.user;
-}
-
-export async function login(
-  username: string,
-  password: string
-): Promise<AuthUser> {
-  const result = await request<{ user: AuthUser }>(
-    '/auth/login',
-    jsonBody({ username, password })
+export async function startSession(passphrase: string): Promise<SessionUser> {
+  const result = await request<{ user: SessionUser }>(
+    '/auth/session',
+    jsonBody({ passphrase })
   );
   return result.user;
 }
 
 export async function logout(): Promise<void> {
-  await request<void>('/auth/logout', { method: 'POST' });
+  await request<void>('/auth/session', { method: 'DELETE' });
 }
 
 export function getAgentStatus(): Promise<AgentStatus> {
@@ -74,8 +59,4 @@ export function getAgentStatus(): Promise<AgentStatus> {
 
 export async function pairAgent(passphrase: string): Promise<void> {
   await request<void>('/auth/agent', jsonBody({ passphrase }));
-}
-
-export async function unpairAgent(): Promise<void> {
-  await request<void>('/auth/agent', { method: 'DELETE' });
 }

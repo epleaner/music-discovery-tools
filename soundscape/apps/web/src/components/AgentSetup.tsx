@@ -1,11 +1,6 @@
 import { Component, Show, createSignal, onCleanup, onMount } from 'solid-js';
 import Button from './Button';
-import {
-  getAgentStatus,
-  pairAgent,
-  unpairAgent,
-  type AgentStatus,
-} from '../lib/auth';
+import { getAgentStatus, pairAgent, type AgentStatus } from '../lib/auth';
 
 const AgentSetup: Component = () => {
   const [open, setOpen] = createSignal(false);
@@ -56,24 +51,6 @@ const AgentSetup: Component = () => {
     }
   };
 
-  const revoke = async () => {
-    setWorking(true);
-    setError('');
-    try {
-      await unpairAgent();
-      setPassphrase('');
-      await refresh();
-    } catch (unpairError) {
-      setError(
-        unpairError instanceof Error
-          ? unpairError.message
-          : 'Unable to unpair the browser helper.'
-      );
-    } finally {
-      setWorking(false);
-    }
-  };
-
   return (
     <div class="relative flex-shrink-0">
       <Button
@@ -85,9 +62,7 @@ const AgentSetup: Component = () => {
         aria-expanded={open()}
       >
         Browser helper{' '}
-        <span class="text-fg-subtle">
-          {status().connected ? '●' : '○'}
-        </span>
+        <span class="text-fg-subtle">{status().connected ? '●' : '○'}</span>
       </Button>
       <Show when={open()}>
         <div class="absolute right-0 z-30 mt-1 w-80 max-w-[calc(100vw-2rem)] border border-border bg-bg shadow-lg">
@@ -95,8 +70,8 @@ const AgentSetup: Component = () => {
             <div>
               <div class="text-xs font-medium text-fg">Browser helper</div>
               <p class="mt-1 text-xs text-fg-muted">
-                In the menu-bar app, choose “Pair with Soundscape Web…”, copy its
-                passphrase, then paste it below.
+                In the menu-bar app, choose “Pair with Soundscape Web…”, copy
+                its passphrase, then paste it below.
               </p>
             </div>
             <div class="text-xs text-fg-muted">
@@ -135,8 +110,8 @@ const AgentSetup: Component = () => {
                 aria-describedby="agent-pairing-help"
               />
               <p id="agent-pairing-help" class="text-xs text-fg-muted">
-                Pairing replaces any passphrase previously linked to this
-                account.
+                Generate a replacement locally, then enter it here before
+                signing out to preserve this account's history.
               </p>
               <Button
                 type="submit"
@@ -150,15 +125,6 @@ const AgentSetup: Component = () => {
                     : 'Pair agent'}
               </Button>
             </form>
-            <Show when={status().configured}>
-              <Button
-                onClick={() => void revoke()}
-                variant="secondary"
-                disabled={working()}
-              >
-                Unpair agent
-              </Button>
-            </Show>
             <Show when={error()}>
               <p class="text-xs text-red-600" role="alert">
                 {error()}

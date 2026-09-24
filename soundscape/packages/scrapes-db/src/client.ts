@@ -20,17 +20,14 @@ function asJsonValue(value: unknown): JSONValue {
 
 export interface UserRecord {
   id: string;
-  username: string;
-  password_hash: string;
   agent_token_hash: string | null;
   agent_last_seen_at: Date | null;
   created_at: Date;
 }
 
-export interface CreateUserArgs {
+export interface CreateAgentUserArgs {
   id: string;
-  username: string;
-  passwordHash: string;
+  tokenHash: string;
 }
 
 export interface CreateSessionArgs {
@@ -40,13 +37,11 @@ export interface CreateSessionArgs {
 }
 
 export interface UserAuthDb {
-  createUser(a: CreateUserArgs): Promise<UserRecord>;
-  getUserByUsername(username: string): Promise<UserRecord | null>;
+  getOrCreateUserByAgentTokenHash(a: CreateAgentUserArgs): Promise<UserRecord>;
   getUserBySession(tokenHash: string): Promise<UserRecord | null>;
   createSession(a: CreateSessionArgs): Promise<void>;
   deleteSession(tokenHash: string): Promise<void>;
   setAgentTokenHash(userId: string, tokenHash: string): Promise<UserRecord>;
-  clearAgentTokenHash(userId: string): Promise<void>;
   getUserByAgentTokenHash(tokenHash: string): Promise<UserRecord | null>;
   touchAgent(userId: string): Promise<void>;
 }
@@ -159,13 +154,13 @@ export function createScrapesDb(connectionString: string): Database {
           await sql`
             CREATE TABLE IF NOT EXISTS users (
               id                   text PRIMARY KEY,
-              username             text NOT NULL UNIQUE,
-              password_hash        text NOT NULL,
               agent_token_hash     text UNIQUE,
               agent_last_seen_at   timestamptz,
               created_at           timestamptz NOT NULL DEFAULT now()
             )
           `;
+          await sql`ALTER TABLE users DROP COLUMN IF EXISTS username`;
+          await sql`ALTER TABLE users DROP COLUMN IF EXISTS password_hash`;
           await sql`
             CREATE TABLE IF NOT EXISTS sessions (
               token_hash  text PRIMARY KEY,
@@ -250,21 +245,15 @@ export function createScrapesDb(connectionString: string): Database {
       }
     },
 
-    async createUser({ id, username, passwordHash }) {
+    async getOrCreateUserByAgentTokenHash({ id, tokenHash }) {
       const rows = await sql<UserRecord[]>`
-        INSERT INTO users (id, username, password_hash)
-        VALUES (${id}, ${username}, ${passwordHash})
+        INSERT INTO users (id, agent_token_hash)
+        VALUES (${id}, ${tokenHash})
+        ON CONFLICT (agent_token_hash)
+        DO UPDATE SET agent_token_hash = EXCLUDED.agent_token_hash
         RETURNING *
       `;
-      if (!rows[0]) throw new Error('user was not created');
       return rows[0];
-    },
-
-    async getUserByUsername(username) {
-      const rows = await sql<UserRecord[]>`
-        SELECT * FROM users WHERE username = ${username} LIMIT 1
-      `;
-      return rows[0] ?? null;
     },
 
     async getUserBySession(tokenHash) {
@@ -298,14 +287,6 @@ export function createScrapesDb(connectionString: string): Database {
       `;
       if (!rows[0]) throw new Error('user was not found');
       return rows[0];
-    },
-
-    async clearAgentTokenHash(userId) {
-      await sql`
-        UPDATE users
-        SET agent_token_hash = NULL, agent_last_seen_at = NULL
-        WHERE id = ${userId}
-      `;
     },
 
     async getUserByAgentTokenHash(tokenHash) {

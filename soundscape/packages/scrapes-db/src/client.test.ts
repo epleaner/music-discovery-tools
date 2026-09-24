@@ -23,6 +23,7 @@ if (!dbUrl) {
   const userId = `user-${randomUUID()}`;
   const otherUserId = `other-user-${randomUUID()}`;
   const testIds: string[] = [];
+  const authUserIds: string[] = [];
   const db = createScrapesDb(dbUrl);
 
   async function queue(
@@ -48,8 +49,42 @@ if (!dbUrl) {
     await db.init();
   });
 
-  test('init creates the queue and auth schema', { concurrency: false }, async () => {
+  test('init creates the passwordless queue and auth schema', { concurrency: false }, async () => {
     await db.init();
+    const sql = postgres(dbUrl);
+    const legacyColumns = await sql<{ column_name: string }[]>`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'users'
+        AND column_name IN ('username', 'password_hash')
+    `;
+    await sql.end();
+    assert.equal(legacyColumns.length, 0);
+  });
+
+  test('agent passphrases atomically provision one user', { concurrency: false }, async () => {
+    const tokenHash = hashToken(`agent-${randomUUID()}`);
+    const firstId = `auth-${randomUUID()}`;
+    const secondId = `auth-${randomUUID()}`;
+    authUserIds.push(firstId);
+
+    const first = await db.getOrCreateUserByAgentTokenHash({
+      id: firstId,
+      tokenHash,
+    });
+    const second = await db.getOrCreateUserByAgentTokenHash({
+      id: secondId,
+      tokenHash,
+    });
+    assert.equal(first.id, firstId);
+    assert.equal(second.id, firstId);
+
+    await db.createSession({
+      tokenHash: hashToken(`session-${randomUUID()}`),
+      userId: first.id,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
   });
 
   test('createQueued inserts a queued row with lease fields clear', { concurrency: false }, async () => {
@@ -186,6 +221,7 @@ if (!dbUrl) {
   after(async () => {
     const sql = postgres(dbUrl);
     await sql`DELETE FROM scrapes WHERE id IN ${sql(testIds)}`;
+    await sql`DELETE FROM users WHERE id IN ${sql(authUserIds)}`;
     await sql.end();
     await db.close();
   });
