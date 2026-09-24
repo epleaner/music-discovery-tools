@@ -156,8 +156,9 @@ or removal of the `SCRAPE_AGENT_TOKEN` environment override.
 
 Acceptance:
 
-- A local agent without a Keychain credential generates a 32-byte random
-  base64url passphrase, stores it in Keychain, and uses it for registration.
+- A local agent without a Keychain credential generates six random words of at
+  least five characters from EFF's long word list (about 77 bits), stores the
+  passphrase in Keychain, and uses it for registration.
 - The menu-bar pairing window lets the user copy the current passphrase and
   explicitly generate a replacement.
 - The web Agent control accepts the local passphrase, binds only the signed-in
@@ -173,7 +174,9 @@ continues to store only its SHA-256 hash.
 
 Verification:
 
-- `swift build` passed for the native menu-bar app.
+- `swift test` passed the six-word format, minimum-length, and nonconstant
+  generation checks. The release app build and strict codesign verification
+  passed with all 7,776 source words packaged as an app resource.
 - `pnpm lint`, `pnpm type-check`, `pnpm test`, and `pnpm build` passed. The
   database-backed scrapes-db cases were skipped because
   `SCRAPES_TEST_DATABASE_URL` was not set; the changed server route uses the

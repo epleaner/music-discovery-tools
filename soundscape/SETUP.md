@@ -56,7 +56,7 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 ### Test scrape job communication
 
 1. Start the API with `DATABASE_URL` configured.
-2. Open the RYM menu-bar app and choose **Pair with Soundscape…**.
+2. Open the RYM menu-bar app and choose **Pair with Soundscape Web…**.
 3. Copy the passphrase generated and stored by the local app.
 4. Sign in to the web app, open **Browser helper**, paste the passphrase, and
    choose **Pair agent**.

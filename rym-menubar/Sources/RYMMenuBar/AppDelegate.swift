@@ -455,7 +455,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         menu.addItem(cdp)
         cdpStatusItem = cdp
         configureCdpItem(cdp, port: lastDetectedPort)
-        let agentSetup = NSMenuItem(title: "Pair with Soundscape…", action: #selector(showPairingPassphrase), keyEquivalent: "")
+        let agentSetup = NSMenuItem(title: "Pair with Soundscape Web…", action: #selector(showPairingPassphrase), keyEquivalent: "")
         agentSetup.target = self
         menu.addItem(agentSetup)
         menu.addItem(.separator())
@@ -822,7 +822,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
             contentRect: NSRect(x: 0, y: 0, width: w, height: h),
             styleMask: [.titled, .closable],
             backing: .buffered, defer: false)
-        window.title = "Pair with Soundscape"
+        window.title = "Pair with Soundscape Web"
         window.isReleasedWhenClosed = false
 
         let content = NSView(frame: NSRect(x: 0, y: 0, width: w, height: h))

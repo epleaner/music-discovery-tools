@@ -7,7 +7,13 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "RYMMenuBar",
-            path: "Sources/RYMMenuBar"
+            path: "Sources/RYMMenuBar",
+            resources: [.copy("Resources/eff_large_wordlist.txt")]
+        ),
+        .testTarget(
+            name: "RYMMenuBarTests",
+            dependencies: ["RYMMenuBar"],
+            path: "Tests/RYMMenuBarTests"
         )
     ]
 )

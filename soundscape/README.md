@@ -60,9 +60,10 @@ VITE_API_URL=http://localhost:3001
 
 **Local browser agent**:
 
-The RYM menu-bar app generates a high-entropy pairing passphrase and stores it
-in the macOS Keychain. Choose **Pair with Soundscape…**, copy the passphrase,
-then paste it into the signed-in web UI's **Browser helper** control.
+The RYM menu-bar app generates a six-word pairing passphrase with about 77 bits
+of entropy from [EFF's long word list](https://www.eff.org/dice) and stores it
+in the macOS Keychain. Choose **Pair with Soundscape Web…**, copy the
+passphrase, then paste it into the signed-in web UI's **Browser helper** control.
 
 For a menu-less launch, `SCRAPE_AGENT_TOKEN` remains an advanced override. Use
 the same high-entropy value in the environment and the web pairing form:

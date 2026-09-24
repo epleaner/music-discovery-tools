@@ -95,7 +95,7 @@ const AgentSetup: Component = () => {
             <div>
               <div class="text-xs font-medium text-fg">Browser helper</div>
               <p class="mt-1 text-xs text-fg-muted">
-                In the menu-bar app, choose “Pair with Soundscape…”, copy its
+                In the menu-bar app, choose “Pair with Soundscape Web…”, copy its
                 passphrase, then paste it below.
               </p>
             </div>

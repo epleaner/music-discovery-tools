@@ -10,6 +10,7 @@ enum AgentTokenStore {
         case randomGeneration(OSStatus)
         case invalidPassphrase
         case invalidStoredPassphrase
+        case invalidWordList
 
         var errorDescription: String? {
             switch self {
@@ -21,6 +22,8 @@ enum AgentTokenStore {
                 return "The pairing passphrase is empty."
             case .invalidStoredPassphrase:
                 return "The saved pairing passphrase is not valid text."
+            case .invalidWordList:
+                return "The pairing passphrase word list is unavailable or invalid."
             }
         }
     }
@@ -33,18 +36,62 @@ enum AgentTokenStore {
     }
 
     static func generateAndSave() throws -> String {
-        var bytes = [UInt8](repeating: 0, count: 32)
-        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-        guard status == errSecSuccess else {
-            throw StoreError.randomGeneration(status)
-        }
-        let passphrase = Data(bytes)
-            .base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
+        let passphrase = try generatePassphrase()
         try save(passphrase)
         return passphrase
+    }
+
+    static func generatePassphrase() throws -> String {
+        let words = try loadWords()
+        return try (0..<6)
+            .map { _ in words[try randomIndex(upperBound: words.count)] }
+            .joined(separator: " ")
+    }
+
+    private static func loadWords() throws -> [String] {
+        // EFF recommends six words from its long list (~77 bits):
+        // https://www.eff.org/dice
+        guard let url = Bundle.main.url(
+            forResource: "eff_large_wordlist",
+            withExtension: "txt"
+        ) ?? Bundle.module.url(
+            forResource: "eff_large_wordlist",
+            withExtension: "txt"
+        ),
+        let contents = try? String(contentsOf: url, encoding: .utf8) else {
+            throw StoreError.invalidWordList
+        }
+        let words = contents
+            .split(whereSeparator: \.isNewline)
+            .compactMap { line -> String? in
+                let fields = line.split(whereSeparator: \.isWhitespace)
+                guard fields.count == 2 else { return nil }
+                let word = String(fields[1])
+                return word.count >= 5 ? word : nil
+            }
+        guard words.count == 7_227 else {
+            throw StoreError.invalidWordList
+        }
+        return words
+    }
+
+    private static func randomIndex(upperBound: Int) throws -> Int {
+        let bound = UInt32(upperBound)
+        let cutoff = UInt32.max - (UInt32.max % bound)
+        var value: UInt32 = 0
+        repeat {
+            let status = withUnsafeMutableBytes(of: &value) { bytes in
+                SecRandomCopyBytes(
+                    kSecRandomDefault,
+                    bytes.count,
+                    bytes.baseAddress!
+                )
+            }
+            guard status == errSecSuccess else {
+                throw StoreError.randomGeneration(status)
+            }
+        } while value >= cutoff
+        return Int(value % bound)
     }
 
     private static func load() throws -> String? {

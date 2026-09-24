@@ -22,6 +22,12 @@ else
   BIN_PATH=".build/release/${BIN_NAME}"
 fi
 
+WORD_LIST="Sources/RYMMenuBar/Resources/eff_large_wordlist.txt"
+if [ ! -f "${WORD_LIST}" ]; then
+  echo "Missing passphrase word list: ${WORD_LIST}" >&2
+  exit 1
+fi
+
 echo "==> Assembling ${APP_DIR}…"
 rm -rf "${APP_DIR}"
 mkdir -p "${APP_DIR}/Contents/MacOS"
@@ -30,6 +36,7 @@ mkdir -p "${APP_DIR}/Contents/Resources"
 cp "${BIN_PATH}" "${APP_DIR}/Contents/MacOS/${BIN_NAME}"
 cp "Resources/Info.plist" "${APP_DIR}/Contents/Info.plist"
 cp "Resources/genres-tree.json" "${APP_DIR}/Contents/Resources/genres-tree.json"
+cp "${WORD_LIST}" "${APP_DIR}/Contents/Resources/eff_large_wordlist.txt"
 
 # Ad-hoc sign so macOS lets it run locally without Gatekeeper friction.
 codesign --force --deep --sign - "${APP_DIR}" >/dev/null 2>&1 || true
