@@ -897,21 +897,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTabl
         content.addSubview(error)
         pairingError = error
 
-        let rotate = NSButton(frame: NSRect(x: 20, y: 20, width: 170, height: 28))
+        let rotate = NSButton(frame: NSRect(x: 100, y: 20, width: 170, height: 28))
         rotate.title = "Generate New Passphrase"
         rotate.bezelStyle = .rounded
         rotate.target = self
         rotate.action = #selector(rotatePairingPassphrase)
         content.addSubview(rotate)
 
-        let close = NSButton(frame: NSRect(x: w - 250, y: 20, width: 72, height: 28))
+        let close = NSButton(frame: NSRect(x: 20, y: 20, width: 72, height: 28))
         close.title = "Close"
         close.bezelStyle = .rounded
         close.target = window
         close.action = #selector(NSWindow.performClose(_:))
         content.addSubview(close)
 
-        let copy = NSButton(frame: NSRect(x: 198, y: 20, width: 170, height: 28))
+        let copy = NSButton(frame: NSRect(x: 278, y: 20, width: 170, height: 28))
         copy.title = "Copy for Soundscape Web"
         copy.bezelStyle = .rounded
         copy.target = self
