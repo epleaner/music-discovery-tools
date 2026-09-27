@@ -297,13 +297,13 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
     <div class="flex flex-col h-screen bg-bg">
       {/* Header */}
       <div class="flex-shrink-0 border-b border-border">
-        <div class="flex gap-2 justify-between items-center p-3">
+        <div class="flex flex-wrap gap-2 justify-between items-center p-3">
           <UsernameInput
             onSubmit={handleUsernameSubmit}
             initialUsername={username()}
           />
 
-          <div class="flex flex-1 gap-2 justify-end items-center w-full">
+          <div class="ml-auto flex gap-2 justify-end items-center">
             <div class="relative flex-shrink-0" ref={accountMenuRef}>
               <Button
                 onClick={() => {
@@ -334,7 +334,7 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
               <Show when={showAccountDropdown()}>
                 <div
                   id="account-menu"
-                  class="absolute right-0 top-full z-40 mt-1 flex min-w-[220px] flex-col gap-2 border border-border bg-bg p-2 shadow-lg"
+                  class="absolute right-0 top-full z-40 mt-1 flex min-w-[200px] flex-col gap-2 border border-border bg-bg p-2 shadow-lg sm:min-w-[220px]"
                 >
                   <div class="flex items-center justify-between border-b border-border px-2 pb-2">
                     <div class="text-xs font-medium text-fg">

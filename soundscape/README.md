@@ -49,6 +49,9 @@ The services will be available at:
 - Agent WebSocket: ws://localhost:3001/ws (local agent only)
 - Web App: http://localhost:3000
 
+The web interface is displayed at 140% scale by default. Browser zoom remains
+available for individual viewing preferences.
+
 ### Environment Setup
 
 **Web App** (`apps/web/.env.local`):

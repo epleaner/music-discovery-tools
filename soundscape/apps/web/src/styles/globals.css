@@ -500,6 +500,17 @@
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
+    --ui-scale: 1.4;
+    zoom: var(--ui-scale);
+  }
+
+  /* Viewport heights are not reduced by CSS zoom as they are by browser zoom. */
+  body .h-screen {
+    height: calc(100vh / var(--ui-scale));
+  }
+
+  body .min-h-screen {
+    min-height: calc(100vh / var(--ui-scale));
   }
 
   /* Minimal scrollbar */
