@@ -63,6 +63,10 @@ VITE_API_URL=http://localhost:3001
 
 **Local browser agent**:
 
+Pairing is optional for Last.fm browsing and NTS lookup. Choose **Connect
+Soundscape** in the app's top-right to use authenticated scrape jobs and the
+local browser agent.
+
 Soundscape Web and the RYM menu-bar app use the same
 `POST /auth/passphrase` API to create or normalize a pairing passphrase:
 
