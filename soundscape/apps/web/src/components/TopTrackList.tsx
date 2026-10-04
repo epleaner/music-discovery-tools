@@ -5,14 +5,16 @@ import {
   getCached,
   getTrackCacheKey,
 } from '@soundscape/utils';
+import Button from './Button';
 import EmptyState from './EmptyState';
 import InfoButton from './InfoButton';
 
 interface TopTrackListProps {
   tracks: TopTrack[];
   isLoading: boolean;
-  error: any;
+  error: Error | null;
   onTrackClick?: (track: TopTrack) => void;
+  onNTSLookup?: (track: TopTrack) => void;
 }
 
 const TopTrackList: Component<TopTrackListProps> = (props) => {
@@ -121,6 +123,18 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
                     </div>
                   </Show>
                 </div>
+                <Button
+                  variant='link'
+                  class='px-1 text-xs'
+                  title={`Search NTS for ${track.name}`}
+                  aria-label={`Search NTS for ${track.name}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    props.onNTSLookup?.(track);
+                  }}
+                >
+                  NTS
+                </Button>
                 <div class='flex-shrink-0 text-fg-subtle'>
                   {track.playcount} plays
                 </div>

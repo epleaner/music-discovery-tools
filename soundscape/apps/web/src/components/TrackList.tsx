@@ -5,6 +5,7 @@ import {
   getCached,
   getTrackCacheKey,
 } from '@soundscape/utils';
+import Button from './Button';
 import EmptyState from './EmptyState';
 import ErrorMessage from './ErrorMessage';
 import InfoButton from './InfoButton';
@@ -14,6 +15,7 @@ interface TrackListProps {
   isLoading?: boolean;
   error?: Error | null;
   onTrackClick?: (track: Track) => void;
+  onNTSLookup?: (track: Track) => void;
 }
 
 const TrackList: Component<TrackListProps> = (props) => {
@@ -146,6 +148,18 @@ const TrackList: Component<TrackListProps> = (props) => {
               <div class='text-xs text-fg-subtle whitespace-nowrap'>
                 {formatDate(track)}
               </div>
+              <Button
+                variant='link'
+                class='px-1 text-xs'
+                title={`Search NTS for ${track.name}`}
+                aria-label={`Search NTS for ${track.name}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  props.onNTSLookup?.(track);
+                }}
+              >
+                NTS
+              </Button>
               <Show when={isLoading() || !info()}>
                 <InfoButton
                   loading={isLoading()}

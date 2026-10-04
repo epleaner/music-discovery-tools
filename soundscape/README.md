@@ -162,6 +162,7 @@ soundscape/
 ### Current
 
 - ✅ Last.fm integration (recent tracks, top artists, albums)
+- ✅ NTS artist and track appearance lookup from history or manual search
 - ✅ Similar artist discovery
 - ✅ EveryNoise genre exploration
 - ✅ Multi-panel blog/site browsing

@@ -23,6 +23,7 @@ import AgentSetup from './components/AgentSetup';
 import PairingScreen from './components/PairingScreen';
 import ScrapeSections from './components/ScrapeSections';
 import ScrapeTool from './components/ScrapeTool';
+import NTSLookup, { type NTSLookupPreset } from './components/NTSLookup';
 import Button from './components/Button';
 import PanelTab from './components/PanelTab';
 import EmptyState from './components/EmptyState';
@@ -50,6 +51,7 @@ import { useSearchState } from './lib/use-search-state';
 import { useNav } from './lib/use-nav';
 import { useTheme } from './lib/use-theme';
 import { getSession, logout, type SessionUser } from './lib/auth';
+import type { NTSLookupType } from './lib/nts';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -85,6 +87,10 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
   const [bottomTab, setBottomTab] = createSignal<
     'history' | 'sites' | 'scrape'
   >('history');
+  const [rightPanelTab, setRightPanelTab] = createSignal<'similar' | 'nts'>(
+    'similar'
+  );
+  const [ntsPreset, setNtsPreset] = createSignal<NTSLookupPreset>();
 
   const { theme, toggleTheme, colorTheme, setColorTheme } = useTheme();
 
@@ -170,6 +176,10 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
 
   const handleArtistResolveClick = (artist: RecentArtist) => {
     nav.navigateToItem({ artist: artist.name, itemKind: 'artist' });
+  };
+  const handleNTSLookup = (query: string, type: NTSLookupType) => {
+    setNtsPreset({ query, type });
+    setRightPanelTab('nts');
   };
 
   const tabs: { id: View; label: string }[] = [
@@ -595,6 +605,9 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                                     isLoading={recentTracks.isLoading()}
                                     error={recentTracks.error()}
                                     onTrackClick={handleTrackResolveClick}
+                                    onNTSLookup={(track) =>
+                                      handleNTSLookup(track.name, 'track')
+                                    }
                                   />
                                 </Match>
                                 <Match when={recentViewType() === 'albums'}>
@@ -613,6 +626,9 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                                     isLoading={recentTracks.isLoading()}
                                     error={recentTracks.error()}
                                     onArtistRowClick={handleArtistResolveClick}
+                                    onNTSLookup={(artistName) =>
+                                      handleNTSLookup(artistName, 'artist')
+                                    }
                                   />
                                 </Match>
                               </Switch>
@@ -646,6 +662,9 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                                     isLoading={topArtists.isLoading()}
                                     error={topArtists.error()}
                                     onArtistClick={handleArtistClick}
+                                    onNTSLookup={(artistName) =>
+                                      handleNTSLookup(artistName, 'artist')
+                                    }
                                     showPlaycount={true}
                                   />
                                 </Match>
@@ -659,6 +678,9 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                                         artist: track.artist.name,
                                         itemKind: 'artist',
                                       })
+                                    }
+                                    onNTSLookup={(track) =>
+                                      handleNTSLookup(track.name, 'track')
                                     }
                                   />
                                 </Match>
@@ -701,14 +723,37 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
           rightPanel={
             <div class="flex h-full min-h-0 flex-col overflow-hidden">
               <Show when={bottomTab() === 'history'}>
-                <div class="flex h-full min-h-0 flex-col">
+                <div
+                  class={`flex h-full min-h-0 flex-col overflow-hidden ${
+                    rightPanelTab() === 'nts'
+                      ? 'fixed inset-0 z-20 bg-bg sm:static'
+                      : ''
+                  }`}
+                >
                   <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-                    {/* LastFM: Similar section */}
-                    <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
-                      <h2 class="text-xs font-medium text-fg-muted">
-                        Similar (last.fm)
-                      </h2>
-                      <Show when={rightPanelModel().showSimilarArtists}>
+                    <div class="flex flex-shrink-0 items-center justify-between border-b bg-bg border-border">
+                      <div class="flex min-w-0 flex-wrap items-center gap-x-2 px-2">
+                        <PanelTab
+                          underline
+                          onClick={() => setRightPanelTab('similar')}
+                          active={() => rightPanelTab() === 'similar'}
+                        >
+                          Similar (last.fm)
+                        </PanelTab>
+                        <PanelTab
+                          underline
+                          onClick={() => setRightPanelTab('nts')}
+                          active={() => rightPanelTab() === 'nts'}
+                        >
+                          NTS Lookup
+                        </PanelTab>
+                      </div>
+                      <Show
+                        when={
+                          rightPanelTab() === 'similar' &&
+                          rightPanelModel().showSimilarArtists
+                        }
+                      >
                         <div class="flex-shrink-0">
                           <EveryNoiseViewer
                             genre={everyNoiseGenre.genre()}
@@ -719,19 +764,30 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                       </Show>
                     </div>
                     <div class="min-h-0 flex-1 overflow-y-auto">
-                      <Show when={selectedArtist()}>
-                        <ArtistList
-                          artists={similarArtists.artists()}
-                          isLoading={similarArtists.isLoading()}
-                          error={similarArtists.error()}
-                          onArtistClick={handleArtistClick}
-                          showMatch={true}
-                        />
-                      </Show>
+                      <Switch>
+                        <Match when={rightPanelTab() === 'similar'}>
+                          <Show when={selectedArtist()}>
+                            <ArtistList
+                              artists={similarArtists.artists()}
+                              isLoading={similarArtists.isLoading()}
+                              error={similarArtists.error()}
+                              onArtistClick={handleArtistClick}
+                              onNTSLookup={(artistName) =>
+                                handleNTSLookup(artistName, 'artist')
+                              }
+                              showMatch={true}
+                            />
+                          </Show>
+                        </Match>
+                        <Match when={rightPanelTab() === 'nts'}>
+                          <NTSLookup preset={ntsPreset()} />
+                        </Match>
+                      </Switch>
                     </div>
                   </div>
-
-                  <ScrapeSections />
+                  <Show when={rightPanelTab() === 'similar'}>
+                    <ScrapeSections />
+                  </Show>
                 </div>
               </Show>
             </div>

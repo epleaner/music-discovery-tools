@@ -10,6 +10,7 @@ import {
   getCached,
   getArtistCacheKey,
 } from '@soundscape/utils';
+import Button from './Button';
 import EmptyState from './EmptyState';
 import ErrorMessage from './ErrorMessage';
 import InfoButton from './InfoButton';
@@ -20,6 +21,7 @@ interface RecentArtistListProps {
   isLoading?: boolean;
   error?: Error | null;
   onArtistRowClick?: (artist: RecentArtist) => void;
+  onNTSLookup?: (artistName: string) => void;
 }
 
 const RecentArtistList: Component<RecentArtistListProps> = (props) => {
@@ -136,6 +138,18 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                       </Show>
                     </div>
                   </div>
+                  <Button
+                    variant='link'
+                    class='px-1 text-xs'
+                    title={`Search NTS for ${artist.name}`}
+                    aria-label={`Search NTS for ${artist.name}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      props.onNTSLookup?.(artist.name);
+                    }}
+                  >
+                    NTS
+                  </Button>
                   <Show when={isLoading() || !info()}>
                     <InfoButton
                       loading={isLoading()}

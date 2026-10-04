@@ -11,6 +11,7 @@ import {
   getCached,
   getArtistCacheKey,
 } from '@soundscape/utils';
+import Button from './Button';
 import EmptyState from './EmptyState';
 import ExternalLink from './ExternalLink';
 import ErrorMessage from './ErrorMessage';
@@ -21,6 +22,7 @@ interface ArtistListProps {
   isLoading?: boolean;
   error?: Error | null;
   onArtistClick?: (artistName: string) => void;
+  onNTSLookup?: (artistName: string) => void;
   showPlaycount?: boolean;
   showMatch?: boolean;
 }
@@ -120,6 +122,18 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                     <div class='flex-1 min-w-0'>
                       <div class='flex gap-2 items-center'>
                         <div class='text-sm truncate'>{artist.name}</div>
+                        <Button
+                          variant='link'
+                          class='px-1 text-xs'
+                          title={`Search NTS for ${artist.name}`}
+                          aria-label={`Search NTS for ${artist.name}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            props.onNTSLookup?.(artist.name);
+                          }}
+                        >
+                          NTS
+                        </Button>
                         <ExternalLink
                           href={getRYMSearchUrl(artist.name)}
                           onClick={(e) => e.stopPropagation()}
