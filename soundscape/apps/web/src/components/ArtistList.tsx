@@ -11,6 +11,7 @@ import {
   getCached,
   getArtistCacheKey,
 } from '@soundscape/utils';
+import Button from './Button';
 import EmptyState from './EmptyState';
 import ExternalLink from './ExternalLink';
 import ErrorMessage from './ErrorMessage';
@@ -21,6 +22,7 @@ interface ArtistListProps {
   isLoading?: boolean;
   error?: Error | null;
   onArtistClick?: (artistName: string) => void;
+  onNTSLookup?: (artistName: string) => void;
   showPlaycount?: boolean;
   showMatch?: boolean;
 }
@@ -99,11 +101,41 @@ const ArtistList: Component<ArtistListProps> = (props) => {
       </Show>
 
       <Show when={props.artists.length > 0}>
-        <div class='grid grid-cols-2 gap-px bg-border'>
+        <div
+          class={
+            props.showMatch
+              ? 'grid grid-cols-1 gap-px bg-border'
+              : 'grid grid-cols-2 gap-px bg-border'
+          }
+        >
           <For each={props.artists}>
             {(artist) => {
               const info = () => artistInfoCache()[artist.name];
               const isLoading = () => loadingInfo().has(artist.name);
+              const renderLinks = () => (
+                <div class='flex gap-2 items-center'>
+                  <Button
+                    variant='link'
+                    class='px-1 text-xs'
+                    title={`Search NTS for ${artist.name}`}
+                    aria-label={`Search NTS for ${artist.name}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      props.onNTSLookup?.(artist.name);
+                    }}
+                  >
+                    NTS
+                  </Button>
+                  <ExternalLink
+                    href={getRYMSearchUrl(artist.name)}
+                    onClick={(e) => e.stopPropagation()}
+                    class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
+                    title='View on RateYourMusic'
+                  >
+                    RYM
+                  </ExternalLink>
+                </div>
+              );
 
               // Check cache immediately and load if available (but don't fetch from API)
               createEffect(() => {
@@ -115,23 +147,29 @@ const ArtistList: Component<ArtistListProps> = (props) => {
               return (
                 <div class='bg-bg'>
                   <div
-                    class='flex gap-2 items-center p-2 transition-colors cursor-pointer hover:bg-bg-subtle'
-                    onClick={() => props.onArtistClick?.(artist.name)}>
+                    class={
+                      props.showMatch
+                        ? 'flex items-start gap-2 p-2 transition-colors cursor-pointer hover:bg-bg-subtle'
+                        : 'flex gap-2 items-center p-2 transition-colors cursor-pointer hover:bg-bg-subtle'
+                    }
+                    onClick={() => props.onArtistClick?.(artist.name)}
+                  >
                     <div class='flex-1 min-w-0'>
                       <div class='flex gap-2 items-center'>
-                        <div class='text-sm truncate'>{artist.name}</div>
-                        <ExternalLink
-                          href={getRYMSearchUrl(artist.name)}
-                          onClick={(e) => e.stopPropagation()}
-                          class='text-xs whitespace-nowrap text-fg-subtle hover:text-fg'
-                          title='View on RateYourMusic'
+                        <div
+                          class={
+                            props.showMatch
+                              ? 'text-sm break-words'
+                              : 'text-sm truncate'
+                          }
                         >
-                          RYM
-                        </ExternalLink>
+                          {artist.name}
+                        </div>
+                        <Show when={!props.showMatch}>{renderLinks()}</Show>
                       </div>
+                      <Show when={props.showMatch}>{renderLinks()}</Show>
                       <div class='flex gap-1 items-center text-xs text-fg-muted'>
-                        <Show
-                          when={props.showPlaycount && getPlaycount(artist)}>
+                        <Show when={props.showPlaycount && getPlaycount(artist)}>
                           <span>
                             {parseInt(getPlaycount(artist)!).toLocaleString()}{' '}
                             plays

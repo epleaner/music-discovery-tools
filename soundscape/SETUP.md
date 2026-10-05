@@ -50,8 +50,9 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 ### Test Web App
 
 1. Open http://localhost:3000.
-2. Enter a passphrase from the RYM menu-bar app, or create a new passphrase on
-   the web and save it somewhere secure.
+2. The app works without pairing. To test scrape status, choose **Connect
+   Soundscape** in the top-right, then enter a passphrase from the RYM menu-bar
+   app or create one on the web and save it somewhere secure.
 3. If the web created it, paste it into **Pair with Soundscape Web…** in the
    menu-bar app and choose **Use This Passphrase**.
 4. Verify that scrape status updates through HTTP polling.

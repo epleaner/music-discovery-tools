@@ -23,6 +23,7 @@ import AgentSetup from './components/AgentSetup';
 import PairingScreen from './components/PairingScreen';
 import ScrapeSections from './components/ScrapeSections';
 import ScrapeTool from './components/ScrapeTool';
+import NTSLookup, { type NTSLookupPreset } from './components/NTSLookup';
 import Button from './components/Button';
 import PanelTab from './components/PanelTab';
 import EmptyState from './components/EmptyState';
@@ -50,6 +51,7 @@ import { useSearchState } from './lib/use-search-state';
 import { useNav } from './lib/use-nav';
 import { useTheme } from './lib/use-theme';
 import { getSession, logout, type SessionUser } from './lib/auth';
+import type { NTSLookupType } from './lib/nts';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -62,7 +64,11 @@ interface AppState extends Record<string, string> {
   sites: string; // JSON-encoded array of sites
 }
 
-const Workspace: Component<{ onLogout: () => void }> = (props) => {
+const Workspace: Component<{
+  user: SessionUser | null;
+  onConnectRequest: () => void;
+  onLogout: () => void;
+}> = (props) => {
   const defaultSites = [
     {
       id: 'secret-ambient',
@@ -85,6 +91,10 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
   const [bottomTab, setBottomTab] = createSignal<
     'history' | 'sites' | 'scrape'
   >('history');
+  const [rightPanelTab, setRightPanelTab] = createSignal<'similar' | 'nts'>(
+    'similar'
+  );
+  const [ntsPreset, setNtsPreset] = createSignal<NTSLookupPreset>();
 
   const { theme, toggleTheme, colorTheme, setColorTheme } = useTheme();
 
@@ -170,6 +180,10 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
 
   const handleArtistResolveClick = (artist: RecentArtist) => {
     nav.navigateToItem({ artist: artist.name, itemKind: 'artist' });
+  };
+  const handleNTSLookup = (query: string, type: NTSLookupType) => {
+    setNtsPreset({ query, type });
+    setRightPanelTab('nts');
   };
 
   const tabs: { id: View; label: string }[] = [
@@ -292,6 +306,18 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
     };
     return colors[themeValue] || colors.default;
   };
+  const renderConnectNotice = (message: string) => (
+    <div class="flex flex-col items-start gap-2 border-t border-border p-3">
+      <p class="text-xs text-fg-muted">{message}</p>
+      <Button
+        onClick={props.onConnectRequest}
+        variant="secondary"
+        class="text-fg"
+      >
+        Connect Soundscape
+      </Button>
+    </div>
+  );
 
   return (
     <div class="flex flex-col h-screen bg-bg">
@@ -303,7 +329,16 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
             initialUsername={username()}
           />
 
-          <div class="ml-auto flex gap-2 justify-end items-center">
+          <div class="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2">
+            <Show when={!props.user}>
+              <Button
+                onClick={props.onConnectRequest}
+                variant="secondary"
+                class="text-fg"
+              >
+                Connect Soundscape
+              </Button>
+            </Show>
             <div class="relative flex-shrink-0" ref={accountMenuRef}>
               <Button
                 onClick={() => {
@@ -311,7 +346,7 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                   setShowColorThemeDropdown(false);
                 }}
                 variant="secondary"
-                class="inline-flex items-center justify-center gap-1"
+                class="inline-flex items-center justify-center gap-1 text-fg"
                 aria-haspopup="true"
                 aria-expanded={showAccountDropdown()}
                 aria-controls="account-menu"
@@ -336,23 +371,32 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                   id="account-menu"
                   class="absolute right-0 top-full z-40 mt-1 flex min-w-[200px] flex-col gap-2 border border-border bg-bg p-2 shadow-lg sm:min-w-[220px]"
                 >
-                  <div class="flex items-center justify-between border-b border-border px-2 pb-2">
-                    <div class="text-xs font-medium text-fg">
-                      Paired session
+                  <Show
+                    when={props.user}
+                    fallback={
+                      <div class="border-b border-border px-2 pb-2 text-xs text-fg-muted">
+                        Not connected
+                      </div>
+                    }
+                  >
+                    <div class="flex items-center justify-between border-b border-border px-2 pb-2">
+                      <div class="text-xs font-medium text-fg">
+                        Paired session
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setShowAccountDropdown(false);
+                          void props.onLogout();
+                        }}
+                        variant="link"
+                        class="px-0 text-right"
+                      >
+                        Sign out
+                      </Button>
                     </div>
-                    <Button
-                      onClick={() => {
-                        setShowAccountDropdown(false);
-                        void props.onLogout();
-                      }}
-                      variant="link"
-                      class="px-0 text-right"
-                    >
-                      Sign out
-                    </Button>
-                  </div>
 
-                  <AgentSetup />
+                    <AgentSetup />
+                  </Show>
 
                   <div
                     class="flex items-center justify-between gap-2 border-t border-border px-2 pt-2"
@@ -475,13 +519,14 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                   Scrape
                 </PanelTab>
               </div>
-              <div class="overflow-hidden flex-1 min-h-0">
+              <div class="h-full min-h-0 overflow-hidden flex-1">
                 <div
+                  class="h-full min-h-0"
                   style={{
                     display: bottomTab() === 'history' ? 'block' : 'none',
                   }}
                 >
-                  <div class="flex flex-col h-full">
+                  <div class="flex h-full min-h-0 flex-col">
                     {/* Sticky Header */}
                     <div class="flex items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-border px-2">
                       <For each={tabs}>
@@ -575,7 +620,7 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                     </div>
 
                     {/* Content */}
-                    <div class="overflow-y-auto flex-1">
+                    <div class="min-h-0 flex-1 overflow-y-auto">
                       <Show when={appLayoutModel().showLibraryEmptyState}>
                         <div class="flex justify-center items-center h-full">
                           <EmptyState class="text-center">
@@ -595,6 +640,9 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                                     isLoading={recentTracks.isLoading()}
                                     error={recentTracks.error()}
                                     onTrackClick={handleTrackResolveClick}
+                                    onNTSLookup={(track) =>
+                                      handleNTSLookup(track.name, 'track')
+                                    }
                                   />
                                 </Match>
                                 <Match when={recentViewType() === 'albums'}>
@@ -613,6 +661,9 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                                     isLoading={recentTracks.isLoading()}
                                     error={recentTracks.error()}
                                     onArtistRowClick={handleArtistResolveClick}
+                                    onNTSLookup={(artistName) =>
+                                      handleNTSLookup(artistName, 'artist')
+                                    }
                                   />
                                 </Match>
                               </Switch>
@@ -646,6 +697,9 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                                     isLoading={topArtists.isLoading()}
                                     error={topArtists.error()}
                                     onArtistClick={handleArtistClick}
+                                    onNTSLookup={(artistName) =>
+                                      handleNTSLookup(artistName, 'artist')
+                                    }
                                     showPlaycount={true}
                                   />
                                 </Match>
@@ -659,6 +713,9 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                                         artist: track.artist.name,
                                         itemKind: 'artist',
                                       })
+                                    }
+                                    onNTSLookup={(track) =>
+                                      handleNTSLookup(track.name, 'track')
                                     }
                                   />
                                 </Match>
@@ -692,7 +749,14 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                     />
                   </Match>
                   <Match when={bottomTab() === 'scrape'}>
-                    <ScrapeTool />
+                    <Show
+                      when={props.user}
+                      fallback={renderConnectNotice(
+                        'Connect Soundscape to use manual scrape tools.'
+                      )}
+                    >
+                      <ScrapeTool />
+                    </Show>
                   </Match>
                 </Switch>
               </div>
@@ -701,15 +765,38 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
           rightPanel={
             <div class="flex h-full min-h-0 flex-col overflow-hidden">
               <Show when={bottomTab() === 'history'}>
-                <div class="flex h-full min-h-0 flex-col">
+                <div
+                  class={`flex h-full min-h-0 flex-col overflow-hidden ${
+                    rightPanelTab() === 'nts'
+                      ? 'fixed inset-0 z-20 bg-bg sm:static'
+                      : ''
+                  }`}
+                >
                   <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-                    {/* LastFM: Similar section */}
-                    <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
-                      <h2 class="text-xs font-medium text-fg-muted">
-                        Similar (last.fm)
-                      </h2>
-                      <Show when={rightPanelModel().showSimilarArtists}>
-                        <div class="flex-shrink-0">
+                    <div class="flex flex-shrink-0 flex-col border-b border-border bg-bg">
+                      <div class="flex min-w-0 flex-wrap items-center gap-x-2 px-2">
+                        <PanelTab
+                          underline
+                          onClick={() => setRightPanelTab('similar')}
+                          active={() => rightPanelTab() === 'similar'}
+                        >
+                          Similar (last.fm)
+                        </PanelTab>
+                        <PanelTab
+                          underline
+                          onClick={() => setRightPanelTab('nts')}
+                          active={() => rightPanelTab() === 'nts'}
+                        >
+                          NTS Lookup
+                        </PanelTab>
+                      </div>
+                      <Show
+                        when={
+                          rightPanelTab() === 'similar' &&
+                          rightPanelModel().showSimilarArtists
+                        }
+                      >
+                        <div class="min-w-0 border-t border-border px-2 py-1">
                           <EveryNoiseViewer
                             genre={everyNoiseGenre.genre()}
                             isLoading={everyNoiseGenre.isLoading()}
@@ -719,19 +806,37 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
                       </Show>
                     </div>
                     <div class="min-h-0 flex-1 overflow-y-auto">
-                      <Show when={selectedArtist()}>
-                        <ArtistList
-                          artists={similarArtists.artists()}
-                          isLoading={similarArtists.isLoading()}
-                          error={similarArtists.error()}
-                          onArtistClick={handleArtistClick}
-                          showMatch={true}
-                        />
-                      </Show>
+                      <Switch>
+                        <Match when={rightPanelTab() === 'similar'}>
+                          <Show when={selectedArtist()}>
+                            <ArtistList
+                              artists={similarArtists.artists()}
+                              isLoading={similarArtists.isLoading()}
+                              error={similarArtists.error()}
+                              onArtistClick={handleArtistClick}
+                              onNTSLookup={(artistName) =>
+                                handleNTSLookup(artistName, 'artist')
+                              }
+                              showMatch={true}
+                            />
+                          </Show>
+                        </Match>
+                        <Match when={rightPanelTab() === 'nts'}>
+                          <NTSLookup preset={ntsPreset()} />
+                        </Match>
+                      </Switch>
                     </div>
                   </div>
-
-                  <ScrapeSections />
+                  <Show when={rightPanelTab() === 'similar'}>
+                    <Show
+                      when={props.user}
+                      fallback={renderConnectNotice(
+                        'Connect Soundscape to load RYM and Bandcamp matches.'
+                      )}
+                    >
+                      <ScrapeSections />
+                    </Show>
+                  </Show>
                 </div>
               </Show>
             </div>
@@ -743,12 +848,11 @@ const Workspace: Component<{ onLogout: () => void }> = (props) => {
 };
 
 const App: Component = () => {
+  const [showPairing, setShowPairing] = createSignal(false);
   const [user, setUser] = createSignal<SessionUser | null>(null);
-  const [loading, setLoading] = createSignal(true);
 
   onMount(async () => {
     setUser(await getSession());
-    setLoading(false);
   });
 
   const handleLogout = async () => {
@@ -757,25 +861,22 @@ const App: Component = () => {
   };
 
   return (
-    <Show
-      when={!loading()}
-      fallback={
-        <div class="flex h-screen items-center justify-center bg-bg text-xs text-fg-muted">
-          Loading…
-        </div>
-      }
-    >
-      <Show
-        when={user()}
-        fallback={
-          <PairingScreen
-            onAuthenticated={(authenticated) => setUser(authenticated)}
-          />
-        }
-      >
-        <Workspace onLogout={handleLogout} />
+    <>
+      <Workspace
+        user={user()}
+        onConnectRequest={() => setShowPairing(true)}
+        onLogout={handleLogout}
+      />
+      <Show when={showPairing()}>
+        <PairingScreen
+          onAuthenticated={(authenticated) => {
+            setUser(authenticated);
+            setShowPairing(false);
+          }}
+          onCancel={() => setShowPairing(false)}
+        />
       </Show>
-    </Show>
+    </>
   );
 };
 export default App;
