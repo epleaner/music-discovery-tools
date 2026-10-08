@@ -13,10 +13,12 @@ const InfoButton: Component<InfoButtonProps> = (props) => {
   return (
     <Button
       {...rest}
-      variant="link"
-      class={`text-xs text-fg-subtle hover:text-fg px-1 ${local.class ?? ''}`}
+      variant="icon"
+      class={local.class}
       title={`Fetch ${local.label} info`}
       aria-label={`Fetch ${local.label} info`}
+      disabled={local.loading || rest.disabled}
+      aria-busy={local.loading}
     >
       {local.loading ? '◐' : 'ⓘ'}
     </Button>

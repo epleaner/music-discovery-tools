@@ -1,4 +1,4 @@
-import { Component, createSignal } from 'solid-js';
+import { Component, createSignal, createUniqueId } from 'solid-js';
 import Button from './Button';
 import Input from './Input';
 
@@ -11,6 +11,7 @@ const UsernameInput: Component<UsernameInputProps> = (props) => {
   const [localUsername, setLocalUsername] = createSignal(
     props.initialUsername || ''
   );
+  const usernameId = createUniqueId();
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
@@ -21,13 +22,22 @@ const UsernameInput: Component<UsernameInputProps> = (props) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} class="flex gap-2">
+    <form onSubmit={handleSubmit} class="toolbar">
+      <label for={usernameId} class="field-label">
+        Last.fm
+      </label>
       <Input
+        id={usernameId}
+        name="lastfm-username"
         type="text"
+        autocomplete="username"
+        autocapitalize="none"
+        spellcheck={false}
+        required
         value={localUsername()}
         onInput={(e) => setLocalUsername(e.currentTarget.value)}
-        placeholder="Last.fm username"
-        class="flex-1"
+        placeholder="Username"
+        class="min-w-0 flex-1"
       />
       <Button type="submit" variant="secondary">
         Load

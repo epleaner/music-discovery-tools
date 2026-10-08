@@ -1,13 +1,11 @@
 import { Component, Show, For, createSignal, createEffect } from 'solid-js';
 import type { TopTrack, TrackInfo, TrackInfoResponse } from '@soundscape/types';
-import {
-  fetchTrackInfo,
-  getCached,
-  getTrackCacheKey,
-} from '@soundscape/utils';
+import { fetchTrackInfo, getCached, getTrackCacheKey } from '@soundscape/utils';
 import Button from './Button';
 import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
 import InfoButton from './InfoButton';
+import Artwork from './Artwork';
 
 interface TopTrackListProps {
   tracks: TopTrack[];
@@ -68,17 +66,16 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
   return (
     <div>
       <Show when={props.isLoading}>
-        <EmptyState class='p-4 text-center'>Loading...</EmptyState>
+        <EmptyState>Loading...</EmptyState>
       </Show>
       <Show when={props.error}>
-        <EmptyState class='p-4 text-center'>
-          Error: {props.error?.toString()}
-        </EmptyState>
+        <ErrorMessage>{props.error?.message}</ErrorMessage>
       </Show>
 
       <Show
-        when={!props.isLoading && !props.error && props.tracks.length === 0}>
-        <EmptyState class="p-4 text-center">No tracks found</EmptyState>
+        when={!props.isLoading && !props.error && props.tracks.length === 0}
+      >
+        <EmptyState>No tracks found</EmptyState>
       </Show>
 
       <Show when={!props.isLoading && !props.error && props.tracks.length > 0}>
@@ -96,55 +93,54 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
             });
 
             return (
-              <div
-                class='flex items-center gap-2 p-2 text-xs border-b border-border hover:bg-bg-subtle cursor-pointer'
-                onClick={() => props.onTrackClick?.(track)}>
-                <div class='flex-1 min-w-0'>
-                  <div class='font-medium truncate'>{track.name}</div>
-                  <div class='flex gap-1 items-center text-fg-muted'>
-                    <span>{track.artist.name}</span>
-                  </div>
-                  <Show
-                    when={
-                      info()?.toptags?.tag && info()!.toptags.tag.length > 0
-                    }>
-                    <div class='flex gap-1 text-fg-muted'>
-                      <For each={info()!.toptags.tag.slice(0, 3)}>
-                        {(tag, index) => (
-                          <span>
-                            {tag.name}
-                            {index() <
-                            Math.min(2, info()!.toptags.tag.length - 1)
-                              ? ','
-                              : ''}
-                          </span>
-                        )}
-                      </For>
-                    </div>
+              <div class="list-row">
+                <button
+                  type="button"
+                  class="list-select"
+                  onClick={() => props.onTrackClick?.(track)}
+                >
+                  <Artwork images={track.image} />
+                  <span class="list-main">
+                    <span class="list-title block">{track.name}</span>
+                    <span class="list-meta block">{track.artist.name}</span>
+                    <Show
+                      when={
+                        info()?.toptags?.tag && info()!.toptags.tag.length > 0
+                      }
+                    >
+                      <span class="list-meta block">
+                        <For each={info()!.toptags.tag.slice(0, 3)}>
+                          {(tag, index) => (
+                            <span>
+                              {index() > 0 ? ', ' : ''}
+                              {tag.name}
+                            </span>
+                          )}
+                        </For>
+                      </span>
+                    </Show>
+                    <span class="list-count block">
+                      {track.playcount} plays
+                    </span>
+                  </span>
+                </button>
+                <div class="list-actions">
+                  <Button
+                    variant="link"
+                    title={`Search NTS for ${track.name}`}
+                    aria-label={`Search NTS for ${track.name}`}
+                    onClick={() => props.onNTSLookup?.(track)}
+                  >
+                    NTS
+                  </Button>
+                  <Show when={isLoading() || !info()}>
+                    <InfoButton
+                      loading={isLoading()}
+                      label="track"
+                      onClick={(e: MouseEvent) => handleInfoClick(track, e)}
+                    />
                   </Show>
                 </div>
-                <Button
-                  variant='link'
-                  class='px-1 text-xs'
-                  title={`Search NTS for ${track.name}`}
-                  aria-label={`Search NTS for ${track.name}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    props.onNTSLookup?.(track);
-                  }}
-                >
-                  NTS
-                </Button>
-                <div class='flex-shrink-0 text-fg-subtle'>
-                  {track.playcount} plays
-                </div>
-                <Show when={isLoading() || !info()}>
-                  <InfoButton
-                    loading={isLoading()}
-                    label="track"
-                    onClick={(e: MouseEvent) => handleInfoClick(track, e)}
-                  />
-                </Show>
               </div>
             );
           }}

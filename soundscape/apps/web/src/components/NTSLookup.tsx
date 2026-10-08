@@ -6,6 +6,8 @@ import {
 } from '../lib/nts';
 import Button from './Button';
 import NTSLookupResults from './NTSLookupResults';
+import Input from './Input';
+import Select from './Select';
 
 export interface NTSLookupPreset {
   query: string;
@@ -63,8 +65,8 @@ const NTSLookup: Component<NTSLookupProps> = (props) => {
   onCleanup(() => activeRequest?.abort());
 
   return (
-    <section class='flex h-full min-h-0 flex-col' aria-label='NTS lookup'>
-      <div role='status' aria-live='polite' class='sr-only'>
+    <section class="flex h-full min-h-0 flex-col" aria-label="NTS lookup">
+      <div role="status" aria-live="polite" class="sr-only">
         {isLoading()
           ? 'Searching NTS'
           : hasSearched()
@@ -72,41 +74,40 @@ const NTSLookup: Component<NTSLookupProps> = (props) => {
             : ''}
       </div>
       <form
-        class='flex flex-wrap items-center gap-2 border-b border-border p-2'
+        class="toolbar section-content border-b border-border"
         onSubmit={(event) => {
           event.preventDefault();
           void performSearch(query(), type());
         }}
       >
-        <label class='sr-only' for='nts-query'>
+        <label class="sr-only" for="nts-query">
           Search NTS for an artist or track
         </label>
-        <input
-          id='nts-query'
-          name='query'
-          autocomplete='off'
-          class='min-w-0 flex-1 basis-full border border-border bg-bg px-2 py-1 text-sm text-fg sm:basis-auto'
-          type='search'
-          placeholder='Search NTS for an artist or track'
+        <Input
+          id="nts-query"
+          name="query"
+          autocomplete="off"
+          class="min-w-0 flex-1 basis-full sm:basis-auto"
+          type="search"
+          placeholder="Search NTS for an artist or track"
           value={query()}
           onInput={(event) => setQuery(event.currentTarget.value)}
         />
-        <label class='sr-only' for='nts-search-type'>
+        <label class="sr-only" for="nts-search-type">
           Search type
         </label>
-        <select
-          id='nts-search-type'
-          name='type'
-          class='border border-border bg-bg px-2 py-1 text-sm text-fg'
+        <Select
+          id="nts-search-type"
+          name="type"
           value={type()}
           onChange={(event) =>
             setType(event.currentTarget.value === 'track' ? 'track' : 'artist')
           }
         >
-          <option value='artist'>Artist</option>
-          <option value='track'>Track</option>
-        </select>
-        <Button type='submit' disabled={isLoading() || !query().trim()}>
+          <option value="artist">Artist</option>
+          <option value="track">Track</option>
+        </Select>
+        <Button type="submit" disabled={isLoading() || !query().trim()}>
           {isLoading() ? 'Searching…' : 'Search'}
         </Button>
       </form>

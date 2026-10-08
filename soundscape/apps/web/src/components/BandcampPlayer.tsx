@@ -42,44 +42,45 @@ const BandcampPlayer: Component<BandcampPlayerProps> = (props) => {
   };
 
   return (
-    <div class="mt-3">
-      <audio
-        ref={audioRef}
-        onEnded={() => setIsPlaying(false)}
-      />
+    <div class="space-y-4">
+      <audio ref={audioRef} onEnded={() => setIsPlaying(false)} />
       <Show when={currentTrack()}>
-        <div class="mb-2 text-xs text-fg-muted flex items-center gap-1">
-          <span class="text-fg">♪</span>
-          <span>{currentTrack()!.name}</span>
+        <div class="status break-words" role="status">
+          {isPlaying() ? 'Playing' : 'Paused'}: {currentTrack()!.name}
         </div>
       </Show>
-      <div class="flex flex-col gap-0.5">
+      <div class="result-list">
         <For each={props.tracks}>
           {(track, i) => {
             const available = () => track.streamUrl !== null;
             const active = () => playingIndex() === i() && isPlaying();
             return (
-              <div
-                class={`flex items-center gap-2 px-2 py-1 rounded text-xs ${
-                  available()
-                    ? 'hover:bg-bg-subtle cursor-pointer'
-                    : 'opacity-40 cursor-default'
-                } ${active() ? 'bg-bg-subtle' : ''}`}
-                onClick={() => available() && handleTrackClick(i(), track.streamUrl!)}
+              <button
+                type="button"
+                class="result-row w-full items-start text-left"
+                classList={{ 'bg-bg-subtle': active() }}
+                disabled={!available()}
+                aria-label={`${active() ? 'Pause' : 'Play'} ${track.name}`}
+                aria-pressed={active()}
+                onClick={() =>
+                  available() && handleTrackClick(i(), track.streamUrl!)
+                }
               >
-                <span class="w-4 text-right text-fg-subtle shrink-0">
-                  {active() ? '▶' : track.position}
+                <span class="list-count shrink-0">
+                  {active() ? 'Ⅱ' : track.position}
                 </span>
-                <span class="flex-1 min-w-0 truncate text-fg">
-                  {track.name}
-                  {!available() && (
-                    <span class="ml-1 text-fg-subtle">(unavailable)</span>
-                  )}
+                <span class="result-main break-words">
+                  <span class="result-title">{track.name}</span>
+                  <Show when={!available()}>
+                    <span class="status block">Unavailable</span>
+                  </Show>
                 </span>
-                <Show when={track.duration}>
-                  <span class="text-fg-subtle shrink-0">{formatDuration(track.duration)}</span>
+                <Show when={track.duration != null}>
+                  <span class="result-meta numeric shrink-0">
+                    {formatDuration(track.duration)}
+                  </span>
                 </Show>
-              </div>
+              </button>
             );
           }}
         </For>

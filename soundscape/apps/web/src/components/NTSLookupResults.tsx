@@ -12,53 +12,53 @@ interface NTSLookupResultsProps {
 }
 
 const NTSLookupResults: Component<NTSLookupResultsProps> = (props) => (
-  <div class='min-h-0 flex-1 overflow-y-auto'>
+  <div class="panel-scroll">
     <Show when={props.error}>
-      <ErrorMessage class='m-2 border border-border bg-bg-muted p-2'>
-        {props.error}
-      </ErrorMessage>
+      <ErrorMessage class="m-6">{props.error}</ErrorMessage>
     </Show>
     <Show when={props.isLoading}>
-      <div role='status' aria-live='polite'>
-        <EmptyState class='py-8 text-center'>Searching NTS…</EmptyState>
+      <div role="status" aria-live="polite">
+        <EmptyState class="section-content">Searching NTS…</EmptyState>
       </div>
     </Show>
     <Show when={!props.isLoading && props.results.length > 0}>
-      <div class='space-y-px'>
+      <div class="result-list section-content">
         <For each={props.results}>
           {(result) => {
             const url = getNTSResultUrl(result.articlePath);
             const isArtist = result.article_type === 'artist';
             return (
-              <article class='flex items-center gap-2 border-b border-border p-2 text-sm hover:bg-bg-subtle'>
+              <article class="result-row">
                 <Show when={isArtist && result.imageUrl}>
                   <img
-                    width={36}
-                    height={36}
+                    width={64}
+                    height={64}
                     src={result.imageUrl}
-                    alt=''
-                    class='h-9 w-9 object-cover'
-                    loading='lazy'
+                    alt=""
+                    class="result-cover"
+                    loading="lazy"
                   />
                 </Show>
-                <div class='min-w-0 flex-1'>
+                <div class="result-main">
                   <Show
                     when={url}
-                    fallback={<div class='truncate'>{result.title}</div>}
+                    fallback={
+                      <div class="result-title break-words">{result.title}</div>
+                    }
                   >
                     <ExternalLink
                       href={url!}
-                      class='block truncate hover:underline'
+                      class="result-title block break-words"
                       title={`Open ${result.title} on NTS`}
                     >
                       {result.title}
                     </ExternalLink>
                   </Show>
                   <Show when={isArtist}>
-                    <div class='text-xs text-fg-muted'>NTS artist</div>
+                    <div class="result-meta">NTS artist</div>
                   </Show>
                   <Show when={!isArtist}>
-                    <div class='truncate text-xs text-fg-muted'>
+                    <div class="result-meta break-words">
                       {result.artists.join(', ')}
                       <Show
                         when={result.artists.length > 0 && result.episodeTitle}
@@ -75,7 +75,6 @@ const NTSLookupResults: Component<NTSLookupResultsProps> = (props) => (
                     </div>
                   </Show>
                 </div>
-                <span class='shrink-0 text-xs text-fg-muted'>NTS</span>
               </article>
             );
           }}
@@ -90,14 +89,12 @@ const NTSLookupResults: Component<NTSLookupResultsProps> = (props) => (
         !props.error
       }
     >
-      <div role='status' aria-live='polite'>
-        <EmptyState class='py-8 text-center'>No NTS results</EmptyState>
+      <div role="status" aria-live="polite">
+        <EmptyState class="section-content">No NTS results</EmptyState>
       </div>
     </Show>
     <Show when={!props.isLoading && !props.hasSearched}>
-      <EmptyState class='py-8 text-center'>
-        Search NTS for artist profiles or track appearances
-      </EmptyState>
+      <EmptyState class="section-content">Search by artist or track</EmptyState>
     </Show>
   </div>
 );

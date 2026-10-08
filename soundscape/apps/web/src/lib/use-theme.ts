@@ -1,4 +1,4 @@
-import { createSignal, createEffect, onMount } from 'solid-js';
+import { createSignal, createEffect, onMount, onCleanup } from 'solid-js';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type ColorTheme =
@@ -15,69 +15,40 @@ export type ColorTheme =
   | 'twilight'
   | 'fire';
 
-/**
- * Hook for managing theme preference with localStorage persistence
- */
+/** Persisted appearance; accents never recolor the neutral workspace surfaces. */
 export function useTheme() {
-  const [theme, setTheme] = createSignal<Theme>('system');
-  const [colorTheme, setColorTheme] = createSignal<ColorTheme>('default');
+  const [theme, setTheme] = createSignal<Theme>(
+    (localStorage.getItem('theme') as Theme | null) ?? 'dark'
+  );
+  const [colorTheme, setColorTheme] = createSignal<ColorTheme>(
+    (localStorage.getItem('colorTheme') as ColorTheme | null) ?? 'default'
+  );
+  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+  const [systemDark, setSystemDark] = createSignal(systemTheme.matches);
 
-  // Initialize theme from localStorage
   onMount(() => {
-    const storedTheme = localStorage.getItem('theme') as Theme | null;
-    const storedColorTheme = localStorage.getItem(
-      'colorTheme'
-    ) as ColorTheme | null;
-
-    if (storedTheme) {
-      setTheme(storedTheme);
-    }
-    if (storedColorTheme) {
-      setColorTheme(storedColorTheme);
-    }
-
-    applyTheme(storedTheme || 'system', storedColorTheme || 'default');
+    const handleChange = (event: MediaQueryListEvent) =>
+      setSystemDark(event.matches);
+    systemTheme.addEventListener('change', handleChange);
+    onCleanup(() => systemTheme.removeEventListener('change', handleChange));
   });
 
-  // Apply theme whenever it changes
   createEffect(() => {
     const currentTheme = theme();
     const currentColorTheme = colorTheme();
+    const dark =
+      currentTheme === 'dark' || (currentTheme === 'system' && systemDark());
+    const root = document.documentElement;
+    root.classList.toggle('dark', dark);
+    root.classList.toggle('light', !dark);
+    root.dataset.colorTheme = currentColorTheme;
     localStorage.setItem('theme', currentTheme);
     localStorage.setItem('colorTheme', currentColorTheme);
-    applyTheme(currentTheme, currentColorTheme);
   });
-
-  const applyTheme = (theme: Theme, colorTheme: ColorTheme) => {
-    const root = document.documentElement;
-
-    // Apply light/dark theme
-    if (theme === 'system') {
-      root.classList.remove('light', 'dark');
-    } else {
-      root.classList.remove('light', 'dark');
-      root.classList.add(theme);
-    }
-
-    // Apply color theme
-    root.removeAttribute('data-color-theme');
-    if (colorTheme !== 'default') {
-      root.setAttribute('data-color-theme', colorTheme);
-    }
-  };
-
-  const toggleTheme = () => {
-    setTheme((current) => {
-      if (current === 'light') return 'dark';
-      if (current === 'dark') return 'system';
-      return 'light';
-    });
-  };
 
   return {
     theme,
     setTheme,
-    toggleTheme,
     colorTheme,
     setColorTheme,
   };

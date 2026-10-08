@@ -14,6 +14,7 @@ import Button from './Button';
 import EmptyState from './EmptyState';
 import ErrorMessage from './ErrorMessage';
 import InfoButton from './InfoButton';
+import Artwork from './Artwork';
 
 interface RecentArtistListProps {
   artists: RecentArtist[];
@@ -67,26 +68,17 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
     fetchArtistInfoForName(artistName);
   };
 
-  const getImageUrl = (artist: RecentArtist) => {
-    const image = artist.image?.find(
-      (img) => img.size === 'small' || img.size === 'medium'
-    );
-    return image?.['#text'] || '';
-  };
-
   return (
     <div>
       <Show when={props.error}>
-        <ErrorMessage class='p-2 mb-2 bg-bg-muted border border-border'>
-          {props.error?.message}
-        </ErrorMessage>
+        <ErrorMessage>{props.error?.message}</ErrorMessage>
       </Show>
 
       <Show when={props.isLoading && props.artists.length === 0}>
-        <EmptyState class='py-8 text-center'>Loading...</EmptyState>
+        <EmptyState>Loading...</EmptyState>
       </Show>
 
-      <div class='grid grid-cols-2 gap-px bg-border'>
+      <div>
         <For each={props.artists}>
           {(artist) => {
             const info = () => artistInfoCache()[artist.name];
@@ -100,53 +92,41 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
             });
 
             return (
-              <div class='bg-bg'>
-                <div
-                  class='flex gap-2 items-center p-2 transition-colors hover:bg-bg-subtle cursor-pointer'
-                  onClick={() => props.onArtistRowClick?.(artist)}>
-                  <Show when={getImageUrl(artist)}>
-                    <img
-                      src={getImageUrl(artist)}
-                      alt={artist.name}
-                      class='w-8 h-8'
-                    />
-                  </Show>
-                  <div class='flex-1 min-w-0'>
-                    <div class='flex gap-2 items-center'>
-                      <div class='text-sm truncate'>{artist.name}</div>
-                    </div>
-                    <div class='flex gap-1 items-center text-xs text-fg-muted'>
-                      <span>
-                        {artist.trackCount}{' '}
-                        {artist.trackCount === 1 ? 'track' : 'tracks'}
+              <div class="list-row">
+                <button
+                  type="button"
+                  class="list-select"
+                  onClick={() => props.onArtistRowClick?.(artist)}
+                >
+                  <Artwork images={artist.image} />
+                  <span class="list-main">
+                    <span class="list-title block">{artist.name}</span>
+                    <span class="list-count block">
+                      {artist.trackCount}{' '}
+                      {artist.trackCount === 1 ? 'track' : 'tracks'}
+                    </span>
+                    <Show
+                      when={info()?.tags?.tag && info()!.tags.tag.length > 0}
+                    >
+                      <span class="list-meta block">
+                        <For each={info()!.tags.tag.slice(0, 3)}>
+                          {(tag, index) => (
+                            <span>
+                              {index() > 0 ? ', ' : ''}
+                              {tag.name}
+                            </span>
+                          )}
+                        </For>
                       </span>
-                      <Show
-                        when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
-                        <span class='flex gap-1'>
-                          <For each={info()!.tags.tag.slice(0, 3)}>
-                            {(tag, index) => (
-                              <span>
-                                {tag.name}
-                                {index() <
-                                Math.min(2, info()!.tags.tag.length - 1)
-                                  ? ','
-                                  : ''}
-                              </span>
-                            )}
-                          </For>
-                        </span>
-                      </Show>
-                    </div>
-                  </div>
+                    </Show>
+                  </span>
+                </button>
+                <div class="list-actions">
                   <Button
-                    variant='link'
-                    class='px-1 text-xs'
+                    variant="link"
                     title={`Search NTS for ${artist.name}`}
                     aria-label={`Search NTS for ${artist.name}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      props.onNTSLookup?.(artist.name);
-                    }}
+                    onClick={() => props.onNTSLookup?.(artist.name)}
                   >
                     NTS
                   </Button>
@@ -154,7 +134,9 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                     <InfoButton
                       loading={isLoading()}
                       label="artist"
-                      onClick={(e: MouseEvent) => handleInfoClick(artist.name, e)}
+                      onClick={(e: MouseEvent) =>
+                        handleInfoClick(artist.name, e)
+                      }
                     />
                   </Show>
                 </div>
@@ -165,8 +147,9 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
       </div>
 
       <Show
-        when={props.artists.length === 0 && !props.isLoading && !props.error}>
-        <EmptyState class="py-8 text-center">No artists</EmptyState>
+        when={props.artists.length === 0 && !props.isLoading && !props.error}
+      >
+        <EmptyState>No artists</EmptyState>
       </Show>
     </div>
   );

@@ -1,17 +1,15 @@
 import { Component, Show, For, createSignal, createEffect } from 'solid-js';
 import type { TopAlbum, AlbumInfo, AlbumInfoResponse } from '@soundscape/types';
-import {
-  fetchAlbumInfo,
-  getCached,
-  getAlbumCacheKey,
-} from '@soundscape/utils';
+import { fetchAlbumInfo, getCached, getAlbumCacheKey } from '@soundscape/utils';
 import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
 import InfoButton from './InfoButton';
+import Artwork from './Artwork';
 
 interface TopAlbumListProps {
   albums: TopAlbum[];
   isLoading: boolean;
-  error: any;
+  error: Error | null;
   onAlbumClick?: (album: TopAlbum) => void;
 }
 
@@ -66,17 +64,16 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
   return (
     <div>
       <Show when={props.isLoading}>
-        <EmptyState class='p-4 text-center'>Loading...</EmptyState>
+        <EmptyState>Loading...</EmptyState>
       </Show>
       <Show when={props.error}>
-        <EmptyState class='p-4 text-center'>
-          Error: {props.error?.toString()}
-        </EmptyState>
+        <ErrorMessage>{props.error?.message}</ErrorMessage>
       </Show>
 
       <Show
-        when={!props.isLoading && !props.error && props.albums.length === 0}>
-        <EmptyState class="p-4 text-center">No albums found</EmptyState>
+        when={!props.isLoading && !props.error && props.albums.length === 0}
+      >
+        <EmptyState>No albums found</EmptyState>
       </Show>
 
       <Show when={!props.isLoading && !props.error && props.albums.length > 0}>
@@ -94,40 +91,43 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
             });
 
             return (
-              <div
-                class='flex gap-2 items-center p-2 text-xs border-b border-border hover:bg-bg-subtle cursor-pointer'
-                onClick={() => props.onAlbumClick?.(album)}>
-                <div class='flex-1 min-w-0'>
-                  <div class='flex gap-1 items-center'>
-                    <span class='font-medium truncate'>{album.name}</span>
-                  </div>
-                  <div class='flex gap-1 items-center text-fg-muted'>
-                    <span>{album.artist.name}</span>
-                  </div>
-                  <Show when={info()?.tags?.tag && info()!.tags.tag.length > 0}>
-                    <div class='flex gap-1 text-fg-muted'>
-                      <For each={info()!.tags.tag.slice(0, 3)}>
-                        {(tag, index) => (
-                          <span>
-                            {tag.name}
-                            {index() < Math.min(2, info()!.tags.tag.length - 1)
-                              ? ','
-                              : ''}
-                          </span>
-                        )}
-                      </For>
-                    </div>
+              <div class="list-row">
+                <button
+                  type="button"
+                  class="list-select"
+                  onClick={() => props.onAlbumClick?.(album)}
+                >
+                  <Artwork images={album.image} />
+                  <span class="list-main">
+                    <span class="list-title block">{album.name}</span>
+                    <span class="list-meta block">{album.artist.name}</span>
+                    <Show
+                      when={info()?.tags?.tag && info()!.tags.tag.length > 0}
+                    >
+                      <span class="list-meta block">
+                        <For each={info()!.tags.tag.slice(0, 3)}>
+                          {(tag, index) => (
+                            <span>
+                              {index() > 0 ? ', ' : ''}
+                              {tag.name}
+                            </span>
+                          )}
+                        </For>
+                      </span>
+                    </Show>
+                    <span class="list-count block">
+                      {album.playcount} plays
+                    </span>
+                  </span>
+                </button>
+                <div class="list-actions">
+                  <Show when={isLoading() || !info()}>
+                    <InfoButton
+                      loading={isLoading()}
+                      label="album"
+                      onClick={(e: MouseEvent) => handleInfoClick(album, e)}
+                    />
                   </Show>
-                </div>
-                <Show when={isLoading() || !info()}>
-                  <InfoButton
-                    loading={isLoading()}
-                    label="album"
-                    onClick={(e: MouseEvent) => handleInfoClick(album, e)}
-                  />
-                </Show>
-                <div class='flex-shrink-0 text-fg-subtle'>
-                  {album.playcount} plays
                 </div>
               </div>
             );

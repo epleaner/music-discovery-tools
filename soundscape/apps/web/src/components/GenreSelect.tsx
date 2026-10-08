@@ -6,6 +6,8 @@ import {
   createResource,
   Show,
   createSignal,
+  onCleanup,
+  onMount,
 } from 'solid-js';
 import { Combobox, useListCollection } from '@ark-ui/solid/combobox';
 import { useFilter } from '@ark-ui/solid/locale';
@@ -50,13 +52,9 @@ interface VirtualItem {
 }
 
 const GenreSelect: Component<GenreSelectProps> = (props) => {
-  // oxlint-disable-next-line no-unassigned-vars
-  let contentRef!: HTMLDivElement;
-  // oxlint-disable-next-line no-unassigned-vars
-  let pillsContainerRef!: HTMLDivElement;
+  const [contentRef, setContentRef] = createSignal<HTMLDivElement | null>(null);
+  let inputRef!: HTMLInputElement;
   let timerRef: NodeJS.Timeout;
-  // oxlint-disable-next-line no-unassigned-vars
-  let triggerRef!: HTMLButtonElement;
 
   const [inputValue, setInputValue] = createSignal('');
   const filterFn = useFilter({ sensitivity: 'base' });
@@ -112,51 +110,21 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
     return flat;
   });
 
-  // Calculate item height based on content (label, description, optional path)
-  const calculateItemHeight = (item: GenreItem | undefined): number => {
-    if (!item) return 64; // Default fallback
-
-    // Base padding: py-2 = 8px top + 8px bottom = 16px
-    let height = 16;
-
-    // Label: text-xs (14px) with line-height ~1.5 = ~21px per line
-    // Assuming ~400px width, ~50 chars per line for text-xs
-    const labelLines = Math.ceil(item.label.length / 50);
-    height += labelLines * 21;
-
-    // Gap between label and description: gap-0.5 = 2px
-    height += 2;
-
-    // Description: text-[11px] with line-height ~1.5 = ~16.5px per line
-    // ~60 chars per line for text-[11px]
-    const descLines = Math.ceil(item.description.length / 60);
-    height += descLines * 16.5;
-
-    // Path (if exists): text-[10px] with line-height ~1.5 = ~15px per line
-    // ~65 chars per line for text-[10px]
-    if (item.path !== item.label) {
-      height += 2; // Gap between description and path
-      const pathLines = Math.ceil(item.path.length / 65);
-      height += pathLines * 15;
-    }
-
-    return Math.max(height, 48); // Minimum height
-  };
-
-  // Create virtualizer reactively - recreates when items change
-  const virtualizer = createMemo(() => {
-    const items = virtualItems();
-    return createVirtualizer({
-      count: items.length,
-      getScrollElement: () => contentRef,
-      estimateSize: (index) => {
-        const item = items[index];
-        if (item?.type === 'group') {
-          return 32; // Group labels are fixed height
-        }
-        return calculateItemHeight(item?.item);
-      },
-    });
+  const virtualizer = createVirtualizer({
+    get count() {
+      return virtualItems().length;
+    },
+    get enabled() {
+      return contentRef() !== null;
+    },
+    getScrollElement: contentRef,
+    estimateSize: (index) => {
+      const item = virtualItems()[index];
+      if (item?.type === 'group') return 32;
+      const genre = item?.item;
+      return genre?.path !== genre?.label ? 144 : 112;
+    },
+    measureElement: (element) => element.getBoundingClientRect().height,
   });
 
   const handleInputChange = (details: { inputValue: string }) => {
@@ -164,26 +132,10 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
     filter(details.inputValue);
   };
 
-  const handleItemSelect = (item: GenreItem) => {
-    const currentValues = props.value || [];
-    if (!currentValues.includes(item.value)) {
-      props.onValueChange([...currentValues, item.value]);
-    }
-    // Focus back on input
-    setTimeout(() => {
-      setInputValue('');
-      filter('');
-      triggerRef?.click();
-    }, 0);
-  };
-
   const handleRemovePill = (valueToRemove: string) => {
     const currentValues = props.value || [];
     props.onValueChange(currentValues.filter((v) => v !== valueToRemove));
-    // Focus back on input
-    setTimeout(() => {
-      triggerRef?.click();
-    }, 0);
+    inputRef?.focus();
   };
 
   const handleInputKeyDown = (e: KeyboardEvent) => {
@@ -227,26 +179,38 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
   };
 
   const handleScrollToIndexFn = (details: ScrollToIndexDetails) => {
+    let itemIndex = -1;
+    const virtualIndex = virtualItems().findIndex((item) => {
+      if (item.type !== 'item') return false;
+      itemIndex += 1;
+      return itemIndex === details.index;
+    });
+    if (virtualIndex < 0) return;
     const scrollOptions: ScrollToOptions = {
       align: 'center',
       behavior: 'auto',
     };
     if (details.immediate) {
-      virtualizer().scrollToIndex(details.index, scrollOptions);
+      virtualizer.scrollToIndex(virtualIndex, scrollOptions);
     } else {
       clearTimeout(timerRef);
       timerRef = setTimeout(() => {
-        virtualizer().scrollToIndex(details.index, scrollOptions);
+        virtualizer.scrollToIndex(virtualIndex, scrollOptions);
       });
     }
   };
+
+  onCleanup(() => clearTimeout(timerRef));
 
   return (
     <Combobox.Root
       collection={collection()}
       value={props.value || []}
-      onValueChange={() => {
-        // Don't update from combobox value changes - we handle selection manually
+      multiple
+      onValueChange={(details) => {
+        props.onValueChange(details.value);
+        setInputValue('');
+        filter('');
       }}
       inputValue={inputValue()}
       onInputValueChange={handleInputChange}
@@ -254,32 +218,24 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
       positioning={{ sameWidth: true }}
     >
       <ControlGroup>
-        <div class="flex items-center gap-1">
-          <Combobox.Label class="block text-xs text-fg-muted">
-            Genre
-          </Combobox.Label>
+        <div class="toolbar">
+          <Combobox.Label class="field-label">Genre</Combobox.Label>
           <Button
             type="button"
             onClick={handleShuffle}
             variant="icon"
-            class="text-fg-muted hover:text-fg"
+            aria-label="Shuffle genres"
             title="Shuffle genres"
           >
             <ShuffleIcon />
           </Button>
         </div>
-        <Combobox.Control class="relative flex items-center min-h-6">
-          <div
-            ref={pillsContainerRef}
-            class="flex flex-wrap items-center gap-1 flex-1 control-surface ring-1 ring-inset ring-border"
-            onClick={() => {
-              triggerRef?.click();
-            }}
-          >
+        <Combobox.Control class="combobox-control">
+          <div class="toolbar min-w-0 flex-1">
             <For each={selectedItems()}>
               {(item) => (
-                <Chip variant="subtle" class="gap-1 px-2 border border-border">
-                  <span class="text-fg">{item.label}</span>
+                <Chip variant="subtle" class="max-w-full">
+                  <span class="min-w-0 break-words">{item.label}</span>
                   <Button
                     type="button"
                     variant="control"
@@ -287,7 +243,6 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
                       e.stopPropagation();
                       handleRemovePill(item.value);
                     }}
-                    class="px-1 text-fg-muted hover:text-fg ml-1"
                     aria-label={`Remove ${item.label}`}
                   >
                     ×
@@ -295,109 +250,90 @@ const GenreSelect: Component<GenreSelectProps> = (props) => {
                 </Chip>
               )}
             </For>
-            <Combobox.Trigger
-              class="control-size flex-1 min-w-[120px] p-0 m-0 flex items-center"
-              ref={triggerRef}
-            >
-              <Combobox.Input
-                placeholder={props.value.length === 0 ? 'Search genre...' : ''}
-                class={`${inputClassName} w-full flex-1 bg-transparent border-0 outline-none min-w-[120px] p-0 m-0`}
-                onKeyDown={handleInputKeyDown}
-                onFocus={() => {
-                  triggerRef?.click();
-                }}
-              />
-            </Combobox.Trigger>
+            <Combobox.Input
+              ref={inputRef}
+              placeholder={props.value.length === 0 ? 'Search genres' : ''}
+              class={`${inputClassName} min-w-0 w-full`}
+              onKeyDown={handleInputKeyDown}
+            />
           </div>
+          <Combobox.Trigger class="btn control-icon" aria-label="Show genres">
+            +
+          </Combobox.Trigger>
           <Combobox.ClearTrigger
-            class="control-size absolute right-0 text-fg-muted hover:text-fg px-2"
+            class="btn control-icon"
+            aria-label="Clear genres"
             onClick={() => {
               props.onValueChange([]);
               setInputValue('');
               filter('');
             }}
           >
-            🅧
+            ×
           </Combobox.ClearTrigger>
         </Combobox.Control>
       </ControlGroup>
       <Portal>
         <Combobox.Positioner>
-          <Combobox.Content
-            ref={contentRef}
-            class="bg-bg border border-border shadow-lg"
-            style={{
-              height: '384px',
-              overflow: 'auto',
-            }}
-          >
+          <Combobox.Content ref={setContentRef} class="combobox-content">
             <div
-              style={{
-                height: `${virtualizer().getTotalSize()}px`,
-                width: '100%',
-                position: 'relative',
-              }}
+              class="relative w-full"
+              style={{ height: `${virtualizer.getTotalSize()}px` }}
             >
-              <For each={virtualizer().getVirtualItems()}>
+              <For each={virtualizer.getVirtualItems()}>
                 {(virtualItem) => {
-                  const items = virtualItems();
-                  const flatItem = items[virtualItem.index];
-                  if (!flatItem) return null;
-
-                  if (flatItem.type === 'group') {
-                    return (
+                  const flatItem = () => virtualItems()[virtualItem.index];
+                  return (
+                    <Show
+                      when={flatItem()?.type === 'group'}
+                      fallback={
+                        <Show when={flatItem()?.item} keyed>
+                          {(item) => (
+                            <Combobox.Item
+                              item={item}
+                              ref={(element) =>
+                                onMount(() =>
+                                  virtualizer.measureElement(element)
+                                )
+                              }
+                              data-index={virtualItem.index}
+                              style={{
+                                transform: `translateY(${virtualItem.start}px)`,
+                              }}
+                              class="combobox-option absolute left-0 top-0 w-full"
+                            >
+                              <Combobox.ItemText class="control-group min-w-0 break-words">
+                                <span class="result-title">{item.label}</span>
+                                <span class="meta-text">
+                                  {item.description}
+                                </span>
+                                <Show when={item.path !== item.label}>
+                                  <span class="subtle-text">{item.path}</span>
+                                </Show>
+                              </Combobox.ItemText>
+                              <Show when={props.value.includes(item.value)}>
+                                <span class="text-accent" aria-hidden="true">
+                                  ✓
+                                </span>
+                              </Show>
+                            </Combobox.Item>
+                          )}
+                        </Show>
+                      }
+                    >
                       <div
+                        ref={(element) =>
+                          onMount(() => virtualizer.measureElement(element))
+                        }
+                        data-index={virtualItem.index}
                         style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: `${virtualItem.size}px`,
                           transform: `translateY(${virtualItem.start}px)`,
                         }}
-                        class="px-3 py-2 text-xs font-medium text-fg-muted bg-bg-subtle border-b border-border sticky top-0 z-10"
+                        class="combobox-group absolute left-0 top-0 w-full"
                       >
-                        {flatItem.groupLabel}
+                        {flatItem()?.groupLabel}
                       </div>
-                    );
-                  }
-
-                  if (!flatItem.item) return null;
-
-                  const isSelected = () =>
-                    props.value.includes(flatItem.item!.value);
-
-                  return (
-                    <Combobox.Item
-                      item={flatItem.item}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: `${virtualItem.size}px`,
-                        transform: `translateY(${virtualItem.start}px)`,
-                      }}
-                      class="px-3 py-2 text-xs hover:bg-bg-subtle cursor-pointer border-b border-border flex items-center"
-                      onClick={() => handleItemSelect(flatItem.item!)}
-                    >
-                      <Combobox.ItemText class="flex flex-col gap-0.5 flex-1">
-                        <span class="text-fg font-medium">
-                          {flatItem.item.label}
-                        </span>
-                        <span class="text-fg-muted text-[11px]">
-                          {flatItem.item.description}
-                        </span>
-                        <Show when={flatItem.item.path !== flatItem.item.label}>
-                          <span class="text-fg-subtle text-[10px]">
-                            {flatItem.item.path}
-                          </span>
-                        </Show>
-                      </Combobox.ItemText>
-                      <Show when={isSelected()}>
-                        <span class="text-fg ml-2">✓</span>
-                      </Show>
-                    </Combobox.Item>
+                    </Show>
                   );
                 }}
               </For>

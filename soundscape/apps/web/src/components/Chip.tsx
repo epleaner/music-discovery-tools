@@ -7,8 +7,8 @@ export interface ChipProps extends JSX.HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantClassName: Record<ChipVariant, string> = {
-  muted: 'bg-bg-muted text-fg-subtle',
-  subtle: 'bg-bg-subtle text-fg-muted',
+  muted: '',
+  subtle: 'badge-subtle',
 };
 
 const Chip: Component<ChipProps> = (props) => {
@@ -17,7 +17,7 @@ const Chip: Component<ChipProps> = (props) => {
   return (
     <span
       {...rest}
-      class={`control-size inline-flex items-center rounded px-1.5 ${
+      class={`badge ${
         variantClassName[local.variant ?? 'muted']
       } ${local.class ?? ''}`}
     />

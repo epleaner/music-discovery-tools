@@ -27,6 +27,7 @@ import NTSLookup, { type NTSLookupPreset } from './components/NTSLookup';
 import Button from './components/Button';
 import PanelTab from './components/PanelTab';
 import EmptyState from './components/EmptyState';
+import Select from './components/Select';
 import { buildSimilarPanelModel } from './lib/app-right-panel';
 import { buildAppLayoutModel } from './lib/app-layout';
 import {
@@ -49,7 +50,7 @@ import {
 import { groupTracksByAlbum, groupTracksByArtist } from '@soundscape/utils';
 import { useSearchState } from './lib/use-search-state';
 import { useNav } from './lib/use-nav';
-import { useTheme } from './lib/use-theme';
+import { useTheme, type Theme, type ColorTheme } from './lib/use-theme';
 import { getSession, logout, type SessionUser } from './lib/auth';
 import type { NTSLookupType } from './lib/nts';
 
@@ -96,7 +97,7 @@ const Workspace: Component<{
   );
   const [ntsPreset, setNtsPreset] = createSignal<NTSLookupPreset>();
 
-  const { theme, toggleTheme, colorTheme, setColorTheme } = useTheme();
+  const { theme, setTheme, colorTheme, setColorTheme } = useTheme();
 
   // Getters for reactive access
   const username = () => state().username;
@@ -213,14 +214,6 @@ const Workspace: Component<{
     });
   };
 
-  const getThemeRotation = () => {
-    const t = theme();
-    // Rotate 180deg for dark mode, 0deg for light mode
-    if (t === 'dark') return '180deg';
-    if (t === 'system') return '90deg';
-    return '0deg';
-  };
-
   const handleSitesChange = (
     sites: Array<{ id: string; name: string; url: string }>
   ) => {
@@ -231,11 +224,6 @@ const Workspace: Component<{
   const [showAccountDropdown, setShowAccountDropdown] = createSignal(false);
   let accountMenuRef: HTMLDivElement | undefined;
 
-  // Color theme dropdown state
-  const [showColorThemeDropdown, setShowColorThemeDropdown] =
-    createSignal(false);
-  // oxlint-disable-next-line no-unassigned-vars
-  let colorThemeContainerRef: HTMLDivElement | undefined;
   const colorThemes: Array<{ value: string; label: string }> = [
     { value: 'default', label: 'Default' },
     { value: 'blue', label: 'Blue' },
@@ -251,28 +239,19 @@ const Workspace: Component<{
     { value: 'fire', label: 'Fire' },
   ];
 
-  // Handle clicks outside the account and color theme dropdowns.
   onMount(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (showAccountDropdown() && accountMenuRef?.contains(target) === false) {
-        setShowAccountDropdown(false);
-        setShowColorThemeDropdown(false);
-      }
       if (
-        showColorThemeDropdown() &&
-        colorThemeContainerRef?.contains(target) === false
-      ) {
-        setShowColorThemeDropdown(false);
-      }
+        showAccountDropdown() &&
+        !accountMenuRef?.contains(event.target as Node)
+      )
+        setShowAccountDropdown(false);
     };
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setShowAccountDropdown(false);
-        setShowColorThemeDropdown(false);
-      }
+      if (event.key !== 'Escape' || !showAccountDropdown()) return;
+      setShowAccountDropdown(false);
+      accountMenuRef?.querySelector('button')?.focus();
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
     onCleanup(() => {
@@ -280,570 +259,419 @@ const Workspace: Component<{
       document.removeEventListener('keydown', handleKeyDown);
     });
   });
-
-  const isDarkMode = createMemo(() => {
-    const currentTheme = theme();
-    if (currentTheme === 'dark') return true;
-    if (currentTheme === 'light') return false;
-    // system theme - check media query
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
-  const getThemeColor = (themeValue: string): string => {
-    const colors: Record<string, string> = {
-      default: isDarkMode() ? 'hsl(0, 0%, 98%)' : 'hsl(0, 0%, 9%)',
-      blue: 'hsl(210, 70%, 45%)',
-      green: 'hsl(142, 60%, 40%)',
-      purple: 'hsl(270, 60%, 45%)',
-      amber: 'hsl(38, 80%, 45%)',
-      rose: 'hsl(350, 60%, 45%)',
-      slate: 'hsl(215, 30%, 25%)',
-      sunset: 'hsl(340, 70%, 50%)',
-      ocean: 'hsl(180, 70%, 45%)',
-      forest: 'hsl(30, 50%, 40%)',
-      twilight: 'hsl(220, 70%, 50%)',
-      fire: 'hsl(25, 80%, 50%)',
-    };
-    return colors[themeValue] || colors.default;
-  };
   const renderConnectNotice = (message: string) => (
-    <div class="flex flex-col items-start gap-2 border-t border-border p-3">
-      <p class="text-xs text-fg-muted">{message}</p>
-      <Button
-        onClick={props.onConnectRequest}
-        variant="secondary"
-        class="text-fg"
-      >
-        Connect Soundscape
+    <div class="section-content space-y-4">
+      <p class="status">{message}</p>
+      <Button onClick={props.onConnectRequest} variant="secondary">
+        Connect
       </Button>
     </div>
   );
 
   return (
-    <div class="flex flex-col h-screen bg-bg">
-      {/* Header */}
-      <div class="flex-shrink-0 border-b border-border">
-        <div class="flex flex-wrap gap-2 justify-between items-center p-3">
-          <UsernameInput
-            onSubmit={handleUsernameSubmit}
-            initialUsername={username()}
-          />
-
-          <div class="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2">
-            <Show when={!props.user}>
-              <Button
-                onClick={props.onConnectRequest}
-                variant="secondary"
-                class="text-fg"
+    <main class="app-shell">
+      <header class="app-header">
+        <h1 class="app-wordmark">soundscape</h1>
+        <UsernameInput
+          onSubmit={handleUsernameSubmit}
+          initialUsername={username()}
+        />
+        <div class="toolbar ml-auto">
+          <Show when={!props.user}>
+            <Button onClick={props.onConnectRequest} variant="secondary">
+              Connect
+            </Button>
+          </Show>
+          <div class="relative" ref={accountMenuRef}>
+            <Button
+              onClick={() => setShowAccountDropdown(!showAccountDropdown())}
+              aria-expanded={showAccountDropdown()}
+              aria-controls="account-settings"
+            >
+              Account
+            </Button>
+            <Show when={showAccountDropdown()}>
+              <section
+                id="account-settings"
+                aria-label="Account settings"
+                class="menu space-y-5"
               >
-                Connect Soundscape
-              </Button>
-            </Show>
-            <div class="relative flex-shrink-0" ref={accountMenuRef}>
-              <Button
-                onClick={() => {
-                  setShowAccountDropdown(!showAccountDropdown());
-                  setShowColorThemeDropdown(false);
-                }}
-                variant="secondary"
-                class="inline-flex items-center justify-center gap-1 text-fg"
-                aria-haspopup="true"
-                aria-expanded={showAccountDropdown()}
-                aria-controls="account-menu"
-              >
-                Soundscape Web
-                <svg
-                  aria-hidden="true"
-                  class="h-2.5 w-2.5"
-                  fill="none"
-                  viewBox="0 0 12 12"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                <Show
+                  when={props.user}
+                  fallback={<p class="status">Not connected</p>}
                 >
-                  <path d="m2.5 4.5 3.5 3 3.5-3" />
-                </svg>
-              </Button>
-
-              <Show when={showAccountDropdown()}>
-                <div
-                  id="account-menu"
-                  class="absolute right-0 top-full z-40 mt-1 flex min-w-[200px] flex-col gap-2 border border-border bg-bg p-2 shadow-lg sm:min-w-[220px]"
-                >
-                  <Show
-                    when={props.user}
-                    fallback={
-                      <div class="border-b border-border px-2 pb-2 text-xs text-fg-muted">
-                        Not connected
-                      </div>
+                  <div class="toolbar justify-between">
+                    <span class="status">Connected</span>
+                    <Button
+                      variant="link"
+                      onClick={() => {
+                        setShowAccountDropdown(false);
+                        void props.onLogout();
+                      }}
+                    >
+                      Sign out
+                    </Button>
+                  </div>
+                  <AgentSetup />
+                </Show>
+                <div class="control-group menu-divider">
+                  <label class="field-label" for="appearance">
+                    Appearance
+                  </label>
+                  <Select
+                    id="appearance"
+                    value={theme()}
+                    onChange={(event) =>
+                      setTheme(event.currentTarget.value as Theme)
                     }
                   >
-                    <div class="flex items-center justify-between border-b border-border px-2 pb-2">
-                      <div class="text-xs font-medium text-fg">
-                        Paired session
-                      </div>
-                      <Button
-                        onClick={() => {
-                          setShowAccountDropdown(false);
-                          void props.onLogout();
-                        }}
-                        variant="link"
-                        class="px-0 text-right"
-                      >
-                        Sign out
-                      </Button>
-                    </div>
-
-                    <AgentSetup />
-                  </Show>
-
-                  <div
-                    class="flex items-center justify-between gap-2 border-t border-border px-2 pt-2"
-                    ref={colorThemeContainerRef}
-                  >
-                    <span class="text-xs text-fg-muted">Appearance</span>
-                    <div class="flex items-center gap-1">
-                      <Button
-                        onClick={(e: MouseEvent) => {
-                          e.stopPropagation();
-                          toggleTheme();
-                        }}
-                        variant="icon"
-                        class="flex items-center justify-center flex-shrink-0 transition-all text-fg-subtle hover:text-fg"
-                        style={{ transform: `rotate(${getThemeRotation()})` }}
-                        aria-label={`Switch theme (currently ${theme()})`}
-                        title={`Switch theme (currently ${theme()})`}
-                      >
-                        <span class="theme-icon w-3 h-3" />
-                      </Button>
-
-                      <div class="relative">
-                        <Button
-                          onClick={(e: MouseEvent) => {
-                            e.stopPropagation();
-                            setShowColorThemeDropdown(
-                              !showColorThemeDropdown()
-                            );
-                          }}
-                          variant="icon"
-                          class="flex items-center justify-center flex-shrink-0 text-fg-muted hover:text-fg transition-colors"
-                          aria-label="Choose accent color theme"
-                          title="Choose accent color theme"
-                        >
-                          <span
-                            class="w-2 h-2 rounded-full"
-                            style={{
-                              'background-color': getThemeColor(colorTheme()),
-                            }}
-                          ></span>
-                        </Button>
-
-                        <Show when={showColorThemeDropdown()}>
-                          <div class="absolute right-0 top-full mt-1 bg-bg border border-border rounded z-50 min-w-[120px]">
-                            <For each={colorThemes}>
-                              {(item) => (
-                                <Button
-                                  onClick={() => {
-                                    setColorTheme(
-                                      item.value as
-                                        | 'default'
-                                        | 'blue'
-                                        | 'green'
-                                        | 'purple'
-                                        | 'amber'
-                                        | 'rose'
-                                        | 'slate'
-                                        | 'sunset'
-                                        | 'ocean'
-                                        | 'forest'
-                                        | 'twilight'
-                                        | 'fire'
-                                    );
-                                    setShowColorThemeDropdown(false);
-                                  }}
-                                  variant="control"
-                                  class="px-3 text-left hover:bg-bg-muted transition-colors flex items-center gap-2"
-                                  classList={{
-                                    'bg-bg-muted': colorTheme() === item.value,
-                                  }}
-                                >
-                                  <span
-                                    class="w-3 h-3 rounded-full flex-shrink-0 border border-border"
-                                    style={{
-                                      'background-color': getThemeColor(
-                                        item.value
-                                      ),
-                                    }}
-                                  ></span>
-                                  <span>{item.label}</span>
-                                </Button>
-                              )}
-                            </For>
-                          </div>
-                        </Show>
-                      </div>
-                    </div>
-                  </div>
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="system">System</option>
+                  </Select>
                 </div>
-              </Show>
-            </div>
+                <div class="control-group">
+                  <label class="field-label" for="accent">
+                    Accent
+                  </label>
+                  <Select
+                    id="accent"
+                    value={colorTheme()}
+                    onChange={(event) =>
+                      setColorTheme(event.currentTarget.value as ColorTheme)
+                    }
+                  >
+                    <For each={colorThemes}>
+                      {(item) => (
+                        <option value={item.value}>{item.label}</option>
+                      )}
+                    </For>
+                  </Select>
+                </div>
+              </section>
+            </Show>
           </div>
         </div>
-      </div>
-
+      </header>
+      <nav class="workspace-tabs" aria-label="Workspace">
+        <PanelTab
+          underline
+          active={bottomTab() === 'history'}
+          onClick={() => setBottomTab('history')}
+        >
+          History
+        </PanelTab>
+        <PanelTab
+          underline
+          active={bottomTab() === 'sites'}
+          onClick={() => setBottomTab('sites')}
+        >
+          Sites
+        </PanelTab>
+        <PanelTab
+          underline
+          active={bottomTab() === 'scrape'}
+          onClick={() => setBottomTab('scrape')}
+        >
+          Scrape
+        </PanelTab>
+      </nav>
       <Show when={appLayoutModel().showMainLayout}>
         <ResizablePanels
-          initialLeftWidth={70}
+          initialLeftWidth={65}
           minLeftWidth={30}
           maxLeftWidth={80}
+          showRightPanel={bottomTab() === 'history'}
           leftPanel={
-            <div class="flex flex-col h-full">
-              <div class="relative z-10 flex flex-shrink-0 p-2 panel-tab-row bg-bg">
-                <PanelTab
-                  onClick={() => setBottomTab('history')}
-                  active={() => bottomTab() === 'history'}
-                >
-                  Listening History
-                </PanelTab>
-                <PanelTab
-                  onClick={() => setBottomTab('sites')}
-                  active={() => bottomTab() === 'sites'}
-                >
-                  Sites
-                </PanelTab>
-                <PanelTab
-                  onClick={() => setBottomTab('scrape')}
-                  active={() => bottomTab() === 'scrape'}
-                >
-                  Scrape
-                </PanelTab>
-              </div>
-              <div class="h-full min-h-0 overflow-hidden flex-1">
-                <div
-                  class="h-full min-h-0"
-                  style={{
-                    display: bottomTab() === 'history' ? 'block' : 'none',
-                  }}
-                >
-                  <div class="flex h-full min-h-0 flex-col">
-                    {/* Sticky Header */}
-                    <div class="flex items-center gap-1 overflow-x-auto whitespace-nowrap border-b border-border px-2">
-                      <For each={tabs}>
-                        {(tab) => (
-                          <PanelTab
-                            onClick={() => selectHistoryView(tab.id)}
-                            active={() => currentView() === tab.id}
-                            underline
-                          >
-                            {tab.label}
-                          </PanelTab>
-                        )}
-                      </For>
-
-                      <Show when={currentView() === 'recent'}>
-                        <span
-                          class="mx-1 h-6 border-l border-border/50"
-                          aria-hidden="true"
-                        />
+            <div class="workspace-panel flex-1">
+              <div
+                class="workspace-panel flex-1"
+                hidden={bottomTab() !== 'history'}
+              >
+                <nav class="filter-bar" aria-label="Listening history">
+                  <For each={tabs}>
+                    {(tab) => (
+                      <PanelTab
+                        active={currentView() === tab.id}
+                        onClick={() => selectHistoryView(tab.id)}
+                      >
+                        {tab.label}
+                      </PanelTab>
+                    )}
+                  </For>
+                  <span class="filter-divider" aria-hidden="true" />
+                  <For
+                    each={['tracks', 'albums', 'artists'] as RecentViewType[]}
+                  >
+                    {(entity) => (
+                      <PanelTab
+                        active={
+                          (currentView() === 'top'
+                            ? topViewType()
+                            : recentViewType()) === entity
+                        }
+                        onClick={() => selectEntityType(entity)}
+                      >
+                        {entity === 'tracks'
+                          ? 'Tracks'
+                          : entity === 'albums'
+                            ? 'Albums'
+                            : 'Artists'}
+                      </PanelTab>
+                    )}
+                  </For>
+                </nav>
+                <Show when={currentView() === 'top'}>
+                  <nav class="filter-bar" aria-label="Listening period">
+                    <For each={Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]}>
+                      {(value) => (
                         <PanelTab
-                          onClick={() => selectEntityType('tracks')}
-                          active={() => recentViewType() === 'tracks'}
+                          active={period() === value}
+                          onClick={() => updateState({ period: value })}
                         >
-                          Tracks
+                          {TIME_PERIOD_LABELS[value]}
                         </PanelTab>
-                        <PanelTab
-                          onClick={() => selectEntityType('albums')}
-                          active={() => recentViewType() === 'albums'}
-                        >
-                          Albums
-                        </PanelTab>
-                        <PanelTab
-                          onClick={() => selectEntityType('artists')}
-                          active={() => recentViewType() === 'artists'}
-                        >
-                          Artists
-                        </PanelTab>
-                      </Show>
-
-                      <Show when={currentView() === 'top'}>
-                        <span
-                          class="mx-1 h-6 border-l border-border/50"
-                          aria-hidden="true"
-                        />
-                        <PanelTab
-                          onClick={() => selectEntityType('tracks')}
-                          active={() => topViewType() === 'tracks'}
-                        >
-                          Tracks
-                        </PanelTab>
-                        <PanelTab
-                          onClick={() => selectEntityType('albums')}
-                          active={() => topViewType() === 'albums'}
-                        >
-                          Albums
-                        </PanelTab>
-                        <PanelTab
-                          onClick={() => selectEntityType('artists')}
-                          active={() => topViewType() === 'artists'}
-                        >
-                          Artists
-                        </PanelTab>
-                        <span
-                          class="mx-1 h-6 border-l border-border/50"
-                          aria-hidden="true"
-                        />
-                        <For
-                          each={Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]}
-                        >
-                          {(p) => (
-                            <PanelTab
-                              onClick={() => updateState({ period: p })}
-                              active={() => period() === p}
-                            >
-                              {TIME_PERIOD_LABELS[p]}
-                            </PanelTab>
-                          )}
-                        </For>
-                        <Show
-                          when={
-                            topArtists.isLoading() ||
-                            topTracks.isLoading() ||
-                            topAlbums.isLoading()
-                          }
-                        >
-                          <div class="ml-1 text-xs animate-spin text-fg-muted">
-                            ◐
-                          </div>
-                        </Show>
-                      </Show>
+                      )}
+                    </For>
+                    <Show
+                      when={
+                        topArtists.isLoading() ||
+                        topTracks.isLoading() ||
+                        topAlbums.isLoading()
+                      }
+                    >
+                      <span class="status" role="status">
+                        Loading…
+                      </span>
+                    </Show>
+                  </nav>
+                </Show>
+                <div class="panel-scroll">
+                  <Show when={appLayoutModel().showLibraryEmptyState}>
+                    <div class="workspace-empty">
+                      <EmptyState>Enter a Last.fm username.</EmptyState>
                     </div>
-
-                    {/* Content */}
-                    <div class="min-h-0 flex-1 overflow-y-auto">
-                      <Show when={appLayoutModel().showLibraryEmptyState}>
-                        <div class="flex justify-center items-center h-full">
-                          <EmptyState class="text-center">
-                            Enter a username to load Last.fm data
-                          </EmptyState>
-                        </div>
-                      </Show>
-
-                      <Show when={!appLayoutModel().showLibraryEmptyState}>
+                  </Show>
+                  <Show when={!appLayoutModel().showLibraryEmptyState}>
+                    <Switch>
+                      <Match when={currentView() === 'recent'}>
                         <Switch>
-                          <Match when={currentView() === 'recent'}>
-                            <div>
-                              <Switch>
-                                <Match when={recentViewType() === 'tracks'}>
-                                  <TrackList
-                                    tracks={recentTracks.tracks()}
-                                    isLoading={recentTracks.isLoading()}
-                                    error={recentTracks.error()}
-                                    onTrackClick={handleTrackResolveClick}
-                                    onNTSLookup={(track) =>
-                                      handleNTSLookup(track.name, 'track')
-                                    }
-                                  />
-                                </Match>
-                                <Match when={recentViewType() === 'albums'}>
-                                  <AlbumList
-                                    albums={recentAlbums()}
-                                    tracks={recentTracks.tracks()}
-                                    isLoading={recentTracks.isLoading()}
-                                    error={recentTracks.error()}
-                                    onAlbumClick={handleAlbumResolveClick}
-                                  />
-                                </Match>
-                                <Match when={recentViewType() === 'artists'}>
-                                  <RecentArtistList
-                                    artists={recentArtists()}
-                                    tracks={recentTracks.tracks()}
-                                    isLoading={recentTracks.isLoading()}
-                                    error={recentTracks.error()}
-                                    onArtistRowClick={handleArtistResolveClick}
-                                    onNTSLookup={(artistName) =>
-                                      handleNTSLookup(artistName, 'artist')
-                                    }
-                                  />
-                                </Match>
-                              </Switch>
-                              <Show
-                                when={
-                                  recentViewType() === 'tracks' &&
-                                  !recentTracks.isLoading() &&
-                                  parseInt(
-                                    recentTracks.currentPage().toString()
-                                  ) < parseInt(recentTracks.totalPages())
-                                }
-                              >
-                                <div class="p-4 text-center border-t border-border">
-                                  <Button
-                                    onClick={() => recentTracks.loadMore()}
-                                    class="text-xs btn"
-                                  >
-                                    Load More
-                                  </Button>
-                                </div>
-                              </Show>
-                            </div>
+                          <Match when={recentViewType() === 'tracks'}>
+                            <TrackList
+                              tracks={recentTracks.tracks()}
+                              isLoading={recentTracks.isLoading()}
+                              error={recentTracks.error()}
+                              onTrackClick={handleTrackResolveClick}
+                              onNTSLookup={(track) =>
+                                handleNTSLookup(track.name, 'track')
+                              }
+                            />
                           </Match>
-
-                          <Match when={currentView() === 'top'}>
-                            <div class="p-2">
-                              <Switch>
-                                <Match when={topViewType() === 'artists'}>
-                                  <ArtistList
-                                    artists={topArtists.artists()}
-                                    isLoading={topArtists.isLoading()}
-                                    error={topArtists.error()}
-                                    onArtistClick={handleArtistClick}
-                                    onNTSLookup={(artistName) =>
-                                      handleNTSLookup(artistName, 'artist')
-                                    }
-                                    showPlaycount={true}
-                                  />
-                                </Match>
-                                <Match when={topViewType() === 'tracks'}>
-                                  <TopTrackList
-                                    tracks={topTracks.tracks()}
-                                    isLoading={topTracks.isLoading()}
-                                    error={topTracks.error()}
-                                    onTrackClick={(track) =>
-                                      nav.navigateToItem({
-                                        artist: track.artist.name,
-                                        itemKind: 'artist',
-                                      })
-                                    }
-                                    onNTSLookup={(track) =>
-                                      handleNTSLookup(track.name, 'track')
-                                    }
-                                  />
-                                </Match>
-                                <Match when={topViewType() === 'albums'}>
-                                  <TopAlbumList
-                                    albums={topAlbums.albums()}
-                                    isLoading={topAlbums.isLoading()}
-                                    error={topAlbums.error()}
-                                    onAlbumClick={(album) =>
-                                      nav.navigateToItem({
-                                        artist: album.artist.name,
-                                        album: album.name,
-                                        itemKind: 'album',
-                                      })
-                                    }
-                                  />
-                                </Match>
-                              </Switch>
-                            </div>
+                          <Match when={recentViewType() === 'albums'}>
+                            <AlbumList
+                              albums={recentAlbums()}
+                              tracks={recentTracks.tracks()}
+                              isLoading={recentTracks.isLoading()}
+                              error={recentTracks.error()}
+                              onAlbumClick={handleAlbumResolveClick}
+                            />
+                          </Match>
+                          <Match when={recentViewType() === 'artists'}>
+                            <RecentArtistList
+                              artists={recentArtists()}
+                              tracks={recentTracks.tracks()}
+                              isLoading={recentTracks.isLoading()}
+                              error={recentTracks.error()}
+                              onArtistRowClick={handleArtistResolveClick}
+                              onNTSLookup={(artistName) =>
+                                handleNTSLookup(artistName, 'artist')
+                              }
+                            />
                           </Match>
                         </Switch>
-                      </Show>
-                    </div>
-                  </div>
+                        <Show
+                          when={
+                            recentViewType() === 'tracks' &&
+                            !recentTracks.isLoading() &&
+                            recentTracks.currentPage() <
+                              parseInt(recentTracks.totalPages())
+                          }
+                        >
+                          <div class="section-content text-center">
+                            <Button
+                              variant="link"
+                              onClick={() => recentTracks.loadMore()}
+                            >
+                              Load more
+                            </Button>
+                          </div>
+                        </Show>
+                      </Match>
+                      <Match when={currentView() === 'top'}>
+                        <Switch>
+                          <Match when={topViewType() === 'artists'}>
+                            <ArtistList
+                              artists={topArtists.artists()}
+                              isLoading={topArtists.isLoading()}
+                              error={topArtists.error()}
+                              onArtistClick={handleArtistClick}
+                              onNTSLookup={(artistName) =>
+                                handleNTSLookup(artistName, 'artist')
+                              }
+                              showPlaycount
+                            />
+                          </Match>
+                          <Match when={topViewType() === 'tracks'}>
+                            <TopTrackList
+                              tracks={topTracks.tracks()}
+                              isLoading={topTracks.isLoading()}
+                              error={topTracks.error()}
+                              onTrackClick={(track) =>
+                                nav.navigateToItem({
+                                  artist: track.artist.name,
+                                  itemKind: 'artist',
+                                })
+                              }
+                              onNTSLookup={(track) =>
+                                handleNTSLookup(track.name, 'track')
+                              }
+                            />
+                          </Match>
+                          <Match when={topViewType() === 'albums'}>
+                            <TopAlbumList
+                              albums={topAlbums.albums()}
+                              isLoading={topAlbums.isLoading()}
+                              error={topAlbums.error()}
+                              onAlbumClick={(album) =>
+                                nav.navigateToItem({
+                                  artist: album.artist.name,
+                                  album: album.name,
+                                  itemKind: 'album',
+                                })
+                              }
+                            />
+                          </Match>
+                        </Switch>
+                      </Match>
+                    </Switch>
+                  </Show>
                 </div>
-                <Switch>
-                  <Match when={bottomTab() === 'sites'}>
-                    <SiteViewer
-                      sites={musicSites()}
-                      onSitesChange={handleSitesChange}
-                    />
-                  </Match>
-                  <Match when={bottomTab() === 'scrape'}>
+              </div>
+              <Switch>
+                <Match when={bottomTab() === 'sites'}>
+                  <SiteViewer
+                    sites={musicSites()}
+                    onSitesChange={handleSitesChange}
+                  />
+                </Match>
+                <Match when={bottomTab() === 'scrape'}>
+                  <div class="panel-scroll">
                     <Show
                       when={props.user}
                       fallback={renderConnectNotice(
-                        'Connect Soundscape to use manual scrape tools.'
+                        'Connect to use scrape tools.'
                       )}
                     >
                       <ScrapeTool />
                     </Show>
-                  </Match>
-                </Switch>
-              </div>
+                  </div>
+                </Match>
+              </Switch>
             </div>
           }
           rightPanel={
-            <div class="flex h-full min-h-0 flex-col overflow-hidden">
-              <Show when={bottomTab() === 'history'}>
-                <div
-                  class={`flex h-full min-h-0 flex-col overflow-hidden ${
-                    rightPanelTab() === 'nts'
-                      ? 'fixed inset-0 z-20 bg-bg sm:static'
-                      : ''
-                  }`}
+            <div class="workspace-panel flex-1">
+              <nav class="workspace-tabs" aria-label="Discovery">
+                <PanelTab
+                  underline
+                  active={rightPanelTab() === 'similar'}
+                  onClick={() => setRightPanelTab('similar')}
                 >
-                  <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-                    <div class="flex flex-shrink-0 flex-col border-b border-border bg-bg">
-                      <div class="flex min-w-0 flex-wrap items-center gap-x-2 px-2">
-                        <PanelTab
-                          underline
-                          onClick={() => setRightPanelTab('similar')}
-                          active={() => rightPanelTab() === 'similar'}
-                        >
-                          Similar (last.fm)
-                        </PanelTab>
-                        <PanelTab
-                          underline
-                          onClick={() => setRightPanelTab('nts')}
-                          active={() => rightPanelTab() === 'nts'}
-                        >
-                          NTS Lookup
-                        </PanelTab>
-                      </div>
-                      <Show
-                        when={
-                          rightPanelTab() === 'similar' &&
-                          rightPanelModel().showSimilarArtists
-                        }
-                      >
-                        <div class="min-w-0 border-t border-border px-2 py-1">
+                  Similar
+                </PanelTab>
+                <PanelTab
+                  underline
+                  active={rightPanelTab() === 'nts'}
+                  onClick={() => setRightPanelTab('nts')}
+                >
+                  NTS
+                </PanelTab>
+              </nav>
+              <div class="panel-scroll">
+                <Switch>
+                  <Match when={rightPanelTab() === 'similar'}>
+                    <Show
+                      when={selectedArtist()}
+                      fallback={
+                        <div class="workspace-empty">
+                          <EmptyState>
+                            Select a track, album or artist.
+                          </EmptyState>
+                        </div>
+                      }
+                    >
+                      <div class="section-content space-y-3">
+                        <h2 class="entity-heading break-words">
+                          {selectedArtist()}
+                        </h2>
+                        <Show when={nav.state().stack.length > 2}>
+                          <nav aria-label="Discovery trail" class="toolbar">
+                            <For
+                              each={nav
+                                .state()
+                                .stack.slice(0, nav.state().index)}
+                            >
+                              {(item, index) => (
+                                <Button
+                                  variant="link"
+                                  onClick={() => nav.goTo(index())}
+                                >
+                                  {item.label}
+                                </Button>
+                              )}
+                            </For>
+                          </nav>
+                        </Show>
+                        <Show when={rightPanelModel().showSimilarArtists}>
                           <EveryNoiseViewer
                             genre={everyNoiseGenre.genre()}
                             isLoading={everyNoiseGenre.isLoading()}
                             artistName={selectedArtist()}
                           />
-                        </div>
-                      </Show>
-                    </div>
-                    <div class="min-h-0 flex-1 overflow-y-auto">
-                      <Switch>
-                        <Match when={rightPanelTab() === 'similar'}>
-                          <Show when={selectedArtist()}>
-                            <ArtistList
-                              artists={similarArtists.artists()}
-                              isLoading={similarArtists.isLoading()}
-                              error={similarArtists.error()}
-                              onArtistClick={handleArtistClick}
-                              onNTSLookup={(artistName) =>
-                                handleNTSLookup(artistName, 'artist')
-                              }
-                              showMatch={true}
-                            />
-                          </Show>
-                        </Match>
-                        <Match when={rightPanelTab() === 'nts'}>
-                          <NTSLookup preset={ntsPreset()} />
-                        </Match>
-                      </Switch>
-                    </div>
-                  </div>
-                  <Show when={rightPanelTab() === 'similar'}>
-                    <Show
-                      when={props.user}
-                      fallback={renderConnectNotice(
-                        'Connect Soundscape to load RYM and Bandcamp matches.'
-                      )}
-                    >
-                      <ScrapeSections />
+                        </Show>
+                      </div>
+                      <ArtistList
+                        artists={similarArtists.artists()}
+                        isLoading={similarArtists.isLoading()}
+                        error={similarArtists.error()}
+                        onArtistClick={handleArtistClick}
+                        onNTSLookup={(artistName) =>
+                          handleNTSLookup(artistName, 'artist')
+                        }
+                        showMatch
+                      />
                     </Show>
-                  </Show>
-                </div>
-              </Show>
+                    <Show when={selectedArtist()}>
+                      <Show
+                        when={props.user}
+                        fallback={renderConnectNotice(
+                          'Connect for RYM and Bandcamp matches.'
+                        )}
+                      >
+                        <ScrapeSections />
+                      </Show>
+                    </Show>
+                  </Match>
+                  <Match when={rightPanelTab() === 'nts'}>
+                    <NTSLookup preset={ntsPreset()} />
+                  </Match>
+                </Switch>
+              </div>
             </div>
           }
         />
       </Show>
-    </div>
+    </main>
   );
 };
 

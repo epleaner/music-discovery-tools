@@ -9,14 +9,12 @@ interface RymResultsProps {
   status: string | null;
 }
 
-const RymLinkList: Component<{ links?: RymLink[]; class?: string }> = (props) => (
-  <div class={`flex flex-wrap gap-x-2 gap-y-1 ${props.class ?? ''}`}>
+const RymLinkList: Component<{ links?: RymLink[]; class?: string }> = (
+  props
+) => (
+  <div class={`result-actions ${props.class ?? ''}`}>
     <For each={props.links ?? []}>
-      {(link) => (
-        <ExternalLink href={link.url} class="text-accent hover:underline">
-          {link.name}
-        </ExternalLink>
-      )}
+      {(link) => <ExternalLink href={link.url}>{link.name}</ExternalLink>}
     </For>
   </div>
 );
@@ -25,117 +23,118 @@ const RymResults: Component<RymResultsProps> = (props) => {
   return (
     <>
       <Show when={props.status}>
-        <div class="text-fg-muted">{props.status}</div>
+        <div class="status break-words" role="status">
+          {props.status}
+        </div>
       </Show>
 
       <Show when={props.entries.length > 0}>
-        <div class="overflow-x-auto">
-          <table class="w-full border-collapse text-xs">
-            <thead>
-              <tr class="border-b border-border text-fg-muted">
-                <th class="text-left py-1 pr-2 font-medium">Artist</th>
-                <th class="text-left py-1 pr-2 font-medium">Album</th>
-                <th class="text-left py-1 pr-2 font-medium">Release date</th>
-                <th class="text-left py-1 pr-2 font-medium">Genres</th>
-                <th class="text-left py-1 pr-2 font-medium">Subgenres</th>
-                <th class="text-left py-1 pr-2 font-medium">Rating</th>
-                <th class="text-left py-1 pr-2 font-medium">Ratings</th>
-                <th class="text-left py-1 pr-2 font-medium">Reviews</th>
-                <th class="text-left py-1 font-medium">Links</th>
-              </tr>
-            </thead>
-            <tbody>
-              <For each={props.entries}>
-                {(entry) => (
-                  <tr class="border-b border-border hover:bg-bg-muted align-top">
-                    <td class="py-1 pr-2">
-                      <Show
-                        when={entry.artistUrl}
-                        fallback={entry.artist}
-                      >
-                        {(url) => (
-                          <ExternalLink href={url()} class="text-accent hover:underline">
-                            {entry.artist}
-                          </ExternalLink>
-                        )}
-                      </Show>
-                    </td>
-                    <td class="py-1 pr-2">
-                      <Show
-                        when={entry.albumUrl ?? entry.path}
-                        fallback={entry.album}
-                      >
-                        {(url) => (
-                          <ExternalLink
-                            href={url().startsWith('http') ? url() : `https://rateyourmusic.com${url()}`}
-                            class="text-accent hover:underline"
-                          >
-                            {entry.album}
-                          </ExternalLink>
-                        )}
-                      </Show>
-                    </td>
-                    <td class="py-1 pr-2 text-fg-muted whitespace-nowrap">
-                      {entry.date ?? ''}
-                    </td>
-                    <td class="py-1 pr-2 text-fg-muted">
+        <div class="result-list">
+          <For each={props.entries}>
+            {(entry) => (
+              <article class="result-row">
+                <div class="result-main">
+                  <h3 class="result-title break-words">
+                    <Show
+                      when={entry.albumUrl ?? entry.path}
+                      fallback={entry.album}
+                    >
+                      {(url) => (
+                        <ExternalLink
+                          href={
+                            url().startsWith('http')
+                              ? url()
+                              : `https://rateyourmusic.com${url()}`
+                          }
+                        >
+                          {entry.album}
+                        </ExternalLink>
+                      )}
+                    </Show>
+                  </h3>
+                  <div class="result-meta break-words">
+                    <Show when={entry.artistUrl} fallback={entry.artist}>
+                      {(url) => (
+                        <ExternalLink href={url()}>{entry.artist}</ExternalLink>
+                      )}
+                    </Show>
+                  </div>
+                  <Show when={entry.date}>
+                    <div class="result-meta">{entry.date}</div>
+                  </Show>
+                  <Show when={entry.genreLinks?.length || entry.genres?.length}>
+                    <div class="result-meta break-words">
                       <Show
                         when={entry.genreLinks?.length}
                         fallback={(entry.genres ?? []).join(', ')}
                       >
                         <RymLinkList links={entry.genreLinks} />
                       </Show>
-                    </td>
-                    <td class="py-1 pr-2 text-fg-muted">
-                      <RymLinkList links={entry.subgenreLinks} />
-                    </td>
-                    <td class="py-1 pr-2 text-fg-muted whitespace-nowrap">
-                      {entry.avgRating ?? ''}
-                    </td>
-                    <td class="py-1 pr-2 text-fg-muted whitespace-nowrap">
-                      {entry.ratings ?? ''}
-                    </td>
-                    <td class="py-1 pr-2 text-fg-muted whitespace-nowrap">
-                      {entry.reviews ?? ''}
-                    </td>
-                    <td class="py-1 text-fg-muted">
-                      <RymLinkList links={entry.mediaLinks} />
-                    </td>
-                  </tr>
-                )}
-              </For>
-            </tbody>
-          </table>
+                    </div>
+                  </Show>
+                  <Show when={entry.subgenreLinks?.length}>
+                    <RymLinkList
+                      links={entry.subgenreLinks}
+                      class="result-meta"
+                    />
+                  </Show>
+                  <div class="result-actions result-meta numeric">
+                    <Show when={entry.avgRating != null}>
+                      <span>Rating {entry.avgRating}</span>
+                    </Show>
+                    <Show when={entry.ratings != null}>
+                      <span>{entry.ratings} ratings</span>
+                    </Show>
+                    <Show when={entry.reviews != null}>
+                      <span>{entry.reviews} reviews</span>
+                    </Show>
+                  </div>
+                  <Show when={entry.mediaLinks?.length}>
+                    <RymLinkList links={entry.mediaLinks} />
+                  </Show>
+                </div>
+              </article>
+            )}
+          </For>
         </div>
       </Show>
 
       <Show when={props.album}>
-        <div class="flex flex-col gap-2">
-          <div class="font-medium text-fg leading-tight">{props.album!.title}</div>
-          <div class="text-fg-muted">{props.album!.artist}</div>
+        <div class="result-main">
+          <h3 class="entity-heading break-words">{props.album!.title}</h3>
+          <div class="result-meta break-words">{props.album!.artist}</div>
           <Show when={props.album!.releaseDate}>
-            <div class="text-fg-subtle">{props.album!.releaseDate}</div>
+            <div class="result-meta">{props.album!.releaseDate}</div>
           </Show>
           <Show when={props.album!.genres && props.album!.genres!.length > 0}>
-            <div class="flex flex-wrap gap-1">
+            <div class="result-actions">
               <For each={props.album!.genres}>
                 {(genre) => <Chip>{genre}</Chip>}
               </For>
             </div>
           </Show>
           <Show when={props.album!.avgRating != null}>
-            <div class="text-fg-muted">
+            <div class="result-meta numeric">
               {props.album!.avgRating!.toFixed(2)}
-              <Show when={props.album!.ratings != null}> ({props.album!.ratings} ratings)</Show>
+              <Show when={props.album!.ratings != null}>
+                {' '}
+                ({props.album!.ratings} ratings)
+              </Show>
             </div>
           </Show>
-          <Show when={props.album!.descriptors && props.album!.descriptors!.length > 0}>
-            <div class="text-fg-subtle">{props.album!.descriptors!.join(', ')}</div>
+          <Show
+            when={
+              props.album!.descriptors && props.album!.descriptors!.length > 0
+            }
+          >
+            <div class="subtle-text break-words">
+              {props.album!.descriptors!.join(', ')}
+            </div>
           </Show>
           <Show when={props.album!.tracks && props.album!.tracks!.length > 0}>
-            <ol class="list-decimal list-inside text-fg-muted">
+            <ol class="list-decimal pl-6 result-meta">
               <For each={props.album!.tracks}>
-                {(track) => <li>{track}</li>}
+                {(track) => <li class="py-2 break-words">{track}</li>}
               </For>
             </ol>
           </Show>
