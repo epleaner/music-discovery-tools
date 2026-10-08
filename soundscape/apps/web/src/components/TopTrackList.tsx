@@ -103,14 +103,15 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
                 >
                   <Artwork images={track.image} />
                   <span class="list-main">
-                    <span class="list-title block">{track.name}</span>
-                    <span class="list-meta block">{track.artist.name}</span>
+                    <span class="list-title">{track.name}</span>
+                    <span class="list-meta">{track.artist.name}</span>
+                    <span class="list-count">{track.playcount} plays</span>
                     <Show
                       when={
                         info()?.toptags?.tag && info()!.toptags.tag.length > 0
                       }
                     >
-                      <span class="list-meta block">
+                      <span class="list-meta">
                         <For each={info()!.toptags.tag.slice(0, 3)}>
                           {(tag, index) => (
                             <span>
@@ -121,9 +122,6 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
                         </For>
                       </span>
                     </Show>
-                    <span class="list-count block">
-                      {track.playcount} plays
-                    </span>
                   </span>
                 </button>
                 <div class="list-actions">

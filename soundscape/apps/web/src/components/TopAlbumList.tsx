@@ -101,12 +101,13 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
                 >
                   <Artwork images={album.image} />
                   <span class="list-main">
-                    <span class="list-title block">{album.name}</span>
-                    <span class="list-meta block">{album.artist.name}</span>
+                    <span class="list-title">{album.name}</span>
+                    <span class="list-meta">{album.artist.name}</span>
+                    <span class="list-count">{album.playcount} plays</span>
                     <Show
                       when={info()?.tags?.tag && info()!.tags.tag.length > 0}
                     >
-                      <span class="list-meta block">
+                      <span class="list-meta">
                         <For each={info()!.tags.tag.slice(0, 3)}>
                           {(tag, index) => (
                             <span>
@@ -117,9 +118,6 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
                         </For>
                       </span>
                     </Show>
-                    <span class="list-count block">
-                      {album.playcount} plays
-                    </span>
                   </span>
                 </button>
                 <div class="list-actions">

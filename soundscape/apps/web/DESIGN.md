@@ -75,6 +75,14 @@ NTS follows Scrape in the primary navigation; row lookup actions open it with th
 artist/track preset. Its search stays mounted while switching workspace tabs.
 Listening and result rows reflow by the panel's inline-size container, not the
 window width.
+
+Listening/discovery rows compose title, artist and time/count as inline,
+baseline-aligned `list-main` fields, with counts before optional cached tags.
+Use the shared compact artwork, row padding and gaps; do not force one line per
+field or shrink the text scale. At `24rem` panel width, list actions share the row;
+below that they reflow visibly. Result rows retain their `32rem` threshold.
+Long data and enlarged text may wrap; preserve every field and action.
+
 The desktop shell has a rem-based minimum height (`min-h-workspace`); short or
 text-enlarged windows scroll the document rather than collapsing embedded views.
 Discovery source sections size to their content under one panel scroll owner.

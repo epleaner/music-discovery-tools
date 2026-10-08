@@ -124,8 +124,8 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                   >
                     <Artwork images={artist.image} />
                     <span class="list-main">
-                      <span class="list-title block">{artist.name}</span>
-                      <span class="list-count block">
+                      <span class="list-title">{artist.name}</span>
+                      <span class="list-count">
                         <Show
                           when={props.showPlaycount && getPlaycount(artist)}
                         >
@@ -147,7 +147,7 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                       <Show
                         when={info()?.tags?.tag && info()!.tags.tag.length > 0}
                       >
-                        <span class="list-meta block">
+                        <span class="list-meta">
                           <For each={info()!.tags.tag.slice(0, 3)}>
                             {(tag, index) => (
                               <span>

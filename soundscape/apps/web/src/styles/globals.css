@@ -313,31 +313,31 @@
   }
 
   .list-row {
-    @apply flex min-w-0 flex-wrap items-center gap-4 border-b py-4 transition-colors hover:bg-bg-subtle;
+    @apply flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 border-b py-2 transition-colors hover:bg-bg-subtle;
   }
   .list-cover {
-    @apply h-12 w-12 shrink-0 bg-transparent object-cover;
+    @apply h-8 w-8 shrink-0 bg-transparent object-cover;
   }
   .list-main {
-    @apply min-w-0 flex-1;
+    @apply flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-1;
   }
   .list-title {
-    @apply truncate text-base text-fg;
+    @apply min-w-0 max-w-full truncate text-base text-fg;
   }
   .list-meta {
-    @apply truncate text-sm text-fg-muted;
+    @apply min-w-0 max-w-full truncate text-sm text-fg-muted;
   }
   .list-actions {
     @apply flex shrink-0 flex-wrap items-center gap-2;
   }
   .list-count {
-    @apply text-sm tabular-nums text-fg-muted;
+    @apply min-w-0 max-w-full break-words text-sm tabular-nums text-fg-muted;
   }
   .list-detail {
     @apply border-b bg-bg-subtle py-4;
   }
   .list-select {
-    @apply flex min-w-0 flex-1 basis-full items-center gap-4 p-0 text-left;
+    @apply flex min-w-0 flex-1 basis-full items-center gap-3 p-0 text-left;
   }
   .result-list {
     @apply divide-y divide-border;
@@ -354,12 +354,18 @@
   .result-main {
     @apply min-w-0 flex-1 basis-full space-y-2;
   }
+  @container workspace (min-width: 24rem) {
+    .list-row {
+      @apply flex-nowrap;
+    }
+    .list-select {
+      @apply basis-0;
+    }
+  }
   @container workspace (min-width: 32rem) {
-    .list-row,
     .result-row {
       @apply flex-nowrap;
     }
-    .list-select,
     .result-main {
       @apply basis-0;
     }
