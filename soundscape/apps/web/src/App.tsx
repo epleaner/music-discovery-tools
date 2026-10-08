@@ -269,16 +269,7 @@ const Workspace: Component<{
     <main class="app-shell">
       <header class="app-header">
         <h1 class="app-wordmark">soundscape</h1>
-        <UsernameInput
-          onSubmit={handleUsernameSubmit}
-          initialUsername={username()}
-        />
         <div class="toolbar ml-auto">
-          <Show when={!props.user}>
-            <Button onClick={props.onConnectRequest} variant="secondary">
-              Connect
-            </Button>
-          </Show>
           <div class="relative" ref={accountMenuRef}>
             <Button
               onClick={() => setShowAccountDropdown(!showAccountDropdown())}
@@ -293,9 +284,28 @@ const Workspace: Component<{
                 aria-label="Account settings"
                 class="menu space-y-5"
               >
+                <UsernameInput
+                  onSubmit={(value) => {
+                    handleUsernameSubmit(value);
+                    setShowAccountDropdown(false);
+                    accountMenuRef?.querySelector('button')?.focus();
+                  }}
+                  initialUsername={username()}
+                />
                 <Show
                   when={props.user}
-                  fallback={<p class="status">Not connected</p>}
+                  fallback={
+                    <Button
+                      variant="link"
+                      onClick={() => {
+                        setShowAccountDropdown(false);
+                        accountMenuRef?.querySelector('button')?.focus();
+                        props.onConnectRequest();
+                      }}
+                    >
+                      Connect
+                    </Button>
+                  }
                 >
                   <div class="toolbar justify-between">
                     <span class="status">Connected</span>
@@ -595,7 +605,9 @@ const Workspace: Component<{
           rightPanel={
             <div class="workspace-panel flex-1">
               <div class="workspace-tabs">
-                <h2 class="panel-heading">Similar</h2>
+                <h2 class="panel-heading" title={selectedArtist() || undefined}>
+                  <span class="truncate">{selectedArtist() || 'Similar'}</span>
+                </h2>
               </div>
               <div class="panel-scroll">
                 <Show
@@ -606,15 +618,11 @@ const Workspace: Component<{
                     </div>
                   }
                 >
-                  <div class="section-content space-y-3">
-                    <h2 class="entity-heading break-words">
-                      {selectedArtist()}
-                    </h2>
+                  <div class="section-content">
                     <Show when={rightPanelModel().showSimilarArtists}>
                       <EveryNoiseViewer
                         genre={everyNoiseGenre.genre()}
                         isLoading={everyNoiseGenre.isLoading()}
-                        artistName={selectedArtist()}
                       />
                     </Show>
                   </div>

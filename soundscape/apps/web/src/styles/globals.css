@@ -152,10 +152,10 @@
     @apply flex min-h-dvh flex-col bg-bg lg:h-dvh lg:min-h-workspace lg:overflow-hidden;
   }
   .app-header {
-    @apply flex shrink-0 flex-wrap items-center justify-between gap-x-8 gap-y-4 border-b py-5;
+    @apply flex shrink-0 flex-wrap items-center justify-between gap-x-8 gap-y-4 border-b py-4;
   }
   .app-wordmark {
-    @apply font-editorial text-2xl font-normal tracking-tight;
+    @apply font-editorial text-xl font-normal tracking-tight;
   }
   .workspace-panel {
     @apply flex min-h-0 min-w-0 flex-col;
@@ -245,7 +245,7 @@
     @apply btn bg-accent text-bg hover:opacity-90;
   }
   .btn-secondary {
-    @apply btn border bg-transparent text-fg hover:border-border-hover hover:bg-bg-muted;
+    @apply btn bg-transparent px-0 text-fg-muted hover:text-fg;
   }
   .panel-control {
     @apply text-fg-muted hover:bg-bg-muted hover:text-fg;
@@ -257,7 +257,7 @@
     @apply px-0 text-accent underline-offset-4 hover:underline;
   }
   .input {
-    @apply min-h-9 min-w-0 max-w-full border bg-transparent px-3 py-2 text-base text-fg placeholder:text-fg-subtle focus-visible:border-accent;
+    @apply min-h-9 min-w-0 max-w-full border-b bg-transparent px-0 py-2 text-base text-fg placeholder:text-fg-subtle focus-visible:border-accent;
   }
   .input[aria-invalid='true'] {
     @apply border-danger;
@@ -266,7 +266,7 @@
     @apply flex flex-wrap items-center gap-4 border-b;
   }
   .panel-heading {
-    @apply flex min-h-12 items-center text-sm text-fg;
+    @apply flex min-h-12 min-w-0 max-w-full items-center text-sm text-fg;
   }
   .panel-tab {
     @apply inline-flex min-h-12 items-center justify-center border-b-2 border-transparent px-0 py-3 text-sm text-fg-muted transition-colors hover:text-fg;
@@ -316,7 +316,7 @@
     @apply flex min-w-0 flex-wrap items-center gap-4 border-b py-4 transition-colors hover:bg-bg-subtle;
   }
   .list-cover {
-    @apply h-12 w-12 shrink-0 bg-bg-muted object-cover;
+    @apply h-12 w-12 shrink-0 bg-transparent object-cover;
   }
   .list-main {
     @apply min-w-0 flex-1;
@@ -375,7 +375,8 @@
   }
 
   .menu {
-    @apply absolute right-0 top-full z-40 mt-2 w-64 border bg-bg-subtle p-3;
+    @apply absolute right-0 top-full z-40 mt-2 w-64 overflow-y-auto border bg-bg-subtle p-3;
+    max-height: calc(100dvh - theme('spacing.48'));
     max-width: calc(100vw - theme('spacing.12'));
   }
   .menu-divider {

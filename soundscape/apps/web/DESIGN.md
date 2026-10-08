@@ -49,11 +49,15 @@ belongs in a named component recipe in `globals.css`, not repeated class strings
 - `list-row`, `list-select`, `list-main`, `list-actions`: all listening/artist rows.
 - `result-row`, `result-main`, `result-actions`: source and lookup results.
 
+Keep the persistent header to the wordmark and Account. Last.fm identity,
+connection and appearance live together in the existing account menu. Submitting
+identity or closing its connection dialog returns focus to Account.
+
 Shell, navigation, list rows and section boundaries share one horizontal gutter:
 `px-6`, increasing to `px-8` at `sm`. The boundary owns that gutter; nested result
-rows and primary list buttons do not add another inset. Workspace, listening and
-discovery navigation share the full-height `PanelTab` variant, without vertical
-padding on the tab-row container, so sibling baselines and bottom rules align.
+rows and primary list buttons do not add another inset. Workspace/listening tabs
+and the discovery heading share one full-height row rhythm, without vertical
+padding on the row container, so sibling baselines and bottom rules align.
 Section headers reserve one shared control-height row plus their vertical padding
 and bottom rule, keeping metadata-only or loading headers aligned with actions.
 Status messages inherit the boundary gutter rather than adding an inset callout.
@@ -90,17 +94,20 @@ inertness and modal focus behavior; dialog lifecycle code sets initial focus and
 restores the trigger. Dialog headings/actions wrap at constrained widths; a
 viewport-constrained dialog scrolls rather than clipping its actions. Buttons
 stay within their owner and wrap compound labels when needed. Account menus
-reserve a spacing-scale viewport gutter even when text is enlarged.
+reserve a spacing-scale viewport gutter and scroll below the header when text is
+enlarged.
 
 The genre popup uses the positioner's available height, bounded by the shared
 spacing scale; enlarged text scrolls inside the popup rather than off-screen.
 
 ## Shapes
 
-Square artwork, controls and badges. No pill shape for navigation or genre tags.
-Artwork has one consistent footprint: `Artwork` owns Last.fm image selection,
-its generic-placeholder exclusion and a quiet missing/failed-image fallback.
-Source covers use the shared `result-cover` recipe.
+Square artwork and badges; fields use a single bottom rule instead of a box.
+Secondary buttons are text-like; reserve a filled accent for primary actions.
+No pill shape for navigation or genre tags. `Artwork` owns Last.fm image
+selection and generic-placeholder exclusion. Missing/failed artwork retains its
+transparent footprint, not a decorative placeholder tile. Source covers use the
+shared `result-cover` recipe.
 
 ## Components
 
@@ -119,6 +126,8 @@ List primary actions are native buttons. Info/NTS/RYM controls are siblings, nev
 nested buttons. Preserve source distinctions: RYM has ratings; Bandcamp has
 playback/purchase/label exploration; NTS links externally; Every Noise supplies
 genre/map links. Minimize copy without removing security or recovery guidance.
+Keep row actions visible. Discovery names the selected artist once in its header;
+genre metadata is one compact line with provider/map links and operational state.
 
 ## Do's and Don'ts
 

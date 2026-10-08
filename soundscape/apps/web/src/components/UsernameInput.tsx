@@ -22,7 +22,7 @@ const UsernameInput: Component<UsernameInputProps> = (props) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} class="toolbar">
+    <form onSubmit={handleSubmit} class="control-group">
       <label for={usernameId} class="field-label">
         Last.fm
       </label>
@@ -37,11 +37,13 @@ const UsernameInput: Component<UsernameInputProps> = (props) => {
         value={localUsername()}
         onInput={(e) => setLocalUsername(e.currentTarget.value)}
         placeholder="Username"
-        class="min-w-0 flex-1"
+        class="w-full"
       />
-      <Button type="submit" variant="secondary">
-        Load
-      </Button>
+      <div class="form-actions">
+        <Button type="submit" variant="secondary">
+          Load
+        </Button>
+      </div>
     </form>
   );
 };
