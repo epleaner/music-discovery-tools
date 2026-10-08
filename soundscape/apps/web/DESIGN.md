@@ -77,11 +77,12 @@ Listening and result rows reflow by the panel's inline-size container, not the
 window width.
 
 Listening/discovery rows compose title, artist and time/count as inline,
-baseline-aligned `list-main` fields, with counts before optional cached tags.
+baseline-aligned `list-main` fields from their incoming listing responses.
 Use the shared compact artwork, row padding and gaps; do not force one line per
 field or shrink the text scale. At `24rem` panel width, list actions share the row;
 below that they reflow visibly. Result rows retain their `32rem` threshold.
 Long data and enlarged text may wrap; preserve every field and action.
+Rows do not perform extended-info lookups or load cached Last.fm metadata.
 
 The desktop shell has a rem-based minimum height (`min-h-workspace`); short or
 text-enlarged windows scroll the document rather than collapsing embedded views.
@@ -130,7 +131,7 @@ shared `result-cover` recipe.
 | `ExternalLink`                | Accent link with safe external target; add the shared button variant class only for a button-shaped action.                             |
 | `GenreSelect`                 | Ark multi-select semantics, grouped and measured virtual results, search, clear, removal and shuffle.                                   |
 
-List primary actions are native buttons. Info/NTS/RYM controls are siblings, never
+List primary actions are native buttons. NTS/RYM controls are siblings, never
 nested buttons. Preserve source distinctions: RYM has ratings; Bandcamp has
 playback/purchase/label exploration; NTS links externally; Every Noise supplies
 genre/map links. Minimize copy without removing security or recovery guidance.
