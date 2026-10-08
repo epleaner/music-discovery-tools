@@ -5,7 +5,6 @@ import {
   deserialize,
   homeState,
   serialize,
-  truncateTo,
   type NavState,
   type NavView,
 } from './nav-store.js';
@@ -54,7 +53,7 @@ test('appendOrReplace replaces entry sharing the same siblingGroup', () => {
   assert.equal(s2.stack[1].label, subB.label);
 });
 
-test('truncate-then-append drops forward history before pushing', () => {
+test('appendOrReplace drops forward history when branching', () => {
   let state: NavState = { stack: [home], index: 0 };
   for (let i = 0; i < 3; i++) {
     state = appendOrReplace(
@@ -66,33 +65,15 @@ test('truncate-then-append drops forward history before pushing', () => {
   assert.equal(state.stack.length, 4);
   assert.equal(state.index, 3);
 
-  const truncated = truncateTo(state, 1);
+  const rewound = { ...state, index: 1 };
   const result = appendOrReplace(
-    truncated,
+    rewound,
     { label: 'New', kind: 'tab', restore: { type: 'tab', panel: 'new' } },
     'new',
   );
 
   assert.equal(result.stack.length, 3);
   assert.equal(result.index, 2);
-});
-
-test('truncateTo clamps to the given index', () => {
-  let state: NavState = { stack: [home], index: 0 };
-  for (let i = 0; i < 3; i++) {
-    state = appendOrReplace(
-      state,
-      { label: `View ${i}`, kind: 'tab', restore: { type: 'tab', panel: `p${i}` } },
-      `v${i}`,
-    );
-  }
-  assert.equal(state.stack.length, 4);
-  assert.equal(state.index, 3);
-
-  const result = truncateTo(state, 1);
-
-  assert.equal(result.stack.length, 2);
-  assert.equal(result.index, 1);
 });
 
 test('homeState builds a single-entry stack at index 0', () => {

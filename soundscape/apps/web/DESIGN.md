@@ -74,6 +74,8 @@ window width.
 The desktop shell has a rem-based minimum height (`min-h-workspace`); short or
 text-enlarged windows scroll the document rather than collapsing embedded views.
 Discovery source sections size to their content under one panel scroll owner.
+Discovery shows the current entity without breadcrumbs; URL-backed selection and
+browser history remain intact.
 
 Runtime inline styles are restricted to genuine data-dependent geometry: the
 split percentage and virtualized genre height/offsets. Static arbitrary-value

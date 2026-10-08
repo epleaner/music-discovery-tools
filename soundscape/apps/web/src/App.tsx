@@ -610,22 +610,6 @@ const Workspace: Component<{
                     <h2 class="entity-heading break-words">
                       {selectedArtist()}
                     </h2>
-                    <Show when={nav.state().stack.length > 2}>
-                      <nav aria-label="Discovery trail" class="toolbar">
-                        <For
-                          each={nav.state().stack.slice(0, nav.state().index)}
-                        >
-                          {(item, index) => (
-                            <Button
-                              variant="link"
-                              onClick={() => nav.goTo(index())}
-                            >
-                              {item.label}
-                            </Button>
-                          )}
-                        </For>
-                      </nav>
-                    </Show>
                     <Show when={rightPanelModel().showSimilarArtists}>
                       <EveryNoiseViewer
                         genre={everyNoiseGenre.genre()}

@@ -51,14 +51,6 @@ export function appendOrReplace(
   return { stack, index: stack.length - 1 };
 }
 
-export function truncateTo(state: NavState, index: number): NavState {
-  const clamped = Math.min(Math.max(index, 0), state.stack.length - 1);
-  return {
-    stack: state.stack.slice(0, clamped + 1),
-    index: clamped,
-  };
-}
-
 export function homeState(homeView: NavView): NavState {
   return { stack: [homeView], index: 0 };
 }

@@ -5,7 +5,6 @@ import {
   deserialize,
   homeState,
   serialize,
-  truncateTo,
   type NavState,
   type NavView,
 } from './nav-store';
@@ -67,10 +66,6 @@ export function useNav() {
     });
   };
 
-  const goTo = (index: number) => {
-    setSearchParams({ nav: serialize(truncateTo(state(), index)) });
-  };
-
   const home = () => {
     setSearchParams({ nav: serialize(homeState(HOME)) });
   };
@@ -81,7 +76,6 @@ export function useNav() {
     lastItem,
     navigate,
     navigateToItem,
-    goTo,
     home,
   };
 }
