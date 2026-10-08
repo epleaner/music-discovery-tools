@@ -392,6 +392,7 @@ const Workspace: Component<{
                   <For each={tabs}>
                     {(tab) => (
                       <PanelTab
+                        underline
                         active={currentView() === tab.id}
                         onClick={() => selectHistoryView(tab.id)}
                       >
@@ -405,6 +406,7 @@ const Workspace: Component<{
                   >
                     {(entity) => (
                       <PanelTab
+                        underline
                         active={
                           (currentView() === 'top'
                             ? topViewType()
@@ -426,6 +428,7 @@ const Workspace: Component<{
                     <For each={Object.keys(TIME_PERIOD_LABELS) as TimePeriod[]}>
                       {(value) => (
                         <PanelTab
+                          underline
                           active={period() === value}
                           onClick={() => updateState({ period: value })}
                         >

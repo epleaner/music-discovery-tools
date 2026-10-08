@@ -14,7 +14,7 @@ interface NTSLookupResultsProps {
 const NTSLookupResults: Component<NTSLookupResultsProps> = (props) => (
   <div class="panel-scroll">
     <Show when={props.error}>
-      <ErrorMessage class="m-6">{props.error}</ErrorMessage>
+      <ErrorMessage class="section-content">{props.error}</ErrorMessage>
     </Show>
     <Show when={props.isLoading}>
       <div role="status" aria-live="polite">

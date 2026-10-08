@@ -92,11 +92,13 @@ const ArtistList: Component<ArtistListProps> = (props) => {
   return (
     <>
       <Show when={props.error}>
-        <ErrorMessage>{props.error?.message}</ErrorMessage>
+        <ErrorMessage class="section-content">
+          {props.error?.message}
+        </ErrorMessage>
       </Show>
 
       <Show when={props.isLoading && props.artists.length === 0}>
-        <EmptyState>Loading...</EmptyState>
+        <EmptyState class="section-content">Loading...</EmptyState>
       </Show>
 
       <Show when={props.artists.length > 0}>
@@ -193,7 +195,7 @@ const ArtistList: Component<ArtistListProps> = (props) => {
       <Show
         when={props.artists.length === 0 && !props.isLoading && !props.error}
       >
-        <EmptyState>No artists</EmptyState>
+        <EmptyState class="section-content">No artists</EmptyState>
       </Show>
     </>
   );

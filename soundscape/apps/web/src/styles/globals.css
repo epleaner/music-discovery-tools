@@ -148,11 +148,21 @@
 }
 
 @layer components {
+  .app-header,
+  .workspace-tabs,
+  .filter-bar,
+  .workspace-empty,
+  .section-header,
+  .section-content,
+  .list-row,
+  .list-detail {
+    @apply px-6 sm:px-8;
+  }
   .app-shell {
     @apply flex min-h-dvh flex-col bg-bg lg:h-dvh lg:min-h-workspace lg:overflow-hidden;
   }
   .app-header {
-    @apply flex shrink-0 flex-wrap items-center justify-between gap-x-8 gap-y-4 border-b px-6 py-5 sm:px-8;
+    @apply flex shrink-0 flex-wrap items-center justify-between gap-x-8 gap-y-4 border-b py-5;
   }
   .app-wordmark {
     @apply font-editorial text-2xl font-normal tracking-tight;
@@ -160,11 +170,9 @@
   .workspace-panel {
     @apply flex min-h-0 min-w-0 flex-col;
   }
-  .workspace-tabs {
-    @apply flex shrink-0 flex-wrap items-center gap-4 border-b px-6 sm:px-8;
-  }
+  .workspace-tabs,
   .filter-bar {
-    @apply flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b px-6 py-2;
+    @apply flex shrink-0 flex-wrap items-center gap-4 border-b;
   }
   .filter-divider {
     @apply mx-1 hidden h-4 border-l sm:block;
@@ -173,7 +181,7 @@
     @apply min-h-0 min-w-0 flex-1 overflow-y-auto;
   }
   .workspace-empty {
-    @apply flex min-h-64 flex-1 items-center justify-center px-6 text-center;
+    @apply flex min-h-64 flex-1 items-center justify-center text-center;
   }
   .workspace-split {
     @apply flex min-h-0 flex-1 flex-col lg:flex-row lg:overflow-hidden;
@@ -272,13 +280,16 @@
   }
 
   .section-header {
-    @apply flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-6 py-4;
+    @apply flex shrink-0 flex-wrap items-center justify-between gap-3 border-b py-4;
+    min-height: calc(
+      theme('spacing.9') + theme('spacing.4') * 2 + theme('borderWidth.DEFAULT')
+    );
   }
   .section-title {
     @apply text-sm font-medium text-fg;
   }
   .section-content {
-    @apply min-w-0 p-6;
+    @apply min-w-0 py-6;
   }
   .surface-section {
     @apply min-w-0 border-b;
@@ -300,7 +311,7 @@
   }
 
   .list-row {
-    @apply flex min-w-0 flex-wrap items-center gap-4 border-b px-6 py-4 transition-colors hover:bg-bg-subtle;
+    @apply flex min-w-0 flex-wrap items-center gap-4 border-b py-4 transition-colors hover:bg-bg-subtle;
   }
   .list-cover {
     @apply h-12 w-12 shrink-0 bg-bg-muted object-cover;
@@ -321,10 +332,10 @@
     @apply text-sm tabular-nums text-fg-muted;
   }
   .list-detail {
-    @apply border-b bg-bg-subtle px-6 py-4;
+    @apply border-b bg-bg-subtle py-4;
   }
   .list-select {
-    @apply flex min-w-0 flex-1 basis-full items-center gap-4 text-left;
+    @apply flex min-w-0 flex-1 basis-full items-center gap-4 p-0 text-left;
   }
   @container workspace (min-width: 32rem) {
     .list-row {
@@ -397,7 +408,7 @@
     @apply py-10 text-sm text-fg-muted;
   }
   .error-message {
-    @apply border-l-2 border-danger px-4 py-3 text-sm text-danger;
+    @apply text-sm text-danger;
   }
   .code-value {
     @apply break-all bg-bg-muted p-3 font-mono text-sm;

@@ -64,16 +64,18 @@ const TopAlbumList: Component<TopAlbumListProps> = (props) => {
   return (
     <div>
       <Show when={props.isLoading}>
-        <EmptyState>Loading...</EmptyState>
+        <EmptyState class="section-content">Loading...</EmptyState>
       </Show>
       <Show when={props.error}>
-        <ErrorMessage>{props.error?.message}</ErrorMessage>
+        <ErrorMessage class="section-content">
+          {props.error?.message}
+        </ErrorMessage>
       </Show>
 
       <Show
         when={!props.isLoading && !props.error && props.albums.length === 0}
       >
-        <EmptyState>No albums found</EmptyState>
+        <EmptyState class="section-content">No albums found</EmptyState>
       </Show>
 
       <Show when={!props.isLoading && !props.error && props.albums.length > 0}>

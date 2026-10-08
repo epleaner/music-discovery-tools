@@ -49,6 +49,15 @@ belongs in a named component recipe in `globals.css`, not repeated class strings
 - `list-row`, `list-select`, `list-main`, `list-actions`: all listening/artist rows.
 - `result-row`, `result-main`, `result-actions`: source and lookup results.
 
+Shell, navigation, list rows and section boundaries share one horizontal gutter:
+`px-6`, increasing to `px-8` at `sm`. The boundary owns that gutter; nested result
+rows and primary list buttons do not add another inset. Workspace, listening and
+discovery navigation share the full-height `PanelTab` variant, without vertical
+padding on the tab-row container, so sibling baselines and bottom rules align.
+Section headers reserve one shared control-height row plus their vertical padding
+and bottom rule, keeping metadata-only or loading headers aligned with actions.
+Status messages inherit the boundary gutter rather than adding an inset callout.
+
 The listening/discovery split is resizable at `lg` and above, using pointer or
 arrow/Home/End keys. Below `lg`, panels stack; the listening list stays bounded
 and scrollable so discovery is reachable without traversing the entire history.

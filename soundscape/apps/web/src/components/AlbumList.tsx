@@ -81,11 +81,13 @@ const AlbumList: Component<AlbumListProps> = (props) => {
   return (
     <div>
       <Show when={props.error}>
-        <ErrorMessage>{props.error?.message}</ErrorMessage>
+        <ErrorMessage class="section-content">
+          {props.error?.message}
+        </ErrorMessage>
       </Show>
 
       <Show when={props.isLoading && props.albums.length === 0}>
-        <EmptyState>Loading...</EmptyState>
+        <EmptyState class="section-content">Loading...</EmptyState>
       </Show>
 
       <div>
@@ -148,7 +150,7 @@ const AlbumList: Component<AlbumListProps> = (props) => {
       <Show
         when={props.albums.length === 0 && !props.isLoading && !props.error}
       >
-        <EmptyState>No albums</EmptyState>
+        <EmptyState class="section-content">No albums</EmptyState>
       </Show>
     </div>
   );

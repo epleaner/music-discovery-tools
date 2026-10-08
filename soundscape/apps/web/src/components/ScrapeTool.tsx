@@ -479,7 +479,9 @@ const ScrapeTool: Component = () => {
           </div>
           <div class="panel-scroll">
             <Show when={recentError()}>
-              <ErrorMessage class="m-6">{recentError()}</ErrorMessage>
+              <ErrorMessage class="section-content">
+                {recentError()}
+              </ErrorMessage>
             </Show>
             <Show
               when={recentResults().length > 0}
@@ -535,7 +537,7 @@ const ScrapeTool: Component = () => {
           </div>
         </aside>
 
-        <div class="panel-scroll section-content min-w-0 lg:col-span-2">
+        <div class="panel-scroll min-w-0 lg:col-span-2">
           <div class="section-header justify-end">
             <CacheAge
               fetchedAt={
@@ -549,36 +551,36 @@ const ScrapeTool: Component = () => {
               }}
             />
           </div>
-          <Show when={activeSource() === 'rym'}>
-            <RymResults
-              entries={entries()}
-              album={rymAlbum()}
-              status={rymStatus()}
-            />
-          </Show>
-          <Show when={activeSource() === 'bandcamp'}>
-            <BandcampResults
-              releases={releases()}
-              album={album()}
-              currentLabel={currentLabel()}
-              status={bcStatus()}
-              isLabelResult={isLabelResult()}
-              isRelatedResult={isRelatedResult()}
-              showExploreLabel={
-                !!currentLabel() && !isLabelResult() && !isRelatedResult()
-              }
-              showRelated={
-                isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()
-              }
-              onExploreLabel={() => scrapeBandcampUrl(url(), 'label')}
-              onRelated={() => scrapeBandcampUrl(url(), 'related')}
-            />
-          </Show>
-          <Show when={!activeSource()}>
-            <EmptyState class="section-content">
-              Choose a chart or enter a URL
-            </EmptyState>
-          </Show>
+          <div class="section-content">
+            <Show when={activeSource() === 'rym'}>
+              <RymResults
+                entries={entries()}
+                album={rymAlbum()}
+                status={rymStatus()}
+              />
+            </Show>
+            <Show when={activeSource() === 'bandcamp'}>
+              <BandcampResults
+                releases={releases()}
+                album={album()}
+                currentLabel={currentLabel()}
+                status={bcStatus()}
+                isLabelResult={isLabelResult()}
+                isRelatedResult={isRelatedResult()}
+                showExploreLabel={
+                  !!currentLabel() && !isLabelResult() && !isRelatedResult()
+                }
+                showRelated={
+                  isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()
+                }
+                onExploreLabel={() => scrapeBandcampUrl(url(), 'label')}
+                onRelated={() => scrapeBandcampUrl(url(), 'related')}
+              />
+            </Show>
+            <Show when={!activeSource()}>
+              <EmptyState>Choose a chart or enter a URL</EmptyState>
+            </Show>
+          </div>
         </div>
       </div>
     </div>
