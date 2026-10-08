@@ -86,6 +86,7 @@
 
   * {
     @apply border-border;
+    scrollbar-color: hsl(var(--border)) transparent;
   }
   [hidden] {
     display: none !important;
@@ -124,18 +125,6 @@
   ::selection {
     @apply bg-accent text-bg;
   }
-  ::-webkit-scrollbar {
-    @apply h-1.5 w-1.5;
-  }
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-border;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-border-hover;
-  }
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -155,7 +144,8 @@
   .section-header,
   .section-content,
   .list-row,
-  .list-detail {
+  .list-detail,
+  .result-row {
     @apply px-6 sm:px-8;
   }
   .app-shell {
@@ -184,7 +174,7 @@
     @apply flex min-h-64 flex-1 items-center justify-center text-center;
   }
   .workspace-split {
-    @apply flex min-h-0 flex-1 flex-col lg:flex-row lg:overflow-hidden;
+    @apply relative flex min-h-0 flex-1 flex-col lg:flex-row lg:overflow-hidden;
   }
   .workspace-primary {
     @apply min-w-0 lg:min-h-0 lg:overflow-hidden;
@@ -200,10 +190,19 @@
     @apply max-h-96 overflow-hidden;
   }
   .resize-handle {
-    @apply hidden w-1 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-border-hover focus-visible:bg-accent lg:block;
+    @apply absolute inset-y-0 z-10 hidden w-3 -translate-x-1/2 cursor-col-resize lg:block;
+    left: var(--primary-width);
     touch-action: none;
   }
-  .resize-handle[data-dragging='true'] {
+  .resize-handle::after {
+    @apply pointer-events-none absolute inset-y-0 left-1/2 w-px bg-transparent transition-colors;
+    content: '';
+  }
+  .resize-handle:hover::after {
+    @apply bg-border-hover;
+  }
+  .resize-handle:focus-visible::after,
+  .resize-handle[data-dragging='true']::after {
     @apply bg-accent;
   }
   @screen lg {
@@ -265,6 +264,9 @@
   }
   .panel-tab-row {
     @apply flex flex-wrap items-center gap-4 border-b;
+  }
+  .panel-heading {
+    @apply flex min-h-12 items-center text-sm text-fg;
   }
   .panel-tab {
     @apply inline-flex min-h-12 items-center justify-center border-b-2 border-transparent px-0 py-3 text-sm text-fg-muted transition-colors hover:text-fg;
@@ -337,25 +339,30 @@
   .list-select {
     @apply flex min-w-0 flex-1 basis-full items-center gap-4 p-0 text-left;
   }
-  @container workspace (min-width: 32rem) {
-    .list-row {
-      @apply flex-nowrap;
-    }
-    .list-select {
-      @apply basis-0;
-    }
-  }
   .result-list {
     @apply divide-y divide-border;
   }
+  .section-content .result-list {
+    @apply -mx-6 sm:-mx-8;
+  }
   .result-row {
-    @apply flex min-w-0 gap-4 py-4;
+    @apply flex min-w-0 flex-wrap gap-4 py-4;
   }
   .result-cover {
     @apply h-16 w-16 shrink-0 bg-bg-muted object-cover;
   }
   .result-main {
-    @apply min-w-0 flex-1 space-y-2;
+    @apply min-w-0 flex-1 basis-full space-y-2;
+  }
+  @container workspace (min-width: 32rem) {
+    .list-row,
+    .result-row {
+      @apply flex-nowrap;
+    }
+    .list-select,
+    .result-main {
+      @apply basis-0;
+    }
   }
   .result-title {
     @apply break-words text-base font-medium text-fg;

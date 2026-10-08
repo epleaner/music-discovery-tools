@@ -58,11 +58,19 @@ Section headers reserve one shared control-height row plus their vertical paddin
 and bottom rule, keeping metadata-only or loading headers aligned with actions.
 Status messages inherit the boundary gutter rather than adding an inset callout.
 
+Structural rules run edge-to-edge. The resize hit area overlays the single panel
+boundary rather than reserving a blank column. Preserve native scrollbar sizing
+and overlay behavior instead of forcing a fixed-width WebKit gutter. Result lists
+cancel their section's gutter; result rows restore the shared content inset.
+
 The listening/discovery split is resizable at `lg` and above, using pointer or
 arrow/Home/End keys. Below `lg`, panels stack; the listening list stays bounded
 and scrollable so discovery is reachable without traversing the entire history.
-Sites and Scrape occupy the full workspace, without an empty discovery column.
-Row actions reflow by the panel's inline-size container, not the window width.
+Sites, Scrape and NTS occupy the full workspace, without an empty discovery column.
+NTS follows Scrape in the primary navigation; row lookup actions open it with the
+artist/track preset. Its search stays mounted while switching workspace tabs.
+Listening and result rows reflow by the panel's inline-size container, not the
+window width.
 The desktop shell has a rem-based minimum height (`min-h-workspace`); short or
 text-enlarged windows scroll the document rather than collapsing embedded views.
 Discovery source sections size to their content under one panel scroll owner.

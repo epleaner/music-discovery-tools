@@ -26,6 +26,7 @@ const NTSLookup: Component<NTSLookupProps> = (props) => {
   const [error, setError] = createSignal<string>();
   const [hasSearched, setHasSearched] = createSignal(false);
   let activeRequest: AbortController | undefined;
+  let queryInput: HTMLInputElement | undefined;
 
   const performSearch = async (
     searchText: string,
@@ -59,7 +60,10 @@ const NTSLookup: Component<NTSLookupProps> = (props) => {
 
   createEffect(() => {
     const preset = props.preset;
-    if (preset) void performSearch(preset.query, preset.type);
+    if (preset) {
+      void performSearch(preset.query, preset.type);
+      queryInput?.focus();
+    }
   });
 
   onCleanup(() => activeRequest?.abort());
@@ -84,6 +88,7 @@ const NTSLookup: Component<NTSLookupProps> = (props) => {
           Search NTS for an artist or track
         </label>
         <Input
+          ref={queryInput}
           id="nts-query"
           name="query"
           autocomplete="off"

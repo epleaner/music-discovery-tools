@@ -22,63 +22,69 @@ const NTSLookupResults: Component<NTSLookupResultsProps> = (props) => (
       </div>
     </Show>
     <Show when={!props.isLoading && props.results.length > 0}>
-      <div class="result-list section-content">
-        <For each={props.results}>
-          {(result) => {
-            const url = getNTSResultUrl(result.articlePath);
-            const isArtist = result.article_type === 'artist';
-            return (
-              <article class="result-row">
-                <Show when={isArtist && result.imageUrl}>
-                  <img
-                    width={64}
-                    height={64}
-                    src={result.imageUrl}
-                    alt=""
-                    class="result-cover"
-                    loading="lazy"
-                  />
-                </Show>
-                <div class="result-main">
-                  <Show
-                    when={url}
-                    fallback={
-                      <div class="result-title break-words">{result.title}</div>
-                    }
-                  >
-                    <ExternalLink
-                      href={url!}
-                      class="result-title block break-words"
-                      title={`Open ${result.title} on NTS`}
+      <div class="section-content">
+        <div class="result-list">
+          <For each={props.results}>
+            {(result) => {
+              const url = getNTSResultUrl(result.articlePath);
+              const isArtist = result.article_type === 'artist';
+              return (
+                <article class="result-row">
+                  <Show when={isArtist && result.imageUrl}>
+                    <img
+                      width={64}
+                      height={64}
+                      src={result.imageUrl}
+                      alt=""
+                      class="result-cover"
+                      loading="lazy"
+                    />
+                  </Show>
+                  <div class="result-main">
+                    <Show
+                      when={url}
+                      fallback={
+                        <div class="result-title break-words">
+                          {result.title}
+                        </div>
+                      }
                     >
-                      {result.title}
-                    </ExternalLink>
-                  </Show>
-                  <Show when={isArtist}>
-                    <div class="result-meta">NTS artist</div>
-                  </Show>
-                  <Show when={!isArtist}>
-                    <div class="result-meta break-words">
-                      {result.artists.join(', ')}
-                      <Show
-                        when={result.artists.length > 0 && result.episodeTitle}
+                      <ExternalLink
+                        href={url!}
+                        class="result-title block break-words"
+                        title={`Open ${result.title} on NTS`}
                       >
-                        {' · '}
-                      </Show>
-                      <Show when={result.episodeTitle}>
-                        {result.episodeTitle}
-                      </Show>
-                      <Show when={result.localDate}>
-                        {' · '}
-                        {result.localDate}
-                      </Show>
-                    </div>
-                  </Show>
-                </div>
-              </article>
-            );
-          }}
-        </For>
+                        {result.title}
+                      </ExternalLink>
+                    </Show>
+                    <Show when={isArtist}>
+                      <div class="result-meta">NTS artist</div>
+                    </Show>
+                    <Show when={!isArtist}>
+                      <div class="result-meta break-words">
+                        {result.artists.join(', ')}
+                        <Show
+                          when={
+                            result.artists.length > 0 && result.episodeTitle
+                          }
+                        >
+                          {' · '}
+                        </Show>
+                        <Show when={result.episodeTitle}>
+                          {result.episodeTitle}
+                        </Show>
+                        <Show when={result.localDate}>
+                          {' · '}
+                          {result.localDate}
+                        </Show>
+                      </div>
+                    </Show>
+                  </div>
+                </article>
+              );
+            }}
+          </For>
+        </div>
       </div>
     </Show>
     <Show

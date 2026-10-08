@@ -90,11 +90,8 @@ const Workspace: Component<{
   const nav = useNav();
 
   const [bottomTab, setBottomTab] = createSignal<
-    'history' | 'sites' | 'scrape'
+    'history' | 'sites' | 'scrape' | 'nts'
   >('history');
-  const [rightPanelTab, setRightPanelTab] = createSignal<'similar' | 'nts'>(
-    'similar'
-  );
   const [ntsPreset, setNtsPreset] = createSignal<NTSLookupPreset>();
 
   const { theme, setTheme, colorTheme, setColorTheme } = useTheme();
@@ -183,8 +180,8 @@ const Workspace: Component<{
     nav.navigateToItem({ artist: artist.name, itemKind: 'artist' });
   };
   const handleNTSLookup = (query: string, type: NTSLookupType) => {
+    setBottomTab('nts');
     setNtsPreset({ query, type });
-    setRightPanelTab('nts');
   };
 
   const tabs: { id: View; label: string }[] = [
@@ -375,6 +372,13 @@ const Workspace: Component<{
         >
           Scrape
         </PanelTab>
+        <PanelTab
+          underline
+          active={bottomTab() === 'nts'}
+          onClick={() => setBottomTab('nts')}
+        >
+          NTS
+        </PanelTab>
       </nav>
       <Show when={appLayoutModel().showMainLayout}>
         <ResizablePanels
@@ -560,6 +564,12 @@ const Workspace: Component<{
                   </Show>
                 </div>
               </div>
+              <div
+                class="workspace-panel flex-1"
+                hidden={bottomTab() !== 'nts'}
+              >
+                <NTSLookup preset={ntsPreset()} />
+              </div>
               <Switch>
                 <Match when={bottomTab() === 'sites'}>
                   <SiteViewer
@@ -584,91 +594,67 @@ const Workspace: Component<{
           }
           rightPanel={
             <div class="workspace-panel flex-1">
-              <nav class="workspace-tabs" aria-label="Discovery">
-                <PanelTab
-                  underline
-                  active={rightPanelTab() === 'similar'}
-                  onClick={() => setRightPanelTab('similar')}
-                >
-                  Similar
-                </PanelTab>
-                <PanelTab
-                  underline
-                  active={rightPanelTab() === 'nts'}
-                  onClick={() => setRightPanelTab('nts')}
-                >
-                  NTS
-                </PanelTab>
-              </nav>
+              <div class="workspace-tabs">
+                <h2 class="panel-heading">Similar</h2>
+              </div>
               <div class="panel-scroll">
-                <Switch>
-                  <Match when={rightPanelTab() === 'similar'}>
-                    <Show
-                      when={selectedArtist()}
-                      fallback={
-                        <div class="workspace-empty">
-                          <EmptyState>
-                            Select a track, album or artist.
-                          </EmptyState>
-                        </div>
-                      }
-                    >
-                      <div class="section-content space-y-3">
-                        <h2 class="entity-heading break-words">
-                          {selectedArtist()}
-                        </h2>
-                        <Show when={nav.state().stack.length > 2}>
-                          <nav aria-label="Discovery trail" class="toolbar">
-                            <For
-                              each={nav
-                                .state()
-                                .stack.slice(0, nav.state().index)}
+                <Show
+                  when={selectedArtist()}
+                  fallback={
+                    <div class="workspace-empty">
+                      <EmptyState>Select a track, album or artist.</EmptyState>
+                    </div>
+                  }
+                >
+                  <div class="section-content space-y-3">
+                    <h2 class="entity-heading break-words">
+                      {selectedArtist()}
+                    </h2>
+                    <Show when={nav.state().stack.length > 2}>
+                      <nav aria-label="Discovery trail" class="toolbar">
+                        <For
+                          each={nav.state().stack.slice(0, nav.state().index)}
+                        >
+                          {(item, index) => (
+                            <Button
+                              variant="link"
+                              onClick={() => nav.goTo(index())}
                             >
-                              {(item, index) => (
-                                <Button
-                                  variant="link"
-                                  onClick={() => nav.goTo(index())}
-                                >
-                                  {item.label}
-                                </Button>
-                              )}
-                            </For>
-                          </nav>
-                        </Show>
-                        <Show when={rightPanelModel().showSimilarArtists}>
-                          <EveryNoiseViewer
-                            genre={everyNoiseGenre.genre()}
-                            isLoading={everyNoiseGenre.isLoading()}
-                            artistName={selectedArtist()}
-                          />
-                        </Show>
-                      </div>
-                      <ArtistList
-                        artists={similarArtists.artists()}
-                        isLoading={similarArtists.isLoading()}
-                        error={similarArtists.error()}
-                        onArtistClick={handleArtistClick}
-                        onNTSLookup={(artistName) =>
-                          handleNTSLookup(artistName, 'artist')
-                        }
-                        showMatch
+                              {item.label}
+                            </Button>
+                          )}
+                        </For>
+                      </nav>
+                    </Show>
+                    <Show when={rightPanelModel().showSimilarArtists}>
+                      <EveryNoiseViewer
+                        genre={everyNoiseGenre.genre()}
+                        isLoading={everyNoiseGenre.isLoading()}
+                        artistName={selectedArtist()}
                       />
                     </Show>
-                    <Show when={selectedArtist()}>
-                      <Show
-                        when={props.user}
-                        fallback={renderConnectNotice(
-                          'Connect for RYM and Bandcamp matches.'
-                        )}
-                      >
-                        <ScrapeSections />
-                      </Show>
-                    </Show>
-                  </Match>
-                  <Match when={rightPanelTab() === 'nts'}>
-                    <NTSLookup preset={ntsPreset()} />
-                  </Match>
-                </Switch>
+                  </div>
+                  <ArtistList
+                    artists={similarArtists.artists()}
+                    isLoading={similarArtists.isLoading()}
+                    error={similarArtists.error()}
+                    onArtistClick={handleArtistClick}
+                    onNTSLookup={(artistName) =>
+                      handleNTSLookup(artistName, 'artist')
+                    }
+                    showMatch
+                  />
+                </Show>
+                <Show when={selectedArtist()}>
+                  <Show
+                    when={props.user}
+                    fallback={renderConnectNotice(
+                      'Connect for RYM and Bandcamp matches.'
+                    )}
+                  >
+                    <ScrapeSections />
+                  </Show>
+                </Show>
               </div>
             </div>
           }
