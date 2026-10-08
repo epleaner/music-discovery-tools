@@ -2,6 +2,7 @@ import { Component, Show, createSignal, onCleanup, onMount } from 'solid-js';
 import Button from './Button';
 import Input from './Input';
 import ControlGroup from './ControlGroup';
+import MenubarInstall from './MenubarInstall';
 import { getAgentStatus, pairAgent, type AgentStatus } from '../lib/auth';
 
 const AgentSetup: Component = () => {
@@ -92,10 +93,7 @@ const AgentSetup: Component = () => {
           </Button>
         </div>
         <div class="dialog-body">
-          <p class="meta-text">
-            Create a passphrase in either Soundscape Web or the menu-bar app,
-            then use the same value in both.
-          </p>
+          <MenubarInstall />
           <p class="status" aria-live="polite">
             Status:{' '}
             {status().connected

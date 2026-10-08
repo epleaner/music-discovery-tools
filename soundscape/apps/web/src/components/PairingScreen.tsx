@@ -2,6 +2,7 @@ import { Component, Show, createSignal, onCleanup, onMount } from 'solid-js';
 import Button from './Button';
 import Input from './Input';
 import ControlGroup from './ControlGroup';
+import MenubarInstall from './MenubarInstall';
 import {
   preparePairingPassphrase,
   startSession,
@@ -130,6 +131,7 @@ const PairingScreen: Component<PairingScreenProps> = (props) => {
         </Button>
       </div>
       <div class="dialog-body">
+        <MenubarInstall />
         <Show
           when={stage() === 'choose'}
           fallback={

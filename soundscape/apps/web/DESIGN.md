@@ -120,16 +120,18 @@ shared `result-cover` recipe.
 
 ## Components
 
-| Component                     | Contract                                                                                                                                |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `Button`                      | Canonical primary, secondary, control, icon, tab and link variants. Native button semantics; disabled state and visible keyboard focus. |
-| `PanelTab`                    | A selected view/filter is an understated accent rule with `aria-pressed`; never a local selected-color recipe.                          |
-| `Input` / `Select`            | One field recipe; associated visible labels, native validation and standard focus treatment.                                            |
-| `Artwork`                     | Decorative thumbnail beside a named primary action; explicit dimensions, lazy loading, shared empty/error fallback.                     |
-| `Chip`                        | Quiet square label; genre removal is a separately named button.                                                                         |
-| `EmptyState` / `ErrorMessage` | Operational copy only; status/alert semantics and canonical state treatment.                                                            |
-| `ExternalLink`                | Accent link with safe external target; add the shared button variant class only for a button-shaped action.                             |
-| `GenreSelect`                 | Ark multi-select semantics, grouped and measured virtual results, search, clear, removal and shuffle.                                   |
+| Component                     | Contract                                                                                                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Button`                      | Canonical primary, secondary, control, icon, tab and link variants. Native button semantics; disabled state and visible keyboard focus.                                                     |
+| `PanelTab`                    | A selected view/filter is an understated accent rule with `aria-pressed`; never a local selected-color recipe.                                                                              |
+| `Input` / `Select`            | One field recipe; associated visible labels, native validation and standard focus treatment.                                                                                                |
+| `Artwork`                     | Decorative thumbnail beside a named primary action; explicit dimensions, lazy loading, shared empty/error fallback.                                                                         |
+| `Chip`                        | Quiet square label; genre removal is a separately named button.                                                                                                                             |
+| `EmptyState` / `ErrorMessage` | Operational copy only; status/alert semantics and canonical state treatment.                                                                                                                |
+| `ExternalLink`                | Accent link with safe external target; add the shared button variant class only for a button-shaped action.                                                                                 |
+| `GenreSelect`                 | Ark multi-select semantics, grouped and measured virtual results, search, clear, removal and shuffle.                                                                                       |
+| `NTSTrackButton`              | Compact NTS action with a bounded artist label; tooltip and accessible name retain artist and track. Both track lists use the same artist-aware search formatter.                           |
+| `MenubarInstall`              | One real download link and native installation disclosure shared by Connect and Browser helper; prerequisites, security guidance and configured-server launch instructions stay consistent. |
 
 List primary actions are native buttons. NTS/RYM controls are siblings, never
 nested buttons. Preserve source distinctions: RYM has ratings; Bandcamp has
@@ -137,6 +139,8 @@ playback/purchase/label exploration; NTS links externally; Every Noise supplies
 genre/map links. Minimize copy without removing security or recovery guidance.
 Keep row actions visible. Discovery names the selected artist once in its header;
 genre metadata is one compact line with provider/map links and operational state.
+Compound link actions align to the start when wrapped. `.list-action-label`
+bounds and truncates visible artist text without shortening its accessible name.
 
 ## Do's and Don'ts
 

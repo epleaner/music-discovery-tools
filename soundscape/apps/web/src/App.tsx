@@ -52,7 +52,7 @@ import { useSearchState } from './lib/use-search-state';
 import { useNav } from './lib/use-nav';
 import { useTheme, type Theme, type ColorTheme } from './lib/use-theme';
 import { getSession, logout, type SessionUser } from './lib/auth';
-import type { NTSLookupType } from './lib/nts';
+import { getNTSTrackQuery, type NTSLookupType } from './lib/nts';
 
 type View = 'recent' | 'top' | 'similar';
 
@@ -480,7 +480,13 @@ const Workspace: Component<{
                               error={recentTracks.error()}
                               onTrackClick={handleTrackResolveClick}
                               onNTSLookup={(track) =>
-                                handleNTSLookup(track.name, 'track')
+                                handleNTSLookup(
+                                  getNTSTrackQuery(
+                                    track.name,
+                                    track.artist['#text']
+                                  ),
+                                  'track'
+                                )
                               }
                             />
                           </Match>
@@ -550,7 +556,13 @@ const Workspace: Component<{
                                 })
                               }
                               onNTSLookup={(track) =>
-                                handleNTSLookup(track.name, 'track')
+                                handleNTSLookup(
+                                  getNTSTrackQuery(
+                                    track.name,
+                                    track.artist.name
+                                  ),
+                                  'track'
+                                )
                               }
                             />
                           </Match>
