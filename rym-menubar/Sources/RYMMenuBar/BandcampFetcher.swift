@@ -8,9 +8,15 @@ struct BandcampRelease: Codable {
     let artist: String?
     let url: String
     let imageUrl: String?
+    var artistUrl: String? = nil
 }
 
 struct BandcampLabel: Codable {
+    let name: String
+    let url: String
+}
+
+struct BandcampTagLink: Codable {
     let name: String
     let url: String
 }
@@ -20,6 +26,7 @@ struct BandcampAlbumTrack: Codable {
     let position: Int?
     let duration: Double?
     let streamUrl: String?
+    var url: String? = nil
 }
 
 struct BandcampAlbumDetail: Codable {
@@ -30,6 +37,8 @@ struct BandcampAlbumDetail: Codable {
     let releaseDate: String?
     let tags: [String]?
     let tracks: [BandcampAlbumTrack]
+    var artistUrl: String? = nil
+    var tagLinks: [BandcampTagLink]? = nil
 }
 
 struct BandcampScrapeResult {
@@ -48,7 +57,7 @@ enum BandcampFetcher {
 
     // Handles both artist discography pages (#music-grid) and tag/discover pages
     // (li.results-grid-item). Returns JSON: {n, releases:[{title,artist,url,imageUrl}], label?:{name,url}}
-    static let extractorJS = "(function(){function clean(s){return(s||'').replace(/\\s+/g,' ').trim();}function firstTextNode(el){if(!el)return'';for(var i=0;i<el.childNodes.length;i++){if(el.childNodes[i].nodeType===3){var t=el.childNodes[i].textContent.trim();if(t)return t;}}return clean(el.textContent);}var releases=[];var origin=window.location.origin;var musicGrid=[].slice.call(document.querySelectorAll('#music-grid li'));musicGrid.forEach(function(li){var a=li.querySelector('a');var href=a?a.getAttribute('href'):'';if(href&&!href.startsWith('http'))href=origin+href;var img=li.querySelector('img');var imgUrl=img?(img.getAttribute('data-original')||img.getAttribute('src')||''):'';var titleEl=li.querySelector('.title');var title=firstTextNode(titleEl);var artistEl=li.querySelector('.artist-override')||li.querySelector('.artist');var artist=artistEl?clean(artistEl.textContent):'';if(title)releases.push({title:title,artist:artist,url:href,imageUrl:imgUrl});});if(releases.length===0){var tagItems=[].slice.call(document.querySelectorAll('li.results-grid-item,[class~=results-grid-item]'));tagItems.forEach(function(li){var a=li.querySelector('a[href*=\"bandcamp.com\"]')||li.querySelector('a');var href=a?a.getAttribute('href'):'';var img=li.querySelector('img');var imgUrl=img?(img.getAttribute('data-original')||img.getAttribute('src')||''):'';var text=(li.innerText||'').trim();var parts=text.split('\\n').map(function(p){return p.trim();}).filter(Boolean);var title=parts[0]||'';var artistRaw=parts[1]||'';var artist=artistRaw.replace(/^by\\s+/i,'').trim();if(title)releases.push({title:title,artist:artist,url:href,imageUrl:imgUrl});});}var labelLink=null;var la=document.querySelector('a.back-to-label-link');if(la){var lhref=la.href;try{var lu=new URL(lhref);lu.search='';lhref=lu.origin;}catch(e){}var lname='';var lspan=la.querySelector('.back-link-text,span');if(lspan){var lnodes=lspan.childNodes;for(var li2=0;li2<lnodes.length;li2++){if(lnodes[li2].nodeType===1&&lnodes[li2].tagName==='BR'){if(li2+1<lnodes.length)lname=lnodes[li2+1].textContent.trim();break;}}}if(!lname)lname=la.textContent.replace(/[←\\s]+more\\s+from\\s*/i,'').trim();if(lname&&lhref)labelLink={name:lname,url:lhref};}var album=null;var tdEl=document.querySelector('script[data-tralbum]');var td=null;if(tdEl){try{td=JSON.parse(tdEl.getAttribute('data-tralbum'));}catch(e){}}if(!td&&window.TralbumData)td=window.TralbumData;if(td&&td.trackinfo&&td.trackinfo.length){var artId=td.art_id||(td.current&&td.current.art_id);var tags=[].slice.call(document.querySelectorAll('.tralbum-tags a.tag')).map(function(a){return clean(a.textContent);});album={title:(td.current&&td.current.title)||'',artist:td.artist||'',url:td.url||window.location.href,imageUrl:artId?('https://f4.bcbits.com/img/a'+artId+'_10.jpg'):null,releaseDate:(td.current&&td.current.release_date)||null,tags:tags,tracks:td.trackinfo.map(function(t){return{name:t.title,position:t.track_num,duration:t.duration,streamUrl:(t.file&&t.file['mp3-128'])||null};})};}return JSON.stringify({n:releases.length,releases:releases,label:labelLink,album:album});})()"
+    static let extractorJS = "(function(){function clean(s){return(s||'').replace(/\\s+/g,' ').trim();}function firstTextNode(el){if(!el)return'';for(var i=0;i<el.childNodes.length;i++){if(el.childNodes[i].nodeType===3){var t=el.childNodes[i].textContent.trim();if(t)return t;}}return clean(el.textContent);}function artistHref(el){var a=el&&(el.matches('a[href]')?el:el.querySelector('a[href]'));return a?a.href:null;}var releases=[];var origin=window.location.origin;var musicGrid=[].slice.call(document.querySelectorAll('#music-grid li'));musicGrid.forEach(function(li){var a=li.querySelector('a');var href=a?a.getAttribute('href'):'';if(href&&!href.startsWith('http'))href=origin+href;var img=li.querySelector('img');var imgUrl=img?(img.getAttribute('data-original')||img.getAttribute('src')||''):'';var titleEl=li.querySelector('.title');var title=firstTextNode(titleEl);var artistEl=li.querySelector('.artist-override')||li.querySelector('.artist');var artist=artistEl?clean(artistEl.textContent):'';if(title)releases.push({title:title,artist:artist,artistUrl:artistHref(artistEl),url:href,imageUrl:imgUrl});});if(releases.length===0){var tagItems=[].slice.call(document.querySelectorAll('li.results-grid-item,[class~=results-grid-item]'));tagItems.forEach(function(li){var a=li.querySelector('a[href*=\"bandcamp.com\"]')||li.querySelector('a');var href=a?a.getAttribute('href'):'';var img=li.querySelector('img');var imgUrl=img?(img.getAttribute('data-original')||img.getAttribute('src')||''):'';var text=(li.innerText||'').trim();var parts=text.split('\\n').map(function(p){return p.trim();}).filter(Boolean);var title=parts[0]||'';var artistRaw=parts[1]||'';var artist=artistRaw.replace(/^by\\s+/i,'').trim();var artistEl=li.querySelector('.artist');if(title)releases.push({title:title,artist:artist,artistUrl:artistHref(artistEl),url:href,imageUrl:imgUrl});});}var labelLink=null;var la=document.querySelector('a.back-to-label-link');if(la){var lhref=la.href;try{var lu=new URL(lhref);lu.search='';lhref=lu.origin;}catch(e){}var lname='';var lspan=la.querySelector('.back-link-text,span');if(lspan){var lnodes=lspan.childNodes;for(var li2=0;li2<lnodes.length;li2++){if(lnodes[li2].nodeType===1&&lnodes[li2].tagName==='BR'){if(li2+1<lnodes.length)lname=lnodes[li2+1].textContent.trim();break;}}}if(!lname)lname=la.textContent.replace(/[←\\s]+more\\s+from\\s*/i,'').trim();if(lname&&lhref)labelLink={name:lname,url:lhref};}var album=null;var tdEl=document.querySelector('script[data-tralbum]');var td=null;if(tdEl){try{td=JSON.parse(tdEl.getAttribute('data-tralbum'));}catch(e){}}if(!td&&window.TralbumData)td=window.TralbumData;if(td&&td.trackinfo&&td.trackinfo.length){var artId=td.art_id||(td.current&&td.current.art_id);var tagLinks=[].slice.call(document.querySelectorAll('.tralbum-tags a.tag[href]')).map(function(a){return{name:clean(a.textContent),url:a.href};});var tags=[].slice.call(document.querySelectorAll('.tralbum-tags a.tag')).map(function(a){return clean(a.textContent);});var artistEl=document.querySelector('#name-section h3 a[href]');album={title:(td.current&&td.current.title)||'',artist:td.artist||'',artistUrl:artistEl?artistEl.href:null,url:td.url||window.location.href,imageUrl:artId?('https://f4.bcbits.com/img/a'+artId+'_10.jpg'):null,releaseDate:(td.current&&td.current.release_date)||null,tags:tags,tagLinks:tagLinks,tracks:td.trackinfo.map(function(t){var url=null;if(t.title_link){try{url=new URL(t.title_link,window.location.href).href;}catch(e){}}return{name:t.title,position:t.track_num,duration:t.duration,streamUrl:(t.file&&t.file['mp3-128'])||null,url:url};})};}return JSON.stringify({n:releases.length,releases:releases,label:labelLink,album:album});})()"
 
     // Extracts "If you like X, you may also like:" recommendations from an album page.
     // Scrolls on each poll iteration to trigger the lazy-loaded recs section.
@@ -181,7 +190,8 @@ enum BandcampFetcher {
             let artist = (r["artist"] as? String).flatMap { $0.isEmpty ? nil : $0 }
             let url = (r["url"] as? String) ?? ""
             let imageUrl = (r["imageUrl"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-            return BandcampRelease(title: title, artist: artist, url: url, imageUrl: imageUrl)
+            return BandcampRelease(title: title, artist: artist, url: url, imageUrl: imageUrl,
+                                   artistUrl: (r["artistUrl"] as? String).flatMap { $0.isEmpty ? nil : $0 })
         }
         var label: BandcampLabel? = nil
         if let rawLabel = obj["label"] as? [String: Any],
@@ -203,9 +213,17 @@ enum BandcampFetcher {
                 let position = t["position"] as? Int
                 let duration = t["duration"] as? Double
                 let streamUrl = t["streamUrl"] as? String
-                return BandcampAlbumTrack(name: name, position: position, duration: duration, streamUrl: streamUrl)
+                return BandcampAlbumTrack(name: name, position: position, duration: duration, streamUrl: streamUrl,
+                                          url: (t["url"] as? String).flatMap { $0.isEmpty ? nil : $0 })
             }
-            album = BandcampAlbumDetail(title: title, artist: artist, url: albumUrl, imageUrl: imageUrl, releaseDate: releaseDate, tags: tags, tracks: tracks)
+            let tagLinks = (rawAlbum["tagLinks"] as? [[String: Any]])?.compactMap { tag -> BandcampTagLink? in
+                guard let name = tag["name"] as? String, !name.isEmpty,
+                      let url = tag["url"] as? String, !url.isEmpty else { return nil }
+                return BandcampTagLink(name: name, url: url)
+            }
+            album = BandcampAlbumDetail(title: title, artist: artist, url: albumUrl, imageUrl: imageUrl, releaseDate: releaseDate, tags: tags, tracks: tracks,
+                                       artistUrl: (rawAlbum["artistUrl"] as? String).flatMap { $0.isEmpty ? nil : $0 },
+                                       tagLinks: tagLinks)
         }
         return BandcampScrapeResult(releases: releases, label: label, album: album)
     }

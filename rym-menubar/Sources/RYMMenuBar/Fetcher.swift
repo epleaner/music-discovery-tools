@@ -33,12 +33,16 @@ struct RymAlbumDetail: Codable {
     let title: String
     let artist: String
     let url: String
+    var artistUrl: String? = nil
     var releaseDate: String? = nil
     var genres: [String]? = nil
+    var genreLinks: [RymLink]? = nil
     var descriptors: [String]? = nil
+    var descriptorLinks: [RymLink]? = nil
     var avgRating: Double? = nil
     var ratings: Int? = nil
     var tracks: [String]? = nil
+    var trackLinks: [RymLink]? = nil
 }
 
 /// Combined result of a scrape: discography/list `entries` and/or a single
@@ -187,6 +191,7 @@ final class Fetcher {
         var artistEl = document.querySelector('.album_info a.artist') || document.querySelector('[itemprop=byArtist] a') || document.querySelector('[itemprop=byArtist]');
         var artistText = clean(artistEl ? artistEl.textContent : '');
         var rd = document.querySelector('.album_info .release_date .value') || document.querySelector('.issue_year');
+        var genreLinks = links(document, '.release_pri_genres a,.release_sec_genres a');
         var genres = [].slice.call(document.querySelectorAll('.release_pri_genres a,.release_sec_genres a')).map(function(el) {
           return clean(el.textContent);
         }).filter(function(s) { return s.length > 0; });
@@ -200,19 +205,28 @@ final class Fetcher {
         var ratEl = document.querySelector('.num_ratings');
         var avgNum = avgEl ? parseFloat(clean(avgEl.textContent)) : NaN;
         var ratNum = ratEl ? parseInt(clean(ratEl.textContent).replace(/,/g, ''), 10) : NaN;
-        var tracks = [].slice.call(document.querySelectorAll('#tracks .track .song,ul#tracks li .rendered_text,.tracklist_line .song')).map(function(el) {
+        var trackNodes = [].slice.call(document.querySelectorAll('#tracks .track .song,ul#tracks li .rendered_text,.tracklist_line .song'));
+        var tracks = trackNodes.map(function(el) {
           return clean(el.textContent);
         }).filter(function(s) { return s.length > 0; });
+        var trackLinks = trackNodes.map(function(el) {
+          var anchor = el.matches('a[href]') ? el : el.querySelector('a[href]') || el.closest('a[href]');
+          return link(anchor, el.textContent);
+        }).filter(function(item) { return item.name && item.url; });
         album = {
           title: titleText,
           artist: artistText,
           url: location.href,
+          artistUrl: href(artistEl),
           releaseDate: rd ? clean(rd.textContent) : '',
           genres: genres,
+          genreLinks: genreLinks,
           descriptors: descText,
+          descriptorLinks: links(document, '.release_pri_descriptors a[href]'),
           avgRating: isNaN(avgNum) ? null : avgNum,
           ratings: isNaN(ratNum) ? null : ratNum,
-          tracks: tracks
+          tracks: tracks,
+          trackLinks: trackLinks
         };
       }
 
@@ -281,10 +295,13 @@ final class Fetcher {
           var wnt = el.querySelector('.newreleases_wishlist_stat');
           entries.push({
             artist: clean(ar ? ar.textContent : ''),
+            artistUrl: href(ar),
             album: clean(al.textContent),
+            albumUrl: href(al),
             date: clean(rd ? rd.textContent : ''),
             path: al.getAttribute('href') || '',
             genres: gs,
+            genreLinks: links(el, '.newreleases_item_genres a[href],a.newreleases_item_genres[href]'),
             avgRating: clean(avg ? avg.textContent : ''),
             ratings: clean(rat ? rat.textContent : ''),
             wants: clean(wnt ? wnt.textContent : '')
@@ -421,12 +438,16 @@ final class Fetcher {
             album = RymAlbumDetail(title: title,
                                     artist: (a["artist"] as? String) ?? "",
                                     url: (a["url"] as? String) ?? "",
+                                    artistUrl: (a["artistUrl"] as? String).flatMap { $0.isEmpty ? nil : $0 },
                                     releaseDate: releaseDate,
                                     genres: genres,
+                                    genreLinks: parseLinks(a["genreLinks"]),
                                     descriptors: descriptors,
+                                    descriptorLinks: parseLinks(a["descriptorLinks"]),
                                     avgRating: avgRating,
                                     ratings: ratings,
-                                    tracks: tracks)
+                                    tracks: tracks,
+                                    trackLinks: parseLinks(a["trackLinks"]))
         }
         return (entries, album, blocked, notFound, title, htmlLen)
     }

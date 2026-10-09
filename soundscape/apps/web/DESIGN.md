@@ -129,6 +129,7 @@ shared `result-cover` recipe.
 | `Chip`                        | Quiet square label; genre removal is a separately named button.                                                                                                                             |
 | `EmptyState` / `ErrorMessage` | Operational copy only; status/alert semantics and canonical state treatment.                                                                                                                |
 | `ExternalLink`                | Accent link with safe external target; add the shared button variant class only for a button-shaped action.                                                                                 |
+| `SourceLink`                  | Captured HTTP(S) metadata URL resolved against its source, composing `ExternalLink`; missing, malformed or non-web destinations stay readable text.                                         |
 | `GenreSelect`                 | Ark multi-select semantics, grouped and measured virtual results, search, clear, removal and shuffle.                                                                                       |
 | `LookupActions`               | Shared compact NTS/RYM row controls. Tracks use one artist-and-song query; artists use their name only. Matching link recipes, full accessible context and safe external RYM search.        |
 | `MenubarInstall`              | One real download link and native installation disclosure shared by Connect and Browser helper; prerequisites, security guidance and configured-server launch instructions stay consistent. |
@@ -139,6 +140,17 @@ playback/purchase/label exploration; NTS links externally. Minimize copy without
 removing security or recovery guidance. Keep row actions visible. Discovery names
 the selected artist once in its header.
 Compound link actions align to the start when wrapped.
+
+RYM and Bandcamp details link titles, artists, genres/tags, descriptors, tracks
+and labels when their source provides a destination. Rating/review statistics
+open the known release page; dates stay text. Never guess artist or genre slugs.
+The menu-bar helper retains metadata URLs; refresh older cached results after
+updating the helper to populate them.
+
+Bandcamp track navigation and playback are separate sibling controls, never a
+link inside a play button. Compose `list-row` and inline `list-main` metadata to
+keep track name, availability and duration compact without forced line breaks.
+The linked label name appears once alongside its exploration action.
 
 ## Do's and Don'ts
 

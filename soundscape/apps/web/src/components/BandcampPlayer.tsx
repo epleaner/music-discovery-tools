@@ -1,7 +1,9 @@
 import { Component, For, createSignal, Show } from 'solid-js';
+import SourceLink from './SourceLink';
 
 interface Track {
   name: string;
+  url?: string;
   position: number;
   duration: number | null;
   streamUrl: string | null;
@@ -9,6 +11,7 @@ interface Track {
 
 interface BandcampPlayerProps {
   tracks: Track[];
+  base: string;
 }
 
 const BandcampPlayer: Component<BandcampPlayerProps> = (props) => {
@@ -55,32 +58,37 @@ const BandcampPlayer: Component<BandcampPlayerProps> = (props) => {
             const available = () => track.streamUrl !== null;
             const active = () => playingIndex() === i() && isPlaying();
             return (
-              <button
-                type="button"
-                class="result-row w-full items-start text-left"
-                classList={{ 'bg-bg-subtle': active() }}
-                disabled={!available()}
-                aria-label={`${active() ? 'Pause' : 'Play'} ${track.name}`}
-                aria-pressed={active()}
-                onClick={() =>
-                  available() && handleTrackClick(i(), track.streamUrl!)
-                }
-              >
-                <span class="list-count shrink-0">
-                  {active() ? 'Ⅱ' : track.position}
-                </span>
-                <span class="result-main break-words">
-                  <span class="result-title">{track.name}</span>
+              <div class="list-row" classList={{ 'bg-bg-subtle': active() }}>
+                <button
+                  type="button"
+                  class="btn-icon shrink-0"
+                  disabled={!available()}
+                  aria-label={`${active() ? 'Pause' : 'Play'} ${track.name}`}
+                  aria-pressed={active()}
+                  onClick={() =>
+                    available() && handleTrackClick(i(), track.streamUrl!)
+                  }
+                >
+                  <span class="list-count">
+                    {active() ? 'Ⅱ' : track.position}
+                  </span>
+                </button>
+                <span class="list-main">
+                  <span class="list-title whitespace-normal break-words">
+                    <SourceLink href={track.url} base={props.base}>
+                      {track.name}
+                    </SourceLink>
+                  </span>
                   <Show when={!available()}>
-                    <span class="status block">Unavailable</span>
+                    <span class="list-meta">Unavailable</span>
+                  </Show>
+                  <Show when={track.duration != null}>
+                    <span class="list-meta numeric">
+                      {formatDuration(track.duration)}
+                    </span>
                   </Show>
                 </span>
-                <Show when={track.duration != null}>
-                  <span class="result-meta numeric shrink-0">
-                    {formatDuration(track.duration)}
-                  </span>
-                </Show>
-              </button>
+              </div>
             );
           }}
         </For>
