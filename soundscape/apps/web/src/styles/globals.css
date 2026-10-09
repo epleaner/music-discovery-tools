@@ -330,9 +330,6 @@
   .list-actions {
     @apply flex min-w-0 max-w-full shrink-0 flex-wrap items-center gap-2;
   }
-  .list-action-label {
-    @apply min-w-0 max-w-32 truncate text-fg-muted;
-  }
   .list-count {
     @apply min-w-0 max-w-full break-words text-sm tabular-nums text-fg-muted;
   }

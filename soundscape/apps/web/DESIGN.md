@@ -130,7 +130,7 @@ shared `result-cover` recipe.
 | `EmptyState` / `ErrorMessage` | Operational copy only; status/alert semantics and canonical state treatment.                                                                                                                |
 | `ExternalLink`                | Accent link with safe external target; add the shared button variant class only for a button-shaped action.                                                                                 |
 | `GenreSelect`                 | Ark multi-select semantics, grouped and measured virtual results, search, clear, removal and shuffle.                                                                                       |
-| `NTSTrackButton`              | Compact NTS action with a bounded artist label; tooltip and accessible name retain artist and track. Both track lists use the same artist-aware search formatter.                           |
+| `NTSTrackButton`              | Visible label stays NTS; tooltip and accessible name retain artist and track. Both track lists search artist and track together as one query.                                               |
 | `MenubarInstall`              | One real download link and native installation disclosure shared by Connect and Browser helper; prerequisites, security guidance and configured-server launch instructions stay consistent. |
 
 List primary actions are native buttons. NTS/RYM controls are siblings, never
@@ -139,8 +139,7 @@ playback/purchase/label exploration; NTS links externally; Every Noise supplies
 genre/map links. Minimize copy without removing security or recovery guidance.
 Keep row actions visible. Discovery names the selected artist once in its header;
 genre metadata is one compact line with provider/map links and operational state.
-Compound link actions align to the start when wrapped. `.list-action-label`
-bounds and truncates visible artist text without shortening its accessible name.
+Compound link actions align to the start when wrapped.
 
 ## Do's and Don'ts
 

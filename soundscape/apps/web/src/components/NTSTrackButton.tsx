@@ -14,7 +14,7 @@ const NTSTrackButton: Component<NTSTrackButtonProps> = (props) => (
     aria-label={`Search NTS for ${props.track} by ${props.artist}`}
     onClick={props.onClick}
   >
-    NTS <span class="list-action-label">{props.artist}</span>
+    NTS
   </Button>
 );
 
