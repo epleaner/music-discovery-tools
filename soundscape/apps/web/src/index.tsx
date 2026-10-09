@@ -2,17 +2,12 @@ import { render } from 'solid-js/web';
 import { HashRouter, Route } from '@solidjs/router';
 import './styles/globals.css';
 import App from './App';
-import { setCorsProxyApiKey, setLastFMApiKey } from '@soundscape/utils';
+import { setLastFMApiKey } from '@soundscape/utils';
 
 // Set the LastFM API key from environment
 const apiKey = import.meta.env.VITE_LASTFM_API_KEY;
 if (apiKey) {
   setLastFMApiKey(apiKey);
-}
-
-const corsProxyApiKey = import.meta.env.VITE_CORSPROXY_API_KEY;
-if (corsProxyApiKey) {
-  setCorsProxyApiKey(corsProxyApiKey);
 }
 
 const root = document.getElementById('root');

@@ -135,10 +135,9 @@ shared `result-cover` recipe.
 
 List primary actions are native buttons. NTS/RYM controls are siblings, never
 nested buttons. Preserve source distinctions: RYM has ratings; Bandcamp has
-playback/purchase/label exploration; NTS links externally; Every Noise supplies
-genre/map links. Minimize copy without removing security or recovery guidance.
-Keep row actions visible. Discovery names the selected artist once in its header;
-genre metadata is one compact line with provider/map links and operational state.
+playback/purchase/label exploration; NTS links externally. Minimize copy without
+removing security or recovery guidance. Keep row actions visible. Discovery names
+the selected artist once in its header.
 Compound link actions align to the start when wrapped.
 
 ## Do's and Don'ts

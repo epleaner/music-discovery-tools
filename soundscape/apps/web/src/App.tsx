@@ -18,7 +18,6 @@ import TopTrackList from './components/TopTrackList';
 import TopAlbumList from './components/TopAlbumList';
 import SiteViewer from './components/SiteViewer';
 import ResizablePanels from './components/ResizablePanels';
-import EveryNoiseViewer from './components/EveryNoiseViewer';
 import AgentSetup from './components/AgentSetup';
 import PairingScreen from './components/PairingScreen';
 import ScrapeSections from './components/ScrapeSections';
@@ -28,7 +27,6 @@ import Button from './components/Button';
 import PanelTab from './components/PanelTab';
 import EmptyState from './components/EmptyState';
 import Select from './components/Select';
-import { buildSimilarPanelModel } from './lib/app-right-panel';
 import { buildAppLayoutModel } from './lib/app-layout';
 import {
   createRecentTracksResource,
@@ -36,7 +34,6 @@ import {
   createTopTracksResource,
   createTopAlbumsResource,
   createSimilarArtistsResource,
-  createEveryNoiseResource,
 } from './lib/lastfm-resource';
 import {
   TIME_PERIOD_LABELS,
@@ -130,12 +127,6 @@ const Workspace: Component<{
   const topTracks = createTopTracksResource(username, period);
   const topAlbums = createTopAlbumsResource(username, period);
   const similarArtists = createSimilarArtistsResource(selectedArtist);
-  const everyNoiseGenre = createEveryNoiseResource(selectedArtist);
-  const rightPanelModel = createMemo(() =>
-    buildSimilarPanelModel({
-      selectedArtist: selectedArtist(),
-    })
-  );
   const appLayoutModel = createMemo(() => buildAppLayoutModel(username()));
 
   const recentAlbums = createMemo(() =>
@@ -618,15 +609,6 @@ const Workspace: Component<{
                     </div>
                   }
                 >
-                  <div class="section-content">
-                    <Show when={rightPanelModel().showSimilarArtists}>
-                      <EveryNoiseViewer
-                        genre={everyNoiseGenre.genre()}
-                        isLoading={everyNoiseGenre.isLoading()}
-                        error={everyNoiseGenre.error()}
-                      />
-                    </Show>
-                  </div>
                   <ArtistList
                     artists={similarArtists.artists()}
                     isLoading={similarArtists.isLoading()}

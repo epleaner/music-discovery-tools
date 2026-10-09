@@ -15,13 +15,8 @@ pnpm install
 
 ```bash
 VITE_LASTFM_API_KEY=your_lastfm_api_key
-VITE_CORSPROXY_API_KEY=your_corsproxy_browser_key
 VITE_API_URL=http://localhost:3001
 ```
-
-Every Noise requires the CORSPROXY browser key. See
-[web environment setup](apps/web/ENV_SETUP.md#every-noise-corsproxy) for domain
-registration, browser visibility and rebuild instructions.
 
 ### 3. Start Development
 
