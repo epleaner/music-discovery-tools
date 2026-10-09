@@ -1,6 +1,6 @@
 import { Component, For, Show } from 'solid-js';
 import type { RecentArtist, Track } from '@soundscape/types';
-import Button from './Button';
+import LookupActions from './LookupActions';
 import EmptyState from './EmptyState';
 import ErrorMessage from './ErrorMessage';
 import Artwork from './Artwork';
@@ -45,16 +45,10 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                   </span>
                 </span>
               </button>
-              <div class="list-actions">
-                <Button
-                  variant="link"
-                  title={`Search NTS for ${artist.name}`}
-                  aria-label={`Search NTS for ${artist.name}`}
-                  onClick={() => props.onNTSLookup?.(artist.name)}
-                >
-                  NTS
-                </Button>
-              </div>
+              <LookupActions
+                artist={artist.name}
+                onNTSLookup={props.onNTSLookup}
+              />
             </div>
           )}
         </For>

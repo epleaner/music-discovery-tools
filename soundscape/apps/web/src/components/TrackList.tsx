@@ -1,6 +1,6 @@
 import { Component, For, Show } from 'solid-js';
 import type { Track } from '@soundscape/types';
-import NTSTrackButton from './NTSTrackButton';
+import LookupActions from './LookupActions';
 import EmptyState from './EmptyState';
 import ErrorMessage from './ErrorMessage';
 import Artwork from './Artwork';
@@ -10,7 +10,7 @@ interface TrackListProps {
   isLoading?: boolean;
   error?: Error | null;
   onTrackClick?: (track: Track) => void;
-  onNTSLookup?: (track: Track) => void;
+  onNTSLookup?: (query: string) => void;
 }
 
 const TrackList: Component<TrackListProps> = (props) => {
@@ -53,13 +53,11 @@ const TrackList: Component<TrackListProps> = (props) => {
                 <span class="list-count">{formatDate(track)}</span>
               </span>
             </button>
-            <div class="list-actions">
-              <NTSTrackButton
-                track={track.name}
-                artist={track.artist['#text']}
-                onClick={() => props.onNTSLookup?.(track)}
-              />
-            </div>
+            <LookupActions
+              track={track.name}
+              artist={track.artist['#text']}
+              onNTSLookup={props.onNTSLookup}
+            />
           </div>
         )}
       </For>

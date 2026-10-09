@@ -10,10 +10,6 @@ export interface NTSLookupResult {
   imageUrl?: string;
 }
 
-export function getNTSTrackQuery(track: string, artist: string): string {
-  return `${artist} ${track}`;
-}
-
 function parseResult(value: unknown): NTSLookupResult | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return null;

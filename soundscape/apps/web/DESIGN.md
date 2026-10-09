@@ -130,7 +130,7 @@ shared `result-cover` recipe.
 | `EmptyState` / `ErrorMessage` | Operational copy only; status/alert semantics and canonical state treatment.                                                                                                                |
 | `ExternalLink`                | Accent link with safe external target; add the shared button variant class only for a button-shaped action.                                                                                 |
 | `GenreSelect`                 | Ark multi-select semantics, grouped and measured virtual results, search, clear, removal and shuffle.                                                                                       |
-| `NTSTrackButton`              | Visible label stays NTS; tooltip and accessible name retain artist and track. Both track lists search artist and track together as one query.                                               |
+| `LookupActions`               | Shared compact NTS/RYM row controls. Tracks use one artist-and-song query; artists use their name only. Matching link recipes, full accessible context and safe external RYM search.        |
 | `MenubarInstall`              | One real download link and native installation disclosure shared by Connect and Browser helper; prerequisites, security guidance and configured-server launch instructions stay consistent. |
 
 List primary actions are native buttons. NTS/RYM controls are siblings, never
