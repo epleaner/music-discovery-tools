@@ -623,6 +623,7 @@ const Workspace: Component<{
                       <EveryNoiseViewer
                         genre={everyNoiseGenre.genre()}
                         isLoading={everyNoiseGenre.isLoading()}
+                        error={everyNoiseGenre.error()}
                       />
                     </Show>
                   </div>

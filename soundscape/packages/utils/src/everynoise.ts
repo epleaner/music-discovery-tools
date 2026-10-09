@@ -1,7 +1,12 @@
 import type { EveryNoiseGenre } from '@soundscape/types';
 
 const EVERYNOISE_BASE_URL = 'https://everynoise.com';
-const CORS_PROXY = 'https://corsproxy.io/?';
+const CORS_PROXY = 'https://corsproxy.io/';
+let corsProxyApiKey = '';
+
+export function setCorsProxyApiKey(key: string) {
+  corsProxyApiKey = key.trim();
+}
 
 /**
  * Fetch genre information for an artist from Every Noise at Once
@@ -9,37 +14,34 @@ const CORS_PROXY = 'https://corsproxy.io/?';
 export async function fetchEveryNoiseGenre(
   artistName: string
 ): Promise<EveryNoiseGenre | null> {
-  try {
-    const targetUrl = `${EVERYNOISE_BASE_URL}/lookup.cgi?who=${encodeURIComponent(
-      artistName
-    )}&mode=map`;
-    const url = `${CORS_PROXY}${encodeURIComponent(targetUrl)}`;
-    const response = await fetch(url);
+  if (!corsProxyApiKey) {
+    throw new Error('CORSPROXY API key is not configured');
+  }
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch: ${response.statusText}`);
-    }
+  const targetUrl = `${EVERYNOISE_BASE_URL}/lookup.cgi?who=${encodeURIComponent(
+    artistName
+  )}&mode=map`;
+  const url = `${CORS_PROXY}?key=${encodeURIComponent(
+    corsProxyApiKey
+  )}&url=${encodeURIComponent(targetUrl)}`;
+  const response = await fetch(url);
 
-    const html = await response.text();
+  if (!response.ok) {
+    throw new Error(`Genre lookup failed (HTTP ${response.status})`);
+  }
 
-    // Parse the HTML to extract the genre link
-    // Looking for: <a href="engenremap-modernelectroacoustic.html" target=_parent>modern electroacoustic</a>
-    const linkMatch = html.match(
-      /<a\s+href="(engenremap-[^"]+\.html)"[^>]*>([^<]+)<\/a>/
-    );
+  const html = await response.text();
+  const linkMatch = html.match(
+    /<a\s+href="(engenremap-[^"]+\.html)"[^>]*>([^<]+)<\/a>/
+  );
 
-    if (!linkMatch) {
-      return null;
-    }
-
-    const [, href, genre] = linkMatch;
-
-    return {
-      genre: genre.trim(),
-      url: `${EVERYNOISE_BASE_URL}/${href}`,
-    };
-  } catch (error) {
-    console.error('Failed to fetch EveryNoise genre:', error);
+  if (!linkMatch) {
     return null;
   }
+
+  const [, href, genre] = linkMatch;
+  return {
+    genre: genre.trim(),
+    url: `${EVERYNOISE_BASE_URL}/${href}`,
+  };
 }

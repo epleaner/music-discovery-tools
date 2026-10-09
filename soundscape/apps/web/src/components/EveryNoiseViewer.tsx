@@ -5,6 +5,7 @@ import type { EveryNoiseGenre } from '@soundscape/types';
 interface EveryNoiseViewerProps {
   genre: EveryNoiseGenre | null;
   isLoading: boolean;
+  error: Error | null;
 }
 
 const EveryNoiseViewer: Component<EveryNoiseViewerProps> = (props) => {
@@ -24,7 +25,12 @@ const EveryNoiseViewer: Component<EveryNoiseViewerProps> = (props) => {
           Loading genre…
         </span>
       </Show>
-      <Show when={!props.isLoading && !props.genre}>
+      <Show when={!props.isLoading && props.error}>
+        <span class="status" role="alert">
+          {props.error!.message}
+        </span>
+      </Show>
+      <Show when={!props.isLoading && !props.genre && !props.error}>
         <span class="status" role="status">
           Genre unavailable
         </span>
