@@ -99,6 +99,13 @@ reset playback, and starts the new view at the top. Selection history preserves
 the listening mode and source choice; a new selection discards forward entries.
 Keep username/filter changes and selection reset in one URL update.
 
+RYM and Bandcamp share the same source-header and empty/status anatomy. Render
+`EmptyState` for a completed lookup with no results; omit empty action containers
+so they cannot introduce source-specific spacing.
+In Scrape, Recent scrapes occupies the full-height left column. Chart and URL
+controls, source metadata and results belong to the right column. Below `lg`,
+these columns stack in the same order with all controls and results reachable.
+
 Runtime inline styles are restricted to genuine data-dependent geometry: the
 split percentage and virtualized genre height/offsets. Static arbitrary-value
 utilities, literal colors, and per-screen visual overrides are not allowed.

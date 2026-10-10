@@ -4,6 +4,7 @@ import BandcampPlayer from './BandcampPlayer';
 import Button from './Button';
 import Chip from './Chip';
 import SourceLink from './SourceLink';
+import EmptyState from './EmptyState';
 
 interface BandcampResultsProps {
   releases: BandcampRelease[];
@@ -26,45 +27,57 @@ const BandcampResults: Component<BandcampResultsProps> = (props) => {
           {props.status}
         </div>
       </Show>
+      <Show when={!props.status && !props.album && props.releases.length === 0}>
+        <EmptyState>No results</EmptyState>
+      </Show>
 
-      <div class="result-actions">
-        <Show when={props.currentLabel && !props.isLabelResult}>
-          <SourceLink
-            href={props.currentLabel!.url}
-            base="https://bandcamp.com"
-          >
-            {props.currentLabel!.name}
-          </SourceLink>
-        </Show>
-        <Show when={props.showExploreLabel}>
-          <Button
-            onClick={() => props.onExploreLabel?.()}
-            variant="secondary"
-            class="max-w-full whitespace-normal text-left"
-            aria-label={
-              props.currentLabel
-                ? `Explore releases on ${props.currentLabel.name}`
-                : 'Explore label'
-            }
-          >
-            Explore label
-          </Button>
-        </Show>
-        <Show when={props.showRelated}>
-          <Button onClick={() => props.onRelated?.()} variant="secondary">
-            Related releases
-          </Button>
-        </Show>
-        <Show when={props.album}>
-          <SourceLink
-            href={props.album!.url}
-            base="https://bandcamp.com"
-            class="btn-secondary max-w-full whitespace-normal"
-          >
-            Buy / open on Bandcamp
-          </SourceLink>
-        </Show>
-      </div>
+      <Show
+        when={
+          (props.currentLabel && !props.isLabelResult) ||
+          props.showExploreLabel ||
+          props.showRelated ||
+          props.album
+        }
+      >
+        <div class="result-actions">
+          <Show when={props.currentLabel && !props.isLabelResult}>
+            <SourceLink
+              href={props.currentLabel!.url}
+              base="https://bandcamp.com"
+            >
+              {props.currentLabel!.name}
+            </SourceLink>
+          </Show>
+          <Show when={props.showExploreLabel}>
+            <Button
+              onClick={() => props.onExploreLabel?.()}
+              variant="secondary"
+              class="max-w-full whitespace-normal text-left"
+              aria-label={
+                props.currentLabel
+                  ? `Explore releases on ${props.currentLabel.name}`
+                  : 'Explore label'
+              }
+            >
+              Explore label
+            </Button>
+          </Show>
+          <Show when={props.showRelated}>
+            <Button onClick={() => props.onRelated?.()} variant="secondary">
+              Related releases
+            </Button>
+          </Show>
+          <Show when={props.album}>
+            <SourceLink
+              href={props.album!.url}
+              base="https://bandcamp.com"
+              class="btn-secondary max-w-full whitespace-normal"
+            >
+              Buy / open on Bandcamp
+            </SourceLink>
+          </Show>
+        </div>
+      </Show>
 
       <Show when={props.album}>
         <div class="space-y-4">

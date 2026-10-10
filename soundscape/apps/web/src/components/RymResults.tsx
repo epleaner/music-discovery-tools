@@ -1,6 +1,7 @@
 import { Component, For, Show } from 'solid-js';
 import Chip from './Chip';
 import SourceLink from './SourceLink';
+import EmptyState from './EmptyState';
 import type { RymEntry, RymAlbumDetail, RymLink } from '@soundscape/types';
 
 interface RymResultsProps {
@@ -30,6 +31,9 @@ const RymResults: Component<RymResultsProps> = (props) => {
         <div class="status break-words" role="status">
           {props.status}
         </div>
+      </Show>
+      <Show when={!props.status && !props.album && props.entries.length === 0}>
+        <EmptyState>No results</EmptyState>
       </Show>
 
       <Show when={props.entries.length > 0}>
