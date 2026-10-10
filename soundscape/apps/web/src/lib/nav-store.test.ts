@@ -4,6 +4,7 @@ import {
   appendOrReplace,
   deserialize,
   homeState,
+  moveHistory,
   serialize,
   type NavState,
   type NavView,
@@ -58,22 +59,78 @@ test('appendOrReplace drops forward history when branching', () => {
   for (let i = 0; i < 3; i++) {
     state = appendOrReplace(
       state,
-      { label: `View ${i}`, kind: 'tab', restore: { type: 'tab', panel: `p${i}` } },
-      `v${i}`,
+      {
+        label: `View ${i}`,
+        kind: 'tab',
+        restore: { type: 'tab', panel: `p${i}` },
+      },
+      `v${i}`
     );
   }
   assert.equal(state.stack.length, 4);
   assert.equal(state.index, 3);
 
-  const rewound = { ...state, index: 1 };
+  const rewound = moveHistory(moveHistory(state, -1), -1);
   const result = appendOrReplace(
     rewound,
     { label: 'New', kind: 'tab', restore: { type: 'tab', panel: 'new' } },
-    'new',
+    'new'
   );
 
   assert.equal(result.stack.length, 3);
   assert.equal(result.index, 2);
+  assert.deepEqual(
+    result.stack.map((view) => view.id),
+    ['home', 'v0', 'new']
+  );
+  assert.equal(moveHistory(result, 1), result);
+});
+
+test('selection history restores artist and album without losing forward entries', () => {
+  const artist = appendOrReplace(
+    homeState(home),
+    {
+      label: 'Hiroshi Yoshimura',
+      kind: 'item',
+      restore: {
+        type: 'item',
+        artist: 'Hiroshi Yoshimura',
+        itemKind: 'artist',
+      },
+    },
+    'artist'
+  );
+  const album = appendOrReplace(
+    artist,
+    {
+      label: 'Green',
+      kind: 'item',
+      restore: {
+        type: 'item',
+        artist: 'Hiroshi Yoshimura',
+        album: 'Green',
+        itemKind: 'album',
+      },
+    },
+    'album'
+  );
+
+  const previous = moveHistory(album, -1);
+  assert.deepEqual(
+    previous.stack[previous.index].restore,
+    artist.stack[1].restore
+  );
+  assert.equal(previous.stack, album.stack);
+  assert.equal(album.index, 2);
+
+  const next = moveHistory(previous, 1);
+  assert.deepEqual(next.stack[next.index].restore, album.stack[2].restore);
+  assert.equal(next.stack, album.stack);
+  assert.equal(moveHistory(next, 1), next);
+
+  const first = moveHistory(previous, -1);
+  assert.equal(first.stack[first.index], home);
+  assert.equal(moveHistory(first, -1), first);
 });
 
 test('homeState builds a single-entry stack at index 0', () => {

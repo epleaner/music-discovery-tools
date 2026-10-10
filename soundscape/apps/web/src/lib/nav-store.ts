@@ -51,6 +51,12 @@ export function appendOrReplace(
   return { stack, index: stack.length - 1 };
 }
 
+export function moveHistory(state: NavState, direction: -1 | 1): NavState {
+  const index = state.index + direction;
+  if (index < 0 || index >= state.stack.length) return state;
+  return { stack: state.stack, index };
+}
+
 export function homeState(homeView: NavView): NavState {
   return { stack: [homeView], index: 0 };
 }

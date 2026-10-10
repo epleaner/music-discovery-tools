@@ -53,6 +53,10 @@ Keep the persistent header to the wordmark and Account. Last.fm identity,
 connection and appearance live together in the existing account menu. Submitting
 identity or closing its connection dialog returns focus to Account.
 
+Top precedes Recent and is the default listening view, including after submitting
+a Last.fm username. Explicit Recent bookmarks still restore Recent; entity and
+period choices retain their existing behavior.
+
 Shell, navigation, list rows and section boundaries share one horizontal gutter:
 `px-6`, increasing to `px-8` at `sm`. The boundary owns that gutter; nested result
 rows and primary list buttons do not add another inset. Workspace/listening tabs
@@ -86,9 +90,14 @@ Rows do not perform extended-info lookups or load cached Last.fm metadata.
 
 The desktop shell has a rem-based minimum height (`min-h-workspace`); short or
 text-enlarged windows scroll the document rather than collapsing embedded views.
-Discovery source sections size to their content under one panel scroll owner.
-Discovery shows the current entity without breadcrumbs; URL-backed selection and
-browser history remain intact.
+Discovery has one content scroll owner. Its header shows the current artist and
+album context without breadcrumbs, with Back/Forward selection controls and
+direct Similar, RYM and Bandcamp views above the content.
+The `focus` URL parameter remembers the selected view. Keep source results and
+audio mounted while hiding inactive views: switching views does not rescrape or
+reset playback, and starts the new view at the top. Selection history preserves
+the listening mode and source choice; a new selection discards forward entries.
+Keep username/filter changes and selection reset in one URL update.
 
 Runtime inline styles are restricted to genuine data-dependent geometry: the
 split percentage and virtualized genre height/offsets. Static arbitrary-value

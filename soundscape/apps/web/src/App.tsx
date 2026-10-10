@@ -4,10 +4,12 @@ import {
   Switch,
   Match,
   For,
+  createEffect,
   createMemo,
   createSignal,
   onMount,
   onCleanup,
+  on,
 } from 'solid-js';
 import UsernameInput from './components/UsernameInput';
 import TrackList from './components/TrackList';
@@ -51,7 +53,8 @@ import { useTheme, type Theme, type ColorTheme } from './lib/use-theme';
 import { getSession, logout, type SessionUser } from './lib/auth';
 import type { NTSLookupType } from './lib/nts';
 
-type View = 'recent' | 'top' | 'similar';
+type View = 'recent' | 'top';
+type FocusView = 'similar' | 'rym' | 'bandcamp';
 
 interface AppState extends Record<string, string> {
   username: string;
@@ -59,6 +62,7 @@ interface AppState extends Record<string, string> {
   subview: string;
   topSubview: string;
   period: string;
+  focus: string;
   sites: string; // JSON-encoded array of sites
 }
 
@@ -77,10 +81,11 @@ const Workspace: Component<{
 
   const [state, updateState] = useSearchState<AppState>({
     username: 'pleanut',
-    view: 'recent',
+    view: 'top',
     subview: 'tracks',
     topSubview: 'artists',
     period: '7day',
+    focus: 'similar',
     sites: JSON.stringify(defaultSites),
   });
 
@@ -103,6 +108,32 @@ const Workspace: Component<{
     const restore = nav.lastItem()?.restore;
     return restore?.type === 'item' ? restore.artist : '';
   };
+  const focusView = (): FocusView => {
+    const view = state().focus;
+    return view === 'rym' || view === 'bandcamp' ? view : 'similar';
+  };
+  const focusSource = () => {
+    const view = focusView();
+    return view === 'similar' ? null : view;
+  };
+  const focusHeading = createMemo(() => {
+    const restore = nav.lastItem()?.restore;
+    if (restore?.type !== 'item') return 'Artist focus';
+    return restore.album
+      ? `${restore.artist} · ${restore.album}`
+      : restore.artist;
+  });
+  const focusTabs: { id: FocusView; label: string }[] = [
+    { id: 'similar', label: 'Similar' },
+    { id: 'rym', label: 'RYM' },
+    { id: 'bandcamp', label: 'Bandcamp' },
+  ];
+  let focusScroll: HTMLDivElement | undefined;
+  createEffect(
+    on([() => nav.lastItem()?.id, focusView], () => {
+      if (focusScroll) focusScroll.scrollTop = 0;
+    })
+  );
   const sitesString = () => state().sites;
 
   // Parse sites only when the sites string actually changes
@@ -139,10 +170,10 @@ const Workspace: Component<{
   const handleUsernameSubmit = (newUsername: string) => {
     updateState({
       username: newUsername,
-      view: 'recent',
+      view: 'top',
       subview: 'tracks',
+      ...nav.homeParams,
     });
-    nav.home();
     recentTracks.reset();
   };
 
@@ -176,23 +207,19 @@ const Workspace: Component<{
   };
 
   const tabs: { id: View; label: string }[] = [
-    { id: 'recent', label: 'Recent' },
     { id: 'top', label: 'Top' },
+    { id: 'recent', label: 'Recent' },
   ];
   const selectHistoryView = (view: View) => {
-    if (view === 'recent' || view === 'top') {
-      const entityType =
-        currentView() === 'top'
-          ? topViewType()
-          : (recentViewType() as RecentViewType);
-      updateState({
-        view,
-        subview: entityType,
-        topSubview: entityType,
-      });
-      return;
-    }
-    updateState({ view });
+    const entityType =
+      currentView() === 'top'
+        ? topViewType()
+        : (recentViewType() as RecentViewType);
+    updateState({
+      view,
+      subview: entityType,
+      topSubview: entityType,
+    });
   };
 
   const selectEntityType = (entityType: RecentViewType) => {
@@ -596,11 +623,45 @@ const Workspace: Component<{
           rightPanel={
             <div class="workspace-panel flex-1">
               <div class="workspace-tabs">
-                <h2 class="panel-heading" title={selectedArtist() || undefined}>
-                  <span class="truncate">{selectedArtist() || 'Similar'}</span>
+                <h2 class="panel-heading flex-1" title={focusHeading()}>
+                  <span class="truncate">{focusHeading()}</span>
                 </h2>
+                <nav class="toolbar" aria-label="Selection history">
+                  <Button
+                    variant="icon"
+                    aria-label="Back"
+                    title="Back"
+                    disabled={!nav.canGoBack()}
+                    onClick={nav.back}
+                  >
+                    ←
+                  </Button>
+                  <Button
+                    variant="icon"
+                    aria-label="Forward"
+                    title="Forward"
+                    disabled={!nav.canGoForward()}
+                    onClick={nav.forward}
+                  >
+                    →
+                  </Button>
+                </nav>
               </div>
-              <div class="panel-scroll">
+              <nav class="filter-bar" aria-label="Artist details">
+                <For each={focusTabs}>
+                  {(tab) => (
+                    <PanelTab
+                      active={focusView() === tab.id}
+                      underline
+                      disabled={!selectedArtist()}
+                      onClick={() => updateState({ focus: tab.id })}
+                    >
+                      {tab.label}
+                    </PanelTab>
+                  )}
+                </For>
+              </nav>
+              <div class="panel-scroll" ref={focusScroll}>
                 <Show
                   when={selectedArtist()}
                   fallback={
@@ -609,25 +670,29 @@ const Workspace: Component<{
                     </div>
                   }
                 >
-                  <ArtistList
-                    artists={similarArtists.artists()}
-                    isLoading={similarArtists.isLoading()}
-                    error={similarArtists.error()}
-                    onArtistClick={handleArtistClick}
-                    onNTSLookup={(artistName) =>
-                      handleNTSLookup(artistName, 'artist')
-                    }
-                    showMatch
-                  />
-                </Show>
-                <Show when={selectedArtist()}>
+                  <div id="focus-similar" hidden={focusView() !== 'similar'}>
+                    <ArtistList
+                      artists={similarArtists.artists()}
+                      isLoading={similarArtists.isLoading()}
+                      error={similarArtists.error()}
+                      onArtistClick={handleArtistClick}
+                      onNTSLookup={(artistName) =>
+                        handleNTSLookup(artistName, 'artist')
+                      }
+                      showMatch
+                    />
+                  </div>
                   <Show
                     when={props.user}
-                    fallback={renderConnectNotice(
-                      'Connect for RYM and Bandcamp matches.'
-                    )}
+                    fallback={
+                      <div hidden={focusView() === 'similar'}>
+                        {renderConnectNotice(
+                          'Connect for RYM and Bandcamp matches.'
+                        )}
+                      </div>
+                    }
                   >
-                    <ScrapeSections />
+                    <ScrapeSections activeSource={focusSource()} />
                   </Show>
                 </Show>
               </div>

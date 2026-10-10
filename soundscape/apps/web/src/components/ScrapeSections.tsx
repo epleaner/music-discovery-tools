@@ -18,7 +18,9 @@ type Item = { artist: string; album?: string; itemKind: 'album' | 'artist' };
 const itemKey = (item: Item) =>
   `${item.artist}|${item.album ?? ''}|${item.itemKind}`;
 
-const ScrapeSections: Component = () => {
+const ScrapeSections: Component<{
+  activeSource: 'rym' | 'bandcamp' | null;
+}> = (props) => {
   const nav = useNav();
   const [rymStatus, setRymStatus] = createSignal<string | null>(null);
   const [rymReqId, setRymReqId] = createSignal<string | null>(null);
@@ -199,7 +201,11 @@ const ScrapeSections: Component = () => {
 
   return (
     <>
-      <section class="surface-section shrink-0">
+      <section
+        id="focus-rym"
+        class="surface-section shrink-0"
+        hidden={props.activeSource !== 'rym'}
+      >
         <div class="section-header">
           <h2 class="section-title">RYM</h2>
           <CacheAge
@@ -226,7 +232,11 @@ const ScrapeSections: Component = () => {
           />
         </div>
       </section>
-      <section class="surface-section shrink-0">
+      <section
+        id="focus-bandcamp"
+        class="surface-section shrink-0"
+        hidden={props.activeSource !== 'bandcamp'}
+      >
         <div class="section-header">
           <h2 class="section-title">Bandcamp</h2>
           <CacheAge
