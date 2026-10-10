@@ -336,6 +336,13 @@ const ScrapeTool: Component = () => {
     return /\/album\/|\/track\//.test(currentUrl);
   };
 
+  const activeFetchedAt = () =>
+    activeSource() === 'bandcamp'
+      ? bcFetchedAt()
+      : activeSource() === 'rym'
+        ? rymFetchedAt()
+        : null;
+
   onMount(() => void loadRecentScrapes());
   onCleanup(() => cancelScrape());
 
@@ -538,19 +545,20 @@ const ScrapeTool: Component = () => {
           </div>
         </div>
         <div class="panel-scroll">
-          <div class="section-header justify-end">
-            <CacheAge
-              fetchedAt={
-                activeSource() === 'bandcamp' ? bcFetchedAt() : rymFetchedAt()
-              }
-              onRefresh={() => {
-                const target = url();
-                if (activeSource() === 'rym' && target) scrapeRym(target, true);
-                if (activeSource() === 'bandcamp' && target)
-                  scrapeBandcampUrl(target, pendingMode(), true);
-              }}
-            />
-          </div>
+          <Show when={activeFetchedAt()}>
+            <div class="section-header justify-end">
+              <CacheAge
+                fetchedAt={activeFetchedAt()}
+                onRefresh={() => {
+                  const target = url();
+                  if (activeSource() === 'rym' && target)
+                    scrapeRym(target, true);
+                  if (activeSource() === 'bandcamp' && target)
+                    scrapeBandcampUrl(target, pendingMode(), true);
+                }}
+              />
+            </div>
+          </Show>
           <div class="section-content">
             <Show when={activeSource() === 'rym'}>
               <RymResults

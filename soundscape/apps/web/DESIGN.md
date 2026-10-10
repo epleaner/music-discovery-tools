@@ -105,6 +105,8 @@ so they cannot introduce source-specific spacing.
 In Scrape, Recent scrapes occupies the full-height left column. Chart and URL
 controls, source metadata and results belong to the right column. Below `lg`,
 these columns stack in the same order with all controls and results reachable.
+Render the scrape metadata row only when the active source has a fetched timestamp;
+initial, loading and error states without metadata must not reserve a blank row.
 
 Runtime inline styles are restricted to genuine data-dependent geometry: the
 split percentage and virtualized genre height/offsets. Static arbitrary-value
