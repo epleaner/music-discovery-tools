@@ -1,12 +1,10 @@
 import type { Component } from 'solid-js';
 import { getRYMSearchUrl } from '@soundscape/utils';
-import Button from './Button';
 import ExternalLink from './ExternalLink';
 
 interface LookupActionsProps {
   artist: string;
   track?: string;
-  onNTSLookup?: (query: string) => void;
 }
 
 const LookupActions: Component<LookupActionsProps> = (props) => {
@@ -19,14 +17,14 @@ const LookupActions: Component<LookupActionsProps> = (props) => {
 
   return (
     <div class="list-actions">
-      <Button
-        variant="link"
+      <ExternalLink
+        href={`https://www.nts.live/find?q=${encodeURIComponent(query())}`}
+        class="btn btn-link"
         title={`Search NTS for ${description()}`}
         aria-label={`Search NTS for ${description()}`}
-        onClick={() => props.onNTSLookup?.(query())}
       >
         NTS
-      </Button>
+      </ExternalLink>
       <ExternalLink
         href={getRYMSearchUrl(query())}
         class="btn btn-link"

@@ -74,11 +74,10 @@ cancel their section's gutter; result rows restore the shared content inset.
 The listening/discovery split is resizable at `lg` and above, using pointer or
 arrow/Home/End keys. Below `lg`, panels stack; the listening list stays bounded
 and scrollable so discovery is reachable without traversing the entire history.
-Sites, Scrape and NTS occupy the full workspace, without an empty discovery column.
-NTS follows Scrape in the primary navigation; row lookup actions open it with the
-artist/track preset. Its search stays mounted while switching workspace tabs.
+Sites and Scrape occupy the full workspace, without an empty discovery column.
 Listening and result rows reflow by the panel's inline-size container, not the
-window width.
+window width. NTS/RYM lookup actions are safe external links. NTS opens `/find?q=`
+with the artist alone or combined artist-and-track query; there is no in-app NTS tab.
 
 Listening/discovery rows compose title, artist and time/count as inline,
 baseline-aligned `list-main` fields from their incoming listing responses.
@@ -149,15 +148,15 @@ shared `result-cover` recipe.
 | `ExternalLink`                | Accent link with safe external target; add the shared button variant class only for a button-shaped action.                                                                                 |
 | `SourceLink`                  | Captured HTTP(S) metadata URL resolved against its source, composing `ExternalLink`; missing, malformed or non-web destinations stay readable text.                                         |
 | `GenreSelect`                 | Ark multi-select semantics, grouped and measured virtual results, search, clear, removal and shuffle.                                                                                       |
-| `LookupActions`               | Shared compact NTS/RYM row controls. Tracks use one artist-and-song query; artists use their name only. Matching link recipes, full accessible context and safe external RYM search.        |
+| `LookupActions`               | Shared compact NTS/RYM external-link row. Tracks use one encoded artist-and-song NTS query; artists use their name only. Accessible context and safe external-link behavior.                |
 | `MenubarInstall`              | One real download link and native installation disclosure shared by Connect and Browser helper; prerequisites, security guidance and configured-server launch instructions stay consistent. |
 
-List primary actions are native buttons. NTS/RYM controls are siblings, never
-nested buttons. Preserve source distinctions: RYM has ratings; Bandcamp has
-playback/purchase/label exploration; NTS links externally. Minimize copy without
-removing security or recovery guidance. Keep row actions visible. Discovery names
-the selected artist once in its header.
-Compound link actions align to the start when wrapped.
+List primary actions are native buttons. NTS/RYM lookups are sibling external
+links, never nested buttons. Preserve source distinctions: RYM has ratings;
+Bandcamp has playback/purchase/label exploration; NTS opens its public search
+page with the row's query. Minimize copy without removing security or recovery
+guidance. Keep row actions visible. Discovery names the selected artist once in
+its header. Compound link actions align to the start when wrapped.
 
 RYM and Bandcamp details link titles, artists, genres/tags, descriptors, tracks
 and labels when their source provides a destination. Rating/review statistics

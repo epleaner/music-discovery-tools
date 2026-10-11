@@ -10,7 +10,6 @@ interface ArtistListProps {
   isLoading?: boolean;
   error?: Error | null;
   onArtistClick?: (artistName: string) => void;
-  onNTSLookup?: (artistName: string) => void;
   showPlaycount?: boolean;
   showMatch?: boolean;
 }
@@ -78,10 +77,7 @@ const ArtistList: Component<ArtistListProps> = (props) => {
                     </span>
                   </span>
                 </button>
-                <LookupActions
-                  artist={artist.name}
-                  onNTSLookup={props.onNTSLookup}
-                />
+                <LookupActions artist={artist.name} />
               </div>
             )}
           </For>

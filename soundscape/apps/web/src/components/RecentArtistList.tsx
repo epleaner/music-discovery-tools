@@ -11,7 +11,6 @@ interface RecentArtistListProps {
   isLoading?: boolean;
   error?: Error | null;
   onArtistRowClick?: (artist: RecentArtist) => void;
-  onNTSLookup?: (artistName: string) => void;
 }
 
 const RecentArtistList: Component<RecentArtistListProps> = (props) => {
@@ -45,10 +44,7 @@ const RecentArtistList: Component<RecentArtistListProps> = (props) => {
                   </span>
                 </span>
               </button>
-              <LookupActions
-                artist={artist.name}
-                onNTSLookup={props.onNTSLookup}
-              />
+              <LookupActions artist={artist.name} />
             </div>
           )}
         </For>

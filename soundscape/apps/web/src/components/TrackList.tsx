@@ -10,7 +10,6 @@ interface TrackListProps {
   isLoading?: boolean;
   error?: Error | null;
   onTrackClick?: (track: Track) => void;
-  onNTSLookup?: (query: string) => void;
 }
 
 const TrackList: Component<TrackListProps> = (props) => {
@@ -53,11 +52,7 @@ const TrackList: Component<TrackListProps> = (props) => {
                 <span class="list-count">{formatDate(track)}</span>
               </span>
             </button>
-            <LookupActions
-              track={track.name}
-              artist={track.artist['#text']}
-              onNTSLookup={props.onNTSLookup}
-            />
+            <LookupActions track={track.name} artist={track.artist['#text']} />
           </div>
         )}
       </For>

@@ -10,7 +10,6 @@ interface TopTrackListProps {
   isLoading: boolean;
   error: Error | null;
   onTrackClick?: (track: TopTrack) => void;
-  onNTSLookup?: (query: string) => void;
 }
 
 const TopTrackList: Component<TopTrackListProps> = (props) => {
@@ -47,11 +46,7 @@ const TopTrackList: Component<TopTrackListProps> = (props) => {
                   <span class="list-count">{track.playcount} plays</span>
                 </span>
               </button>
-              <LookupActions
-                track={track.name}
-                artist={track.artist.name}
-                onNTSLookup={props.onNTSLookup}
-              />
+              <LookupActions track={track.name} artist={track.artist.name} />
             </div>
           )}
         </For>

@@ -24,7 +24,6 @@ import AgentSetup from './components/AgentSetup';
 import PairingScreen from './components/PairingScreen';
 import ScrapeSections from './components/ScrapeSections';
 import ScrapeTool from './components/ScrapeTool';
-import NTSLookup, { type NTSLookupPreset } from './components/NTSLookup';
 import Button from './components/Button';
 import PanelTab from './components/PanelTab';
 import EmptyState from './components/EmptyState';
@@ -51,7 +50,6 @@ import { useSearchState } from './lib/use-search-state';
 import { useNav } from './lib/use-nav';
 import { useTheme, type Theme, type ColorTheme } from './lib/use-theme';
 import { getSession, logout, type SessionUser } from './lib/auth';
-import type { NTSLookupType } from './lib/nts';
 
 type View = 'recent' | 'top';
 type FocusView = 'similar' | 'rym' | 'bandcamp';
@@ -92,9 +90,8 @@ const Workspace: Component<{
   const nav = useNav();
 
   const [bottomTab, setBottomTab] = createSignal<
-    'history' | 'sites' | 'scrape' | 'nts'
+    'history' | 'sites' | 'scrape'
   >('history');
-  const [ntsPreset, setNtsPreset] = createSignal<NTSLookupPreset>();
 
   const { theme, setTheme, colorTheme, setColorTheme } = useTheme();
 
@@ -200,10 +197,6 @@ const Workspace: Component<{
 
   const handleArtistResolveClick = (artist: RecentArtist) => {
     nav.navigateToItem({ artist: artist.name, itemKind: 'artist' });
-  };
-  const handleNTSLookup = (query: string, type: NTSLookupType) => {
-    setBottomTab('nts');
-    setNtsPreset({ query, type });
   };
 
   const tabs: { id: View; label: string }[] = [
@@ -400,13 +393,6 @@ const Workspace: Component<{
         >
           Scrape
         </PanelTab>
-        <PanelTab
-          underline
-          active={bottomTab() === 'nts'}
-          onClick={() => setBottomTab('nts')}
-        >
-          NTS
-        </PanelTab>
       </nav>
       <Show when={appLayoutModel().showMainLayout}>
         <ResizablePanels
@@ -497,9 +483,6 @@ const Workspace: Component<{
                               isLoading={recentTracks.isLoading()}
                               error={recentTracks.error()}
                               onTrackClick={handleTrackResolveClick}
-                              onNTSLookup={(query) =>
-                                handleNTSLookup(query, 'track')
-                              }
                             />
                           </Match>
                           <Match when={recentViewType() === 'albums'}>
@@ -518,9 +501,6 @@ const Workspace: Component<{
                               isLoading={recentTracks.isLoading()}
                               error={recentTracks.error()}
                               onArtistRowClick={handleArtistResolveClick}
-                              onNTSLookup={(artistName) =>
-                                handleNTSLookup(artistName, 'artist')
-                              }
                             />
                           </Match>
                         </Switch>
@@ -550,9 +530,6 @@ const Workspace: Component<{
                               isLoading={topArtists.isLoading()}
                               error={topArtists.error()}
                               onArtistClick={handleArtistClick}
-                              onNTSLookup={(artistName) =>
-                                handleNTSLookup(artistName, 'artist')
-                              }
                               showPlaycount
                             />
                           </Match>
@@ -566,9 +543,6 @@ const Workspace: Component<{
                                   artist: track.artist.name,
                                   itemKind: 'artist',
                                 })
-                              }
-                              onNTSLookup={(query) =>
-                                handleNTSLookup(query, 'track')
                               }
                             />
                           </Match>
@@ -591,12 +565,6 @@ const Workspace: Component<{
                     </Switch>
                   </Show>
                 </div>
-              </div>
-              <div
-                class="workspace-panel flex-1"
-                hidden={bottomTab() !== 'nts'}
-              >
-                <NTSLookup preset={ntsPreset()} />
               </div>
               <Switch>
                 <Match when={bottomTab() === 'sites'}>
@@ -676,9 +644,6 @@ const Workspace: Component<{
                       isLoading={similarArtists.isLoading()}
                       error={similarArtists.error()}
                       onArtistClick={handleArtistClick}
-                      onNTSLookup={(artistName) =>
-                        handleNTSLookup(artistName, 'artist')
-                      }
                       showMatch
                     />
                   </div>
