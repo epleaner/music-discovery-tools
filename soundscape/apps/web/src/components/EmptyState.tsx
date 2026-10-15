@@ -8,7 +8,8 @@ const EmptyState: Component<EmptyStateProps> = (props) => {
   return (
     <div
       {...rest}
-      class={`text-xs text-fg-muted ${local.class ?? ''}`}
+      role={rest.role ?? 'status'}
+      class={`empty-state ${local.class ?? ''}`}
     />
   );
 };

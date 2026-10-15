@@ -1,6 +1,7 @@
 import { Component, For, Show } from 'solid-js';
 import Chip from './Chip';
-import ExternalLink from './ExternalLink';
+import SourceLink from './SourceLink';
+import EmptyState from './EmptyState';
 import type { RymEntry, RymAlbumDetail, RymLink } from '@soundscape/types';
 
 interface RymResultsProps {
@@ -9,13 +10,15 @@ interface RymResultsProps {
   status: string | null;
 }
 
-const RymLinkList: Component<{ links?: RymLink[]; class?: string }> = (props) => (
-  <div class={`flex flex-wrap gap-x-2 gap-y-1 ${props.class ?? ''}`}>
+const RymLinkList: Component<{ links?: RymLink[]; class?: string }> = (
+  props
+) => (
+  <div class={`result-actions ${props.class ?? ''}`}>
     <For each={props.links ?? []}>
       {(link) => (
-        <ExternalLink href={link.url} class="text-accent hover:underline">
+        <SourceLink href={link.url} base="https://rateyourmusic.com">
           {link.name}
-        </ExternalLink>
+        </SourceLink>
       )}
     </For>
   </div>
@@ -25,117 +28,222 @@ const RymResults: Component<RymResultsProps> = (props) => {
   return (
     <>
       <Show when={props.status}>
-        <div class="text-fg-muted">{props.status}</div>
+        <div class="status break-words" role="status">
+          {props.status}
+        </div>
+      </Show>
+      <Show when={!props.status && !props.album && props.entries.length === 0}>
+        <EmptyState>No results</EmptyState>
       </Show>
 
       <Show when={props.entries.length > 0}>
-        <div class="overflow-x-auto">
-          <table class="w-full border-collapse text-xs">
-            <thead>
-              <tr class="border-b border-border text-fg-muted">
-                <th class="text-left py-1 pr-2 font-medium">Artist</th>
-                <th class="text-left py-1 pr-2 font-medium">Album</th>
-                <th class="text-left py-1 pr-2 font-medium">Release date</th>
-                <th class="text-left py-1 pr-2 font-medium">Genres</th>
-                <th class="text-left py-1 pr-2 font-medium">Subgenres</th>
-                <th class="text-left py-1 pr-2 font-medium">Rating</th>
-                <th class="text-left py-1 pr-2 font-medium">Ratings</th>
-                <th class="text-left py-1 pr-2 font-medium">Reviews</th>
-                <th class="text-left py-1 font-medium">Links</th>
-              </tr>
-            </thead>
-            <tbody>
-              <For each={props.entries}>
-                {(entry) => (
-                  <tr class="border-b border-border hover:bg-bg-muted align-top">
-                    <td class="py-1 pr-2">
+        <div class="result-list">
+          <For each={props.entries}>
+            {(entry) => (
+              <article class="result-row">
+                <div class="result-main">
+                  <h3 class="result-title break-words">
+                    <SourceLink
+                      href={entry.albumUrl || entry.path}
+                      base="https://rateyourmusic.com"
+                    >
+                      {entry.album}
+                    </SourceLink>
+                  </h3>
+                  <div class="result-meta break-words">
+                    <SourceLink
+                      href={entry.artistUrl}
+                      base="https://rateyourmusic.com"
+                    >
+                      {entry.artist}
+                    </SourceLink>
+                  </div>
+                  <Show when={entry.date}>
+                    <div class="result-meta">{entry.date}</div>
+                  </Show>
+                  <Show when={entry.genreLinks?.length || entry.genres?.length}>
+                    <div class="result-meta break-words">
                       <Show
-                        when={entry.artistUrl}
-                        fallback={entry.artist}
+                        when={entry.genres?.length}
+                        fallback={<RymLinkList links={entry.genreLinks} />}
                       >
-                        {(url) => (
-                          <ExternalLink href={url()} class="text-accent hover:underline">
-                            {entry.artist}
-                          </ExternalLink>
-                        )}
+                        <div class="result-actions">
+                          <For each={entry.genres}>
+                            {(genre) => (
+                              <SourceLink
+                                href={
+                                  (
+                                    entry.genreLinks?.find(
+                                      (link) => link.name === genre
+                                    ) ??
+                                    entry.subgenreLinks?.find(
+                                      (link) => link.name === genre
+                                    )
+                                  )?.url
+                                }
+                                base="https://rateyourmusic.com"
+                              >
+                                {genre}
+                              </SourceLink>
+                            )}
+                          </For>
+                        </div>
                       </Show>
-                    </td>
-                    <td class="py-1 pr-2">
-                      <Show
-                        when={entry.albumUrl ?? entry.path}
-                        fallback={entry.album}
+                    </div>
+                  </Show>
+                  <Show
+                    when={entry.subgenreLinks?.length && !entry.genres?.length}
+                  >
+                    <RymLinkList
+                      links={entry.subgenreLinks}
+                      class="result-meta"
+                    />
+                  </Show>
+                  <div class="result-actions result-meta numeric">
+                    <Show when={entry.avgRating != null}>
+                      <SourceLink
+                        href={entry.albumUrl || entry.path}
+                        base="https://rateyourmusic.com"
                       >
-                        {(url) => (
-                          <ExternalLink
-                            href={url().startsWith('http') ? url() : `https://rateyourmusic.com${url()}`}
-                            class="text-accent hover:underline"
-                          >
-                            {entry.album}
-                          </ExternalLink>
-                        )}
-                      </Show>
-                    </td>
-                    <td class="py-1 pr-2 text-fg-muted whitespace-nowrap">
-                      {entry.date ?? ''}
-                    </td>
-                    <td class="py-1 pr-2 text-fg-muted">
-                      <Show
-                        when={entry.genreLinks?.length}
-                        fallback={(entry.genres ?? []).join(', ')}
+                        Rating {entry.avgRating}
+                      </SourceLink>
+                    </Show>
+                    <Show when={entry.ratings != null}>
+                      <SourceLink
+                        href={entry.albumUrl || entry.path}
+                        base="https://rateyourmusic.com"
                       >
-                        <RymLinkList links={entry.genreLinks} />
-                      </Show>
-                    </td>
-                    <td class="py-1 pr-2 text-fg-muted">
-                      <RymLinkList links={entry.subgenreLinks} />
-                    </td>
-                    <td class="py-1 pr-2 text-fg-muted whitespace-nowrap">
-                      {entry.avgRating ?? ''}
-                    </td>
-                    <td class="py-1 pr-2 text-fg-muted whitespace-nowrap">
-                      {entry.ratings ?? ''}
-                    </td>
-                    <td class="py-1 pr-2 text-fg-muted whitespace-nowrap">
-                      {entry.reviews ?? ''}
-                    </td>
-                    <td class="py-1 text-fg-muted">
-                      <RymLinkList links={entry.mediaLinks} />
-                    </td>
-                  </tr>
-                )}
-              </For>
-            </tbody>
-          </table>
+                        {entry.ratings} ratings
+                      </SourceLink>
+                    </Show>
+                    <Show when={entry.reviews != null}>
+                      <SourceLink
+                        href={entry.albumUrl || entry.path}
+                        base="https://rateyourmusic.com"
+                      >
+                        {entry.reviews} reviews
+                      </SourceLink>
+                    </Show>
+                  </div>
+                  <Show when={entry.mediaLinks?.length}>
+                    <RymLinkList links={entry.mediaLinks} />
+                  </Show>
+                  <Show
+                    when={
+                      entry.bandcampUrl &&
+                      !entry.mediaLinks?.some(
+                        (link) => link.url === entry.bandcampUrl
+                      )
+                    }
+                  >
+                    <SourceLink
+                      href={entry.bandcampUrl}
+                      base="https://bandcamp.com"
+                    >
+                      Bandcamp
+                    </SourceLink>
+                  </Show>
+                </div>
+              </article>
+            )}
+          </For>
         </div>
       </Show>
 
       <Show when={props.album}>
-        <div class="flex flex-col gap-2">
-          <div class="font-medium text-fg leading-tight">{props.album!.title}</div>
-          <div class="text-fg-muted">{props.album!.artist}</div>
+        <div class="result-main">
+          <h3 class="entity-heading break-words">
+            <SourceLink
+              href={props.album!.url}
+              base="https://rateyourmusic.com"
+            >
+              {props.album!.title}
+            </SourceLink>
+          </h3>
+          <div class="result-meta break-words">
+            <SourceLink href={props.album!.artistUrl} base={props.album!.url}>
+              {props.album!.artist}
+            </SourceLink>
+          </div>
           <Show when={props.album!.releaseDate}>
-            <div class="text-fg-subtle">{props.album!.releaseDate}</div>
+            <div class="result-meta">{props.album!.releaseDate}</div>
           </Show>
           <Show when={props.album!.genres && props.album!.genres!.length > 0}>
-            <div class="flex flex-wrap gap-1">
+            <div class="result-actions">
               <For each={props.album!.genres}>
-                {(genre) => <Chip>{genre}</Chip>}
+                {(genre) => (
+                  <Chip>
+                    <SourceLink
+                      href={
+                        props.album!.genreLinks?.find(
+                          (link) => link.name === genre
+                        )?.url
+                      }
+                      base={props.album!.url}
+                    >
+                      {genre}
+                    </SourceLink>
+                  </Chip>
+                )}
               </For>
             </div>
           </Show>
           <Show when={props.album!.avgRating != null}>
-            <div class="text-fg-muted">
-              {props.album!.avgRating!.toFixed(2)}
-              <Show when={props.album!.ratings != null}> ({props.album!.ratings} ratings)</Show>
+            <div class="result-meta numeric">
+              <SourceLink
+                href={props.album!.url}
+                base="https://rateyourmusic.com"
+              >
+                {props.album!.avgRating!.toFixed(2)}
+                <Show when={props.album!.ratings != null}>
+                  {' '}
+                  ({props.album!.ratings} ratings)
+                </Show>
+              </SourceLink>
             </div>
           </Show>
-          <Show when={props.album!.descriptors && props.album!.descriptors!.length > 0}>
-            <div class="text-fg-subtle">{props.album!.descriptors!.join(', ')}</div>
+          <Show
+            when={
+              props.album!.descriptors && props.album!.descriptors!.length > 0
+            }
+          >
+            <div class="subtle-text break-words">
+              <For each={props.album!.descriptors}>
+                {(descriptor, i) => (
+                  <>
+                    <Show when={i() > 0}>, </Show>
+                    <SourceLink
+                      href={
+                        props.album!.descriptorLinks?.find(
+                          (link) => link.name === descriptor
+                        )?.url
+                      }
+                      base={props.album!.url}
+                    >
+                      {descriptor}
+                    </SourceLink>
+                  </>
+                )}
+              </For>
+            </div>
           </Show>
           <Show when={props.album!.tracks && props.album!.tracks!.length > 0}>
-            <ol class="list-decimal list-inside text-fg-muted">
+            <ol class="list-decimal pl-6 result-meta">
               <For each={props.album!.tracks}>
-                {(track) => <li>{track}</li>}
+                {(track) => (
+                  <li class="py-2 break-words">
+                    <SourceLink
+                      href={
+                        props.album!.trackLinks?.find(
+                          (link) => link.name === track
+                        )?.url
+                      }
+                      base={props.album!.url}
+                    >
+                      {track}
+                    </SourceLink>
+                  </li>
+                )}
               </For>
             </ol>
           </Show>

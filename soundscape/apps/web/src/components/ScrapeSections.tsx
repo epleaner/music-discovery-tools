@@ -18,7 +18,9 @@ type Item = { artist: string; album?: string; itemKind: 'album' | 'artist' };
 const itemKey = (item: Item) =>
   `${item.artist}|${item.album ?? ''}|${item.itemKind}`;
 
-const ScrapeSections: Component = () => {
+const ScrapeSections: Component<{
+  activeSource: 'rym' | 'bandcamp' | null;
+}> = (props) => {
   const nav = useNav();
   const [rymStatus, setRymStatus] = createSignal<string | null>(null);
   const [rymReqId, setRymReqId] = createSignal<string | null>(null);
@@ -199,9 +201,13 @@ const ScrapeSections: Component = () => {
 
   return (
     <>
-      <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
-          <h2 class="text-xs font-medium text-fg-muted">RYM</h2>
+      <section
+        id="focus-rym"
+        class="surface-section shrink-0"
+        hidden={props.activeSource !== 'rym'}
+      >
+        <div class="section-header">
+          <h2 class="section-title">RYM</h2>
           <CacheAge
             fetchedAt={rymFetchedAt()}
             onRefresh={() => {
@@ -218,17 +224,21 @@ const ScrapeSections: Component = () => {
             }}
           />
         </div>
-        <div class="min-h-0 flex-1 overflow-y-auto p-3 text-xs">
+        <div class="section-content space-y-4">
           <RymResults
             entries={entries()}
             album={rymAlbum()}
             status={rymStatus()}
           />
         </div>
-      </div>
-      <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div class="flex flex-shrink-0 justify-between items-center py-2 px-3 border-b bg-bg border-border">
-          <h2 class="text-xs font-medium text-fg-muted">Bandcamp</h2>
+      </section>
+      <section
+        id="focus-bandcamp"
+        class="surface-section shrink-0"
+        hidden={props.activeSource !== 'bandcamp'}
+      >
+        <div class="section-header">
+          <h2 class="section-title">Bandcamp</h2>
           <CacheAge
             fetchedAt={bcFetchedAt()}
             onRefresh={() => {
@@ -245,7 +255,7 @@ const ScrapeSections: Component = () => {
             }}
           />
         </div>
-        <div class="min-h-0 flex-1 overflow-y-auto p-3 text-xs">
+        <div class="section-content space-y-4">
           <BandcampResults
             releases={releases()}
             album={album()}
@@ -267,7 +277,7 @@ const ScrapeSections: Component = () => {
             }
           />
         </div>
-      </div>
+      </section>
     </>
   );
 };

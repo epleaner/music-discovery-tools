@@ -1,76 +1,89 @@
-import { Component, JSX, createSignal, onMount, onCleanup } from 'solid-js';
+import {
+  type Component,
+  type JSX,
+  Show,
+  createSignal,
+  createUniqueId,
+} from 'solid-js';
 
 interface ResizablePanelsProps {
   leftPanel: JSX.Element;
   rightPanel: JSX.Element;
-  initialLeftWidth?: number; // percentage
-  minLeftWidth?: number; // percentage
-  maxLeftWidth?: number; // percentage
+  initialLeftWidth?: number;
+  minLeftWidth?: number;
+  maxLeftWidth?: number;
+  showRightPanel?: boolean;
 }
 
 const ResizablePanels: Component<ResizablePanelsProps> = (props) => {
-  const [leftWidth, setLeftWidth] = createSignal(props.initialLeftWidth || 70);
+  const [leftWidth, setLeftWidth] = createSignal(props.initialLeftWidth ?? 65);
   const [isDragging, setIsDragging] = createSignal(false);
+  const primaryId = createUniqueId();
   let containerRef: HTMLDivElement | undefined;
 
-  const handleMouseDown = (e: MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging() || !containerRef) return;
-
-    const containerRect = containerRef.getBoundingClientRect();
-    const offsetX = e.clientX - containerRect.left;
-    const newWidthPercent = (offsetX / containerRect.width) * 100;
-
-    const minWidth = props.minLeftWidth || 20;
-    const maxWidth = props.maxLeftWidth || 80;
-
-    const clampedWidth = Math.max(
-      minWidth,
-      Math.min(maxWidth, newWidthPercent)
+  const resize = (width: number) => {
+    setLeftWidth(
+      Math.max(
+        props.minLeftWidth ?? 30,
+        Math.min(props.maxLeftWidth ?? 80, width)
+      )
     );
-    setLeftWidth(clampedWidth);
   };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  onMount(() => {
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  });
-
-  onCleanup(() => {
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-  });
 
   return (
-    <div ref={containerRef} class='flex overflow-hidden flex-1 h-full'>
-      {/* Left Panel */}
-      <div
-        class='overflow-hidden border-r border-border'
-        style={{ width: `${leftWidth()}%`, 'min-width': '0', height: '100%' }}>
+    <div
+      ref={containerRef}
+      class="workspace-split"
+      data-single={props.showRightPanel === false}
+      style={{ '--primary-width': `${leftWidth()}%` }}
+    >
+      <section
+        id={primaryId}
+        class="workspace-primary workspace-panel"
+        aria-label="Listening workspace"
+      >
         {props.leftPanel}
-      </div>
-
-      {/* Resize Handle */}
-      <div
-        onMouseDown={handleMouseDown}
-        class={`w-1 cursor-col-resize hover:bg-border-hover transition-colors ${
-          isDragging() ? 'bg-border-hover' : ''}`}
-      />
-
-      {/* Right Panel */}
-      <div
-        class='overflow-hidden flex-1'
-        style={{ 'min-width': '0', height: '100%' }}>
-        {props.rightPanel}
-      </div>
+      </section>
+      <Show when={props.showRightPanel !== false}>
+        <div
+          class="resize-handle"
+          role="separator"
+          tabindex={0}
+          aria-label="Resize listening and discovery panels"
+          aria-orientation="vertical"
+          aria-controls={primaryId}
+          aria-valuemin={props.minLeftWidth ?? 30}
+          aria-valuemax={props.maxLeftWidth ?? 80}
+          aria-valuenow={Math.round(leftWidth())}
+          data-dragging={isDragging()}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            setIsDragging(true);
+          }}
+          onPointerMove={(event) => {
+            if (!isDragging() || !containerRef) return;
+            const bounds = containerRef.getBoundingClientRect();
+            resize(((event.clientX - bounds.left) / bounds.width) * 100);
+          }}
+          onPointerUp={() => setIsDragging(false)}
+          onLostPointerCapture={() => setIsDragging(false)}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowLeft') resize(leftWidth() - 2);
+            else if (event.key === 'ArrowRight') resize(leftWidth() + 2);
+            else if (event.key === 'Home') resize(props.minLeftWidth ?? 30);
+            else if (event.key === 'End') resize(props.maxLeftWidth ?? 80);
+            else return;
+            event.preventDefault();
+          }}
+        />
+        <aside
+          class="workspace-secondary workspace-panel"
+          aria-label="Discovery"
+        >
+          {props.rightPanel}
+        </aside>
+      </Show>
     </div>
   );
 };

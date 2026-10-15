@@ -6,11 +6,7 @@ const ErrorMessage: Component<ErrorMessageProps> = (props) => {
   const [local, rest] = splitProps(props, ['class']);
 
   return (
-    <div
-      {...rest}
-      role="alert"
-      class={`text-xs text-fg-muted ${local.class ?? ''}`}
-    />
+    <div {...rest} role="alert" class={`error-message ${local.class ?? ''}`} />
   );
 };
 

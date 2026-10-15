@@ -4,8 +4,8 @@ import {
   appendOrReplace,
   deserialize,
   homeState,
+  moveHistory,
   serialize,
-  truncateTo,
   type NavState,
   type NavView,
 } from './nav-store.js';
@@ -54,45 +54,83 @@ test('appendOrReplace replaces entry sharing the same siblingGroup', () => {
   assert.equal(s2.stack[1].label, subB.label);
 });
 
-test('truncate-then-append drops forward history before pushing', () => {
+test('appendOrReplace drops forward history when branching', () => {
   let state: NavState = { stack: [home], index: 0 };
   for (let i = 0; i < 3; i++) {
     state = appendOrReplace(
       state,
-      { label: `View ${i}`, kind: 'tab', restore: { type: 'tab', panel: `p${i}` } },
-      `v${i}`,
+      {
+        label: `View ${i}`,
+        kind: 'tab',
+        restore: { type: 'tab', panel: `p${i}` },
+      },
+      `v${i}`
     );
   }
   assert.equal(state.stack.length, 4);
   assert.equal(state.index, 3);
 
-  const truncated = truncateTo(state, 1);
+  const rewound = moveHistory(moveHistory(state, -1), -1);
   const result = appendOrReplace(
-    truncated,
+    rewound,
     { label: 'New', kind: 'tab', restore: { type: 'tab', panel: 'new' } },
-    'new',
+    'new'
   );
 
   assert.equal(result.stack.length, 3);
   assert.equal(result.index, 2);
+  assert.deepEqual(
+    result.stack.map((view) => view.id),
+    ['home', 'v0', 'new']
+  );
+  assert.equal(moveHistory(result, 1), result);
 });
 
-test('truncateTo clamps to the given index', () => {
-  let state: NavState = { stack: [home], index: 0 };
-  for (let i = 0; i < 3; i++) {
-    state = appendOrReplace(
-      state,
-      { label: `View ${i}`, kind: 'tab', restore: { type: 'tab', panel: `p${i}` } },
-      `v${i}`,
-    );
-  }
-  assert.equal(state.stack.length, 4);
-  assert.equal(state.index, 3);
+test('selection history restores artist and album without losing forward entries', () => {
+  const artist = appendOrReplace(
+    homeState(home),
+    {
+      label: 'Hiroshi Yoshimura',
+      kind: 'item',
+      restore: {
+        type: 'item',
+        artist: 'Hiroshi Yoshimura',
+        itemKind: 'artist',
+      },
+    },
+    'artist'
+  );
+  const album = appendOrReplace(
+    artist,
+    {
+      label: 'Green',
+      kind: 'item',
+      restore: {
+        type: 'item',
+        artist: 'Hiroshi Yoshimura',
+        album: 'Green',
+        itemKind: 'album',
+      },
+    },
+    'album'
+  );
 
-  const result = truncateTo(state, 1);
+  const previous = moveHistory(album, -1);
+  assert.deepEqual(
+    previous.stack[previous.index].restore,
+    artist.stack[1].restore
+  );
+  assert.equal(previous.stack, album.stack);
+  assert.equal(album.index, 2);
 
-  assert.equal(result.stack.length, 2);
-  assert.equal(result.index, 1);
+  const next = moveHistory(previous, 1);
+  assert.deepEqual(next.stack[next.index].restore, album.stack[2].restore);
+  assert.equal(next.stack, album.stack);
+  assert.equal(moveHistory(next, 1), next);
+
+  const first = moveHistory(previous, -1);
+  assert.equal(first.stack[first.index], home);
+  assert.equal(moveHistory(first, -1), first);
 });
 
 test('homeState builds a single-entry stack at index 0', () => {

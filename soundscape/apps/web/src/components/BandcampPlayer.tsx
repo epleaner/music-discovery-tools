@@ -1,7 +1,9 @@
 import { Component, For, createSignal, Show } from 'solid-js';
+import SourceLink from './SourceLink';
 
 interface Track {
   name: string;
+  url?: string;
   position: number;
   duration: number | null;
   streamUrl: string | null;
@@ -9,6 +11,7 @@ interface Track {
 
 interface BandcampPlayerProps {
   tracks: Track[];
+  base: string;
 }
 
 const BandcampPlayer: Component<BandcampPlayerProps> = (props) => {
@@ -42,43 +45,49 @@ const BandcampPlayer: Component<BandcampPlayerProps> = (props) => {
   };
 
   return (
-    <div class="mt-3">
-      <audio
-        ref={audioRef}
-        onEnded={() => setIsPlaying(false)}
-      />
+    <div class="space-y-4">
+      <audio ref={audioRef} onEnded={() => setIsPlaying(false)} />
       <Show when={currentTrack()}>
-        <div class="mb-2 text-xs text-fg-muted flex items-center gap-1">
-          <span class="text-fg">♪</span>
-          <span>{currentTrack()!.name}</span>
+        <div class="status break-words" role="status">
+          {isPlaying() ? 'Playing' : 'Paused'}: {currentTrack()!.name}
         </div>
       </Show>
-      <div class="flex flex-col gap-0.5">
+      <div class="result-list">
         <For each={props.tracks}>
           {(track, i) => {
             const available = () => track.streamUrl !== null;
             const active = () => playingIndex() === i() && isPlaying();
             return (
-              <div
-                class={`flex items-center gap-2 px-2 py-1 rounded text-xs ${
-                  available()
-                    ? 'hover:bg-bg-subtle cursor-pointer'
-                    : 'opacity-40 cursor-default'
-                } ${active() ? 'bg-bg-subtle' : ''}`}
-                onClick={() => available() && handleTrackClick(i(), track.streamUrl!)}
-              >
-                <span class="w-4 text-right text-fg-subtle shrink-0">
-                  {active() ? '▶' : track.position}
+              <div class="list-row" classList={{ 'bg-bg-subtle': active() }}>
+                <button
+                  type="button"
+                  class="btn-icon shrink-0"
+                  disabled={!available()}
+                  aria-label={`${active() ? 'Pause' : 'Play'} ${track.name}`}
+                  aria-pressed={active()}
+                  onClick={() =>
+                    available() && handleTrackClick(i(), track.streamUrl!)
+                  }
+                >
+                  <span class="list-count">
+                    {active() ? 'Ⅱ' : track.position}
+                  </span>
+                </button>
+                <span class="list-main">
+                  <span class="list-title whitespace-normal break-words">
+                    <SourceLink href={track.url} base={props.base}>
+                      {track.name}
+                    </SourceLink>
+                  </span>
+                  <Show when={!available()}>
+                    <span class="list-meta">Unavailable</span>
+                  </Show>
+                  <Show when={track.duration != null}>
+                    <span class="list-meta numeric">
+                      {formatDuration(track.duration)}
+                    </span>
+                  </Show>
                 </span>
-                <span class="flex-1 min-w-0 truncate text-fg">
-                  {track.name}
-                  {!available() && (
-                    <span class="ml-1 text-fg-subtle">(unavailable)</span>
-                  )}
-                </span>
-                <Show when={track.duration}>
-                  <span class="text-fg-subtle shrink-0">{formatDuration(track.duration)}</span>
-                </Show>
               </div>
             );
           }}

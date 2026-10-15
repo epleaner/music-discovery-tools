@@ -14,15 +14,20 @@ reads RYM through a Chrome window you already have open.
 
 ## Download
 
-Get the latest build from the [Releases](../../releases) page. Download `RYM-MenuBar.zip`,
-unzip it, and drag **RYM MenuBar.app** into `/Applications`. The build is universal, so it
-runs natively on both Apple Silicon and Intel.
+[Download RYM-MenuBar.zip](https://github.com/epleaner/music-discovery-tools/releases/download/latest/RYM-MenuBar.zip)
+from the rolling [latest release](https://github.com/epleaner/music-discovery-tools/releases/tag/latest).
+This repository is private: sign into GitHub with repository access before downloading.
 
-The app is ad-hoc signed but not notarized, so Gatekeeper will warn you the first time you
-open it. Get past it once with either:
+1. Unzip the archive and move **RYM MenuBar.app** into `/Applications`.
+2. Open it, then click the `≡★` icon in the menu bar; there is no Dock icon.
+3. Install Google Chrome if needed. In the app's menu, click
+   **No debug Chrome — click to start** if shown, then log into RateYourMusic in that window.
+4. Follow [Pair with Soundscape Web](#pair-with-soundscape-web) to enable web scrapes.
 
-- Right-click the app, then **Open**, then **Open** again, or
-- `xattr -dr com.apple.quarantine "/Applications/RYM MenuBar.app"`
+The build is universal (Apple Silicon and Intel) and requires macOS 11+.
+It is ad-hoc signed, not notarized. If macOS blocks it, review
+[Apple's security guidance](https://support.apple.com/en-us/102445) before deciding
+whether to open it. Do not disable Gatekeeper or strip quarantine attributes.
 
 Each push to `main` rebuilds the rolling `latest` prerelease. Tagged versions (`vX.Y.Z`)
 get their own permanent release. If you'd rather build it yourself, see
@@ -101,9 +106,10 @@ the menu, so it tells you when Chrome is down instead of failing silently.
 
 Choose **Pair with Soundscape Web…** from the menu bar. Either direction works:
 
-- Choose **Generate New Passphrase**, copy it, and enter it on Soundscape Web.
-- Or create a passphrase on Soundscape Web, paste it into the pairing window,
-  and choose **Use This Passphrase**.
+- Choose **Copy for Soundscape Web** and enter that passphrase on the web.
+  Generate a new passphrase only when starting new history.
+- Or create and save a passphrase on Soundscape Web, paste it into the app's
+  pairing window, and confirm it.
 
 Both operations use Soundscape's `POST /auth/passphrase` API, so the web and
 menu-bar app generate the same 48-character format and apply the same validation.
@@ -111,6 +117,15 @@ Both apps must use the same passphrase. Soundscape scrape history is tied to
 that passphrase, not to this Mac or a username. Store it in a password manager
 or another secure place; losing it means losing access to that history. The
 menu-bar app stores its active passphrase in the macOS Keychain.
+
+In Soundscape Web, **Account → Browser helper** shows the download link,
+installation steps and connection status. Wait for **Connected** before using
+**Scrape**, and keep the app and its Chrome window running.
+
+The app defaults to `ws://localhost:3001/ws`. For a different API, the web
+installation steps show a `SCRAPE_AGENT_WS_URL` launch command using that web
+client's configured backend. Quit the app before running the command and keep
+Terminal open while the helper runs.
 
 ---
 

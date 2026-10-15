@@ -3,6 +3,8 @@ import Button from './Button';
 import ControlGroup from './ControlGroup';
 import EmptyState from './EmptyState';
 import Input from './Input';
+import PanelTab from './PanelTab';
+import ExternalLink from './ExternalLink';
 
 interface Site {
   id: string;
@@ -40,9 +42,15 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
     e.stopPropagation();
     const newSites = props.sites.filter((_, i) => i !== index);
     props.onSitesChange?.(newSites);
-    if (activeTab() >= newSites.length) {
-      setActiveTab(Math.max(0, newSites.length - 1));
-    }
+    setActiveTab((current) =>
+      Math.max(
+        0,
+        Math.min(current > index ? current - 1 : current, newSites.length - 1)
+      )
+    );
+    const editing = editingTab();
+    if (editing === index) setEditingTab(null);
+    else if (editing !== null && editing > index) setEditingTab(editing - 1);
   };
 
   const startEditing = (index: number) => {
@@ -70,28 +78,24 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
   };
 
   return (
-    <div class='border-t border-border bg-bg flex flex-col h-full text-xs'>
-      {/* Tabs */}
-      <div class='panel-tab-row overflow-x-auto'>
+    <section class="workspace-panel panel-scroll" aria-label="Sites">
+      <div class="workspace-tabs flex-wrap">
         <For each={props.sites}>
           {(site, index) => (
-            <div
-                class={`panel-tab flex items-center gap-2 font-medium border-b-2 transition-colors ${
-                activeTab() === index()
-                  ? 'border-accent'
-                  : 'border-transparent text-fg-muted hover:text-fg'
-              }`}>
-              <Button
+            <div class="flex min-w-0 items-center">
+              <PanelTab
+                active={activeTab() === index()}
+                underline
                 onClick={() => setActiveTab(index())}
-                class="flex-1 text-left"
+                aria-pressed={activeTab() === index()}
+                class="min-w-0 whitespace-normal break-words"
               >
                 {site.name}
-              </Button>
+              </PanelTab>
               <Button
                 onClick={(e: MouseEvent) => removeTab(index(), e)}
                 variant="icon"
-                class="hover:text-fg transition-colors"
-                title="Close tab"
+                title={`Close ${site.name}`}
                 aria-label={`Close ${site.name}`}
               >
                 ×
@@ -101,110 +105,128 @@ const SiteViewer: Component<SiteViewerProps> = (props) => {
         </For>
         <Button
           onClick={addNewTab}
-          variant="tab"
-          class="font-medium text-fg-muted hover:text-fg transition-colors border-b-2 border-transparent"
-          title="Add new tab"
-          aria-label="Add new tab"
+          variant="icon"
+          title="Add site"
+          aria-label="Add site"
         >
           +
         </Button>
       </div>
-
-      {/* Content - All tabs stay mounted, visibility toggled with CSS */}
-      <div class='relative flex-1 overflow-hidden'>
+      <div class="flex min-h-0 min-w-0 flex-1 flex-col">
         <For each={props.sites}>
           {(site, index) => (
-            <>
-              {/* Edit Form */}
-              <div
-                class='absolute inset-0 flex flex-col items-center justify-center p-8 bg-bg'
-                style={{
-                  display: editingTab() === index() ? 'flex' : 'none',
-                }}>
-                <div class='w-full max-w-md space-y-4'>
+            <div
+              class="min-h-0 min-w-0 flex-1 flex-col"
+              classList={{
+                flex: activeTab() === index(),
+                hidden: activeTab() !== index(),
+              }}
+            >
+              <Show when={editingTab() === index()}>
+                <form
+                  class="form-stack section-content"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    saveEdit();
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') cancelEdit();
+                  }}
+                >
                   <ControlGroup>
-                    <label class='block text-xs text-fg-muted'>
-                      Tab Name
+                    <label class="field-label" for={`site-name-${site.id}`}>
+                      Site name
                     </label>
                     <Input
-                      type='text'
+                      id={`site-name-${site.id}`}
+                      type="text"
                       value={editName()}
-                      onInput={(e) => setEditName(e.currentTarget.value)}
-                      placeholder='Enter tab name...'
-                      class='w-full'
-                      autofocus={editingTab() === index()}
+                      onInput={(event) =>
+                        setEditName(event.currentTarget.value)
+                      }
+                      class="w-full min-w-0"
+                      autofocus
                     />
                   </ControlGroup>
                   <ControlGroup>
-                    <label class='block text-xs text-fg-muted'>URL</label>
+                    <label class="field-label" for={`site-url-${site.id}`}>
+                      URL
+                    </label>
                     <Input
-                      type='url'
+                      id={`site-url-${site.id}`}
+                      type="url"
                       value={editUrl()}
-                      onInput={(e) => setEditUrl(e.currentTarget.value)}
-                      placeholder='https://example.com'
-                      class='w-full'
+                      onInput={(event) => setEditUrl(event.currentTarget.value)}
+                      placeholder="https://example.com"
+                      class="w-full min-w-0"
                     />
                   </ControlGroup>
-                  <div class='flex gap-2'>
-                    <Button onClick={saveEdit} variant='primary'>
+                  <div class="form-actions">
+                    <Button type="submit" variant="primary">
                       Save
                     </Button>
-                    <Button onClick={cancelEdit} variant='secondary'>
+                    <Button
+                      type="button"
+                      onClick={cancelEdit}
+                      variant="secondary"
+                    >
                       Cancel
                     </Button>
                   </div>
-                </div>
-              </div>
-
-              {/* Empty state */}
+                </form>
+              </Show>
               <Show when={!site.url && editingTab() !== index()}>
-                <div
-                  class='absolute inset-0 flex flex-col items-center justify-center p-8 gap-4 bg-bg'
-                  style={{
-                    display: activeTab() === index() ? 'flex' : 'none',
-                  }}>
-                  <EmptyState>No URL configured for this tab</EmptyState>
-                  <Button
-                    onClick={() => startEditing(index())}
-                    variant="secondary"
-                    class="px-2"
-                  >
-                    Configure Tab
-                  </Button>
+                <div class="section-content form-stack">
+                  <EmptyState>No URL configured</EmptyState>
+                  <div class="form-actions">
+                    <Button
+                      onClick={() => startEditing(index())}
+                      variant="secondary"
+                    >
+                      Configure site
+                    </Button>
+                  </div>
                 </div>
               </Show>
-
-              {/* Iframe content */}
               <Show when={site.url}>
                 <div
-                  class='absolute inset-0'
-                  style={{
-                    display:
-                      activeTab() === index() && editingTab() !== index()
-                        ? 'block'
-                        : 'none',
-                  }}>
+                  class="min-h-0 flex-1 flex-col"
+                  classList={{
+                    flex: editingTab() !== index(),
+                    hidden: editingTab() === index(),
+                  }}
+                >
+                  <div class="section-header">
+                    <ExternalLink
+                      href={site.url}
+                      class="meta-text min-w-0 break-all"
+                    >
+                      {site.url}
+                    </ExternalLink>
+                    <Button
+                      onClick={() => startEditing(index())}
+                      variant="secondary"
+                      aria-label={`Edit ${site.name}`}
+                    >
+                      Edit
+                    </Button>
+                  </div>
                   <iframe
                     src={site.url}
-                    class='w-full h-full border-0'
+                    class="media-frame min-h-96 flex-1 lg:min-h-0"
                     title={site.name}
-                    sandbox='allow-same-origin allow-scripts allow-popups allow-forms'
+                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
                   />
-                  <Button
-                    onClick={() => startEditing(index())}
-                    variant="secondary"
-                    class="px-2.5 absolute top-2 right-2 bg-bg border border-border hover:bg-bg-subtle transition-colors"
-                    title="Edit tab"
-                  >
-                    Edit
-                  </Button>
                 </div>
               </Show>
-            </>
+            </div>
           )}
         </For>
+        <Show when={props.sites.length === 0}>
+          <EmptyState class="section-content">No sites</EmptyState>
+        </Show>
       </div>
-    </div>
+    </section>
   );
 };
 

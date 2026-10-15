@@ -21,12 +21,15 @@ import { listScrapeJobs, startScrapeJob } from '../lib/scrape-jobs';
 import Input from './Input';
 import GenreSelect from './GenreSelect';
 import Button from './Button';
+import PanelTab from './PanelTab';
 import Select from './Select';
 import ControlGroup from './ControlGroup';
 import RymResults from './RymResults';
 import BandcampResults from './BandcampResults';
 import ShuffleIcon from './ShuffleIcon';
 import CacheAge from './CacheAge';
+import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
 
 const ScrapeTool: Component = () => {
   const [url, setUrl] = createSignal('');
@@ -333,176 +336,59 @@ const ScrapeTool: Component = () => {
     return /\/album\/|\/track\//.test(currentUrl);
   };
 
+  const activeFetchedAt = () =>
+    activeSource() === 'bandcamp'
+      ? bcFetchedAt()
+      : activeSource() === 'rym'
+        ? rymFetchedAt()
+        : null;
+
   onMount(() => void loadRecentScrapes());
   onCleanup(() => cancelScrape());
 
   return (
-    <div class="flex h-full min-w-0 flex-col gap-3 p-3 text-xs">
-      <div class="flex flex-shrink-0 flex-col gap-2 border-b border-border pb-3">
-        <div class="flex flex-wrap items-end gap-2">
-          <div class="min-w-[14rem] flex-1">
-            <GenreSelect
-              value={rymSearchTerm()}
-              onValueChange={setRymSearchTerm}
-            />
-          </div>
-          <ControlGroup>
-            <label class="block text-xs text-fg-muted">Range</label>
-            <div class="flex gap-1">
-              <Button
-                onClick={() => setRymTimeRange('year')}
-                class={`px-2 ${rymTimeRange() === 'year' ? 'bg-accent text-bg' : 'text-fg-muted hover:text-fg border border-border'}`}
-              >
-                Year
-              </Button>
-              <Button
-                onClick={() => setRymTimeRange('decade')}
-                class={`px-2 ${rymTimeRange() === 'decade' ? 'bg-accent text-bg' : 'text-fg-muted hover:text-fg border border-border'}`}
-              >
-                Decade
-              </Button>
-              <Button
-                onClick={() => setRymTimeRange('all-time')}
-                class={`px-2 ${rymTimeRange() === 'all-time' ? 'bg-accent text-bg' : 'text-fg-muted hover:text-fg border border-border'}`}
-              >
-                All Time
-              </Button>
-            </div>
-          </ControlGroup>
-          <Show when={rymTimeRange() !== 'all-time'}>
-            <ControlGroup>
-              <div class="flex items-center gap-1">
-                <label class="block text-xs text-fg-muted">
-                  {rymTimeRange() === 'year' ? 'Year' : 'Decade'}
-                </label>
-                <Button
-                  type="button"
-                  onClick={() =>
-                    setRymYear(
-                      rymYears[Math.floor(Math.random() * rymYears.length)]
-                    )
-                  }
-                  variant="icon"
-                  class="text-fg-muted hover:text-fg"
-                  title="Shuffle year/decade"
-                >
-                  <ShuffleIcon />
-                </Button>
-              </div>
-              <Select
-                value={rymYear()}
-                onChange={(e) => setRymYear(parseInt(e.currentTarget.value))}
-                class="w-full"
-              >
-                <For each={rymYears}>
-                  {(year) => (
-                    <option value={year}>
-                      {rymTimeRange() === 'decade'
-                        ? `${Math.floor(year / 10) * 10}s`
-                        : year}
-                    </option>
-                  )}
-                </For>
-              </Select>
-            </ControlGroup>
-          </Show>
+    <div class="grid h-full min-h-0 min-w-0 grid-cols-1 lg:grid-cols-3">
+      <aside class="surface-section flex min-h-0 min-w-0 flex-col lg:border-r">
+        <div class="section-header">
+          <h2 class="section-title">Recent scrapes</h2>
           <Button
-            onClick={() => scrapeRym(getRYMChartUrl())}
-            variant="primary"
-            class="px-2"
+            type="button"
+            onClick={() => void loadRecentScrapes()}
+            variant="icon"
+            aria-label="Refresh recent scrapes"
+            title="Refresh recent scrapes"
           >
-            Scrape charts
-          </Button>
-          <Button
-            onClick={() => window.open(getRYMChartUrl(), '_blank', 'noopener')}
-            variant="secondary"
-            class="px-2"
-          >
-            Open in RYM ↗
+            ↻
           </Button>
         </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="whitespace-nowrap text-xs text-fg-subtle">
-            Paste a RYM or Bandcamp URL
-          </span>
-          <Input
-            type="url"
-            placeholder="https://rateyourmusic.com/... or https://artist.bandcamp.com/..."
-            value={url()}
-            onInput={(e) => {
-              setUrl(e.currentTarget.value);
-              setInputError(null);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && url().trim()) scrapeInput();
-            }}
-            class="min-w-[14rem] flex-1"
-          />
-          <Show when={detectSource(url())}>
-            {(source) => (
-              <span class="text-fg-subtle">
-                {source() === 'rym' ? 'RYM' : 'Bandcamp'}
-              </span>
-            )}
+        <div class="panel-scroll">
+          <Show when={recentError()}>
+            <ErrorMessage class="section-content">{recentError()}</ErrorMessage>
           </Show>
-          <Button
-            onClick={scrapeInput}
-            disabled={!url().trim()}
-            variant="primary"
-            class="px-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          <Show
+            when={recentResults().length > 0}
+            fallback={
+              <EmptyState class="section-content">No recent scrapes</EmptyState>
+            }
           >
-            Scrape
-          </Button>
-          <Show when={inputError()}>
-            <span class="w-full text-fg-muted">{inputError()}</span>
-          </Show>
-        </div>
-      </div>
-
-      <div class="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-3 overflow-hidden lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside class="flex h-full min-h-0 flex-col gap-2 overflow-hidden border-b border-border pb-3 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-3">
-          <div class="flex flex-shrink-0 items-center justify-between">
-            <h2 class="font-medium text-fg">Recent scrapes</h2>
-            <Button
-              type="button"
-              onClick={() => void loadRecentScrapes()}
-              variant="icon"
-              class="text-fg-muted hover:text-fg"
-              aria-label="Refresh recent scrapes"
-              title="Refresh recent scrapes"
-            >
-              ↻
-            </Button>
-          </div>
-          <div class="min-h-0 flex-1 overflow-y-auto">
-            <Show
-              when={recentResults().length > 0}
-              fallback={
-                <div class="py-2 text-fg-subtle">
-                  {recentError() ?? 'No recent scrapes yet.'}
-                </div>
-              }
-            >
-              <div class="flex flex-col gap-1">
-                <For each={recentResults()}>
-                  {(job) => (
+            <div>
+              <For each={recentResults()}>
+                {(job) => (
+                  <div class="list-row">
                     <Button
                       type="button"
                       onClick={() => openRecent(job)}
-                      variant="link"
-                      class="flex h-auto min-h-0 w-full min-w-0 flex-col items-stretch px-0 py-1 text-left"
+                      variant="control"
+                      class="list-select flex-col items-stretch whitespace-normal"
                       title={recentSummary(job)}
                     >
-                      <div class="flex items-center justify-between gap-2">
-                        <div class="truncate font-medium text-fg">
+                      <div class="toolbar">
+                        <div class="result-title break-words">
                           {recentSummary(job)}
                         </div>
-                        <span class="flex-shrink-0 text-[0.65rem] uppercase text-fg-subtle">
-                          {job.source}
-                        </span>
+                        <span class="badge">{job.source}</span>
                       </div>
-                      <div class="mt-1 text-fg-subtle">
+                      <div class="meta-text">
                         {recentDate(job)}
                         <Show when={job.data?.kind === 'rym'}>
                           {' · '}
@@ -523,57 +409,186 @@ const ScrapeTool: Component = () => {
                         </Show>
                       </div>
                     </Button>
-                  )}
-                </For>
-              </div>
-            </Show>
-          </div>
-        </aside>
-
-        <div class="flex min-h-0 min-w-0 flex-col overflow-y-auto">
-          <div class="mb-1 flex justify-end">
-            <CacheAge
-              fetchedAt={
-                activeSource() === 'bandcamp' ? bcFetchedAt() : rymFetchedAt()
-              }
-              onRefresh={() => {
-                const target = url();
-                if (activeSource() === 'rym' && target) scrapeRym(target, true);
-                if (activeSource() === 'bandcamp' && target)
-                  scrapeBandcampUrl(target, pendingMode(), true);
-              }}
-            />
-          </div>
-          <Show when={activeSource() === 'rym'}>
-            <RymResults
-              entries={entries()}
-              album={rymAlbum()}
-              status={rymStatus()}
-            />
-          </Show>
-          <Show when={activeSource() === 'bandcamp'}>
-            <BandcampResults
-              releases={releases()}
-              album={album()}
-              currentLabel={currentLabel()}
-              status={bcStatus()}
-              isLabelResult={isLabelResult()}
-              isRelatedResult={isRelatedResult()}
-              showExploreLabel={
-                !!currentLabel() && !isLabelResult() && !isRelatedResult()
-              }
-              showRelated={
-                isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()
-              }
-              onExploreLabel={() => scrapeBandcampUrl(url(), 'label')}
-              onRelated={() => scrapeBandcampUrl(url(), 'related')}
-            />
-          </Show>
-          <Show when={!activeSource()}>
-            <div class="py-2 text-fg-subtle">
-              Choose a RYM chart or paste a RYM/Bandcamp URL to start a scrape.
+                  </div>
+                )}
+              </For>
             </div>
           </Show>
+        </div>
+      </aside>
+
+      <div class="workspace-panel lg:col-span-2">
+        <div class="form-stack section-content border-b border-border">
+          <div class="toolbar items-end">
+            <div class="min-w-0 basis-full flex-1 sm:basis-auto">
+              <GenreSelect
+                value={rymSearchTerm()}
+                onValueChange={setRymSearchTerm}
+              />
+            </div>
+            <ControlGroup>
+              <span class="field-label">Range</span>
+              <div class="toolbar" role="group" aria-label="Chart range">
+                <PanelTab
+                  active={rymTimeRange() === 'year'}
+                  onClick={() => setRymTimeRange('year')}
+                >
+                  Year
+                </PanelTab>
+                <PanelTab
+                  active={rymTimeRange() === 'decade'}
+                  onClick={() => setRymTimeRange('decade')}
+                >
+                  Decade
+                </PanelTab>
+                <PanelTab
+                  active={rymTimeRange() === 'all-time'}
+                  onClick={() => setRymTimeRange('all-time')}
+                >
+                  All time
+                </PanelTab>
+              </div>
+            </ControlGroup>
+            <Show when={rymTimeRange() !== 'all-time'}>
+              <ControlGroup>
+                <div class="toolbar">
+                  <label class="field-label" for="chart-year">
+                    {rymTimeRange() === 'year' ? 'Year' : 'Decade'}
+                  </label>
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      setRymYear(
+                        rymYears[Math.floor(Math.random() * rymYears.length)]
+                      )
+                    }
+                    variant="icon"
+                    aria-label="Shuffle year or decade"
+                    title="Shuffle year/decade"
+                  >
+                    <ShuffleIcon />
+                  </Button>
+                </div>
+                <Select
+                  id="chart-year"
+                  value={rymYear()}
+                  onChange={(e) => setRymYear(parseInt(e.currentTarget.value))}
+                  class="w-full"
+                >
+                  <For each={rymYears}>
+                    {(year) => (
+                      <option value={year}>
+                        {rymTimeRange() === 'decade'
+                          ? `${Math.floor(year / 10) * 10}s`
+                          : year}
+                      </option>
+                    )}
+                  </For>
+                </Select>
+              </ControlGroup>
+            </Show>
+            <Button
+              onClick={() => scrapeRym(getRYMChartUrl())}
+              variant="primary"
+            >
+              Scrape charts
+            </Button>
+            <Button
+              onClick={() =>
+                window.open(getRYMChartUrl(), '_blank', 'noopener')
+              }
+              variant="secondary"
+            >
+              Open in RYM ↗
+            </Button>
+          </div>
+
+          <div class="toolbar">
+            <label for="scrape-url" class="field-label basis-full">
+              RYM or Bandcamp URL
+            </label>
+            <Input
+              id="scrape-url"
+              aria-invalid={!!inputError()}
+              aria-describedby={inputError() ? 'scrape-url-error' : undefined}
+              type="url"
+              placeholder="https://rateyourmusic.com/... or https://artist.bandcamp.com/..."
+              value={url()}
+              onInput={(e) => {
+                setUrl(e.currentTarget.value);
+                setInputError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && url().trim()) scrapeInput();
+              }}
+              class="min-w-0 basis-full flex-1 sm:basis-auto"
+            />
+            <Show when={detectSource(url())}>
+              {(source) => (
+                <span class="status">
+                  {source() === 'rym' ? 'RYM' : 'Bandcamp'}
+                </span>
+              )}
+            </Show>
+            <Button
+              onClick={scrapeInput}
+              disabled={!url().trim()}
+              variant="primary"
+            >
+              Scrape
+            </Button>
+            <Show when={inputError()}>
+              <ErrorMessage id="scrape-url-error" class="w-full">
+                {inputError()}
+              </ErrorMessage>
+            </Show>
+          </div>
+        </div>
+        <div class="panel-scroll">
+          <Show when={activeFetchedAt()}>
+            <div class="section-header justify-end">
+              <CacheAge
+                fetchedAt={activeFetchedAt()}
+                onRefresh={() => {
+                  const target = url();
+                  if (activeSource() === 'rym' && target)
+                    scrapeRym(target, true);
+                  if (activeSource() === 'bandcamp' && target)
+                    scrapeBandcampUrl(target, pendingMode(), true);
+                }}
+              />
+            </div>
+          </Show>
+          <div class="section-content">
+            <Show when={activeSource() === 'rym'}>
+              <RymResults
+                entries={entries()}
+                album={rymAlbum()}
+                status={rymStatus()}
+              />
+            </Show>
+            <Show when={activeSource() === 'bandcamp'}>
+              <BandcampResults
+                releases={releases()}
+                album={album()}
+                currentLabel={currentLabel()}
+                status={bcStatus()}
+                isLabelResult={isLabelResult()}
+                isRelatedResult={isRelatedResult()}
+                showExploreLabel={
+                  !!currentLabel() && !isLabelResult() && !isRelatedResult()
+                }
+                showRelated={
+                  isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()
+                }
+                onExploreLabel={() => scrapeBandcampUrl(url(), 'label')}
+                onRelated={() => scrapeBandcampUrl(url(), 'related')}
+              />
+            </Show>
+            <Show when={!activeSource()}>
+              <EmptyState>Choose a chart or enter a URL</EmptyState>
+            </Show>
+          </div>
         </div>
       </div>
     </div>

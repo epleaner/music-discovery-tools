@@ -19,7 +19,7 @@ const variantClassName: Record<ButtonVariant, string> = {
   control: 'panel-control',
   icon: 'control-icon',
   tab: 'panel-tab',
-  link: 'text-fg-muted hover:text-fg transition-colors',
+  link: 'btn-link',
 };
 
 const Button: Component<ButtonProps> = (props) => {
@@ -28,7 +28,7 @@ const Button: Component<ButtonProps> = (props) => {
   return (
     <button
       {...rest}
-      class={`${variantClassName[local.variant ?? 'control']} ${local.class ?? ''}`}
+      class={`btn ${variantClassName[local.variant ?? 'control']} ${local.class ?? ''}`}
     />
   );
 };

@@ -28,12 +28,16 @@ export interface RymAlbumDetail {
   title: string;
   artist: string;
   url: string;
+  artistUrl?: string;
   releaseDate?: string;
   genres?: string[];
+  genreLinks?: RymLink[];
   descriptors?: string[];
+  descriptorLinks?: RymLink[];
   avgRating?: number;
   ratings?: number;
   tracks?: string[];
+  trackLinks?: RymLink[];
 }
 export type RymScrapeData = {
   kind: 'rym';
@@ -45,10 +49,12 @@ export interface BandcampRelease {
   title: string;
   artist?: string;
   url: string;
+  artistUrl?: string;
   imageUrl?: string;
 }
 export interface BandcampTrack {
   name: string;
+  url?: string;
   position?: number;
   duration?: number;
   streamUrl?: string;
@@ -57,9 +63,11 @@ export interface BandcampAlbumDetail {
   title: string;
   artist: string;
   url: string;
+  artistUrl?: string;
   imageUrl?: string;
   releaseDate?: string;
   tags?: string[];
+  tagLinks?: { name: string; url: string }[];
   tracks: BandcampTrack[];
 }
 export type BandcampScrapeData = {

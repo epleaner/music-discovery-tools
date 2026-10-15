@@ -1,5 +1,8 @@
 import { Component, Show, createSignal, onCleanup, onMount } from 'solid-js';
 import Button from './Button';
+import Input from './Input';
+import ControlGroup from './ControlGroup';
+import MenubarInstall from './MenubarInstall';
 import { getAgentStatus, pairAgent, type AgentStatus } from '../lib/auth';
 
 const AgentSetup: Component = () => {
@@ -11,15 +14,17 @@ const AgentSetup: Component = () => {
   });
   const [passphrase, setPassphrase] = createSignal('');
   const [error, setError] = createSignal('');
+  const [statusError, setStatusError] = createSignal('');
   const [working, setWorking] = createSignal(false);
   let timer: ReturnType<typeof setInterval> | undefined;
+  let triggerRef: HTMLButtonElement | undefined;
 
   const refresh = async () => {
     try {
       setStatus(await getAgentStatus());
-      setError('');
+      setStatusError('');
     } catch (refreshError) {
-      setError(
+      setStatusError(
         refreshError instanceof Error
           ? refreshError.message
           : 'Unable to read agent status.'
@@ -51,68 +56,91 @@ const AgentSetup: Component = () => {
     }
   };
 
-  return (
-    <div class="relative flex-shrink-0">
-      <Button
-        onClick={() => setOpen(!open())}
-        variant="link"
-        class="w-full px-2 py-1 text-left"
-        title="Browser helper"
-        aria-haspopup="dialog"
-        aria-expanded={open()}
+  const PairingDialog: Component = () => {
+    let dialogRef: HTMLDialogElement | undefined;
+    let passphraseRef: HTMLInputElement | undefined;
+    onMount(() => {
+      dialogRef?.showModal();
+      passphraseRef?.focus();
+    });
+    onCleanup(() => {
+      dialogRef?.close();
+      setPassphrase('');
+      setError('');
+      if (triggerRef?.isConnected) triggerRef.focus();
+    });
+
+    return (
+      <dialog
+        ref={dialogRef}
+        class="dialog"
+        aria-labelledby="agent-dialog-title"
+        onCancel={(event) => {
+          event.preventDefault();
+          setOpen(false);
+        }}
       >
-        Browser helper{' '}
-        <span class="text-fg-subtle">{status().connected ? '●' : '○'}</span>
-      </Button>
-      <Show when={open()}>
-        <div class="absolute right-0 z-30 mt-1 w-80 max-w-[calc(100vw-2rem)] border border-border bg-bg shadow-lg">
-          <div class="flex flex-col gap-3 p-3">
-            <div>
-              <div class="text-xs font-medium text-fg">Browser helper</div>
-              <p class="mt-1 text-xs text-fg-muted">
-                Create a passphrase in either Soundscape Web or the menu-bar
-                app, then use the same value in both.
-              </p>
-            </div>
-            <div class="text-xs text-fg-muted">
-              Status:{' '}
-              <span class="font-medium text-fg">
-                {status().connected
-                  ? 'connected'
-                  : status().configured
-                    ? 'paired · offline'
-                    : 'not paired'}
-              </span>
-            </div>
-            <form
-              class="flex flex-col gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void pair();
-              }}
-            >
-              <label
-                for="agent-pairing-passphrase"
-                class="text-xs font-medium text-fg"
-              >
+        <div class="dialog-header">
+          <h2 id="agent-dialog-title" class="entity-heading">
+            Browser helper
+          </h2>
+          <Button
+            type="button"
+            variant="control"
+            onClick={() => setOpen(false)}
+          >
+            Close
+          </Button>
+        </div>
+        <div class="dialog-body">
+          <MenubarInstall />
+          <p class="status" aria-live="polite">
+            Status:{' '}
+            {status().connected
+              ? 'connected'
+              : status().configured
+                ? 'paired · offline'
+                : 'not paired'}
+          </p>
+          <Show when={statusError()}>
+            <p class="status-error" role="alert">
+              {statusError()}
+            </p>
+          </Show>
+          <form
+            class="form-stack"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!working()) void pair();
+            }}
+          >
+            <ControlGroup>
+              <label for="agent-pairing-passphrase" class="field-label">
                 Pairing passphrase
               </label>
-              <input
+              <Input
+                ref={passphraseRef}
                 id="agent-pairing-passphrase"
                 name="agent-pairing-passphrase"
                 type="password"
-                autocomplete="off"
+                autocomplete="current-password"
                 minLength={32}
                 required
                 value={passphrase()}
                 onInput={(event) => setPassphrase(event.currentTarget.value)}
-                class="min-w-0 border border-border bg-bg px-2 py-1 text-sm text-fg"
                 aria-describedby="agent-pairing-help"
               />
-              <p id="agent-pairing-help" class="text-xs text-fg-muted">
+              <p id="agent-pairing-help" class="meta-text">
                 This passphrase is the key to this account's scrape history.
                 Save it in a password manager before replacing the current one.
               </p>
+            </ControlGroup>
+            <Show when={error()}>
+              <p class="status-error" role="alert">
+                {error()}
+              </p>
+            </Show>
+            <div class="form-actions">
               <Button
                 type="submit"
                 variant="primary"
@@ -122,16 +150,36 @@ const AgentSetup: Component = () => {
                   ? 'Pairing…'
                   : status().configured
                     ? 'Replace pairing'
-                    : 'Pair agent'}
+                    : 'Pair helper'}
               </Button>
-            </form>
-            <Show when={error()}>
-              <p class="text-xs text-red-600" role="alert">
-                {error()}
-              </p>
-            </Show>
-          </div>
+            </div>
+          </form>
         </div>
+      </dialog>
+    );
+  };
+
+  return (
+    <div class="shrink-0">
+      <Button
+        ref={triggerRef}
+        onClick={() => setOpen(true)}
+        variant="control"
+        title="Browser helper"
+        aria-haspopup="dialog"
+        aria-expanded={open()}
+      >
+        Browser helper
+        <span class="subtle-text">
+          {status().connected
+            ? 'Connected'
+            : status().configured
+              ? 'Offline'
+              : 'Not paired'}
+        </span>
+      </Button>
+      <Show when={open()}>
+        <PairingDialog />
       </Show>
     </div>
   );

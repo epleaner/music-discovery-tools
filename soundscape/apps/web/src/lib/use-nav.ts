@@ -4,8 +4,8 @@ import {
   appendOrReplace,
   deserialize,
   homeState,
+  moveHistory,
   serialize,
-  truncateTo,
   type NavState,
   type NavView,
 } from './nav-store';
@@ -16,6 +16,9 @@ const HOME: NavView = {
   kind: 'home',
   restore: { type: 'tab', panel: 'similar' },
 };
+
+// Compose a reset with filter changes in one router navigation.
+const HOME_PARAMS = { nav: serialize(homeState(HOME)) } as const;
 
 function sanitize(state: NavState): NavState {
   if (!Array.isArray(state.stack) || state.stack.length === 0) {
@@ -49,6 +52,14 @@ export function useNav() {
     return null;
   });
 
+  const canGoBack = () => state().index > 0;
+  const canGoForward = () => state().index < state().stack.length - 1;
+  const move = (direction: -1 | 1) => {
+    const previous = state();
+    const next = moveHistory(previous, direction);
+    if (next !== previous) setSearchParams({ nav: serialize(next) });
+  };
+
   const navigate = (view: Omit<NavView, 'id'>) => {
     setSearchParams({
       nav: serialize(appendOrReplace(state(), view, crypto.randomUUID())),
@@ -67,21 +78,16 @@ export function useNav() {
     });
   };
 
-  const goTo = (index: number) => {
-    setSearchParams({ nav: serialize(truncateTo(state(), index)) });
-  };
-
-  const home = () => {
-    setSearchParams({ nav: serialize(homeState(HOME)) });
-  };
-
   return {
     state,
     current,
     lastItem,
+    canGoBack,
+    canGoForward,
+    back: () => move(-1),
+    forward: () => move(1),
     navigate,
     navigateToItem,
-    goTo,
-    home,
+    homeParams: HOME_PARAMS,
   };
 }

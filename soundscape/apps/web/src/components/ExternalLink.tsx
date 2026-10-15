@@ -11,7 +11,7 @@ const ExternalLink: Component<ExternalLinkProps> = (props) => {
       {...rest}
       target={local.target ?? '_blank'}
       rel={local.rel ?? 'noopener noreferrer'}
-      class={local.class}
+      class={`link ${local.class ?? ''}`}
     />
   );
 };

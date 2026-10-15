@@ -415,12 +415,22 @@ final class BridgeClient {
         var data: [String: Any] = ["kind": "rym", "entries": entryMaps]
         if let album = album {
             var albumMap: [String: Any] = ["title": album.title, "artist": album.artist, "url": album.url]
+            if let artistUrl = album.artistUrl { albumMap["artistUrl"] = artistUrl }
             if let releaseDate = album.releaseDate { albumMap["releaseDate"] = releaseDate }
             if let genres = album.genres, !genres.isEmpty { albumMap["genres"] = genres }
+            if let links = album.genreLinks, !links.isEmpty {
+                albumMap["genreLinks"] = links.map { ["name": $0.name, "url": $0.url] }
+            }
             if let descriptors = album.descriptors, !descriptors.isEmpty { albumMap["descriptors"] = descriptors }
+            if let links = album.descriptorLinks, !links.isEmpty {
+                albumMap["descriptorLinks"] = links.map { ["name": $0.name, "url": $0.url] }
+            }
             if let avgRating = album.avgRating { albumMap["avgRating"] = avgRating }
             if let ratings = album.ratings { albumMap["ratings"] = ratings }
             if let tracks = album.tracks, !tracks.isEmpty { albumMap["tracks"] = tracks }
+            if let links = album.trackLinks, !links.isEmpty {
+                albumMap["trackLinks"] = links.map { ["name": $0.name, "url": $0.url] }
+            }
             data["album"] = albumMap
         }
         let payload: [String: Any] = [
@@ -437,6 +447,7 @@ final class BridgeClient {
         let releaseMaps: [[String: Any]] = scrapeResult.releases.map { r in
             var m: [String: Any] = ["title": r.title, "url": r.url]
             if let artist = r.artist { m["artist"] = artist }
+            if let artistUrl = r.artistUrl { m["artistUrl"] = artistUrl }
             if let imageUrl = r.imageUrl { m["imageUrl"] = imageUrl }
             return m
         }
@@ -447,14 +458,19 @@ final class BridgeClient {
         if let album = scrapeResult.album {
             var albumMap: [String: Any] = ["title": album.title, "url": album.url]
             if let artist = album.artist { albumMap["artist"] = artist }
+            if let artistUrl = album.artistUrl { albumMap["artistUrl"] = artistUrl }
             if let imageUrl = album.imageUrl { albumMap["imageUrl"] = imageUrl }
             if let releaseDate = album.releaseDate { albumMap["releaseDate"] = releaseDate }
             if let tags = album.tags { albumMap["tags"] = tags }
+            if let links = album.tagLinks, !links.isEmpty {
+                albumMap["tagLinks"] = links.map { ["name": $0.name, "url": $0.url] }
+            }
             albumMap["tracks"] = album.tracks.map { t -> [String: Any] in
                 var tm: [String: Any] = ["name": t.name]
                 if let position = t.position { tm["position"] = position }
                 if let duration = t.duration { tm["duration"] = duration }
                 if let streamUrl = t.streamUrl { tm["streamUrl"] = streamUrl }
+                if let url = t.url { tm["url"] = url }
                 return tm
             }
             data["album"] = albumMap

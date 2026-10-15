@@ -50,12 +50,18 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 ### Test Web App
 
 1. Open http://localhost:3000.
-2. The app works without pairing. To test scrape status, choose **Connect
-   Soundscape** in the top-right, then enter a passphrase from the RYM menu-bar
-   app or create one on the web and save it somewhere secure.
-3. If the web created it, paste it into **Pair with Soundscape Web…** in the
-   menu-bar app and choose **Use This Passphrase**.
-4. Verify that scrape status updates through HTTP polling.
+2. The app works without pairing. For scrape tools, choose **Account → Connect**.
+   Both Connect and Browser helper offer **Download menu-bar app** and expandable
+   **Installation steps**. The download requires GitHub access to this private
+   repository; see the [menubar install guide](../rym-menubar/README.md#download).
+3. Install and open the app, start its Chrome window, and log into RateYourMusic.
+   If the API is not `localhost:3001`, use the launch command shown in the
+   installation steps so both clients connect to the same backend.
+4. Use the same passphrase in both clients. Copy it from **Pair with Soundscape
+   Web…** in the app, or create and save one on the web and paste it into the app's
+   pairing window.
+5. Verify **Account → Browser helper** reports **Connected**. Status updates
+   through HTTP polling.
 
 ### Test scrape job communication
 
@@ -64,8 +70,8 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
    `POST /auth/passphrase`:
    - Menu bar first: choose **Pair with Soundscape Web…**, generate and copy a
      passphrase, then enter it on Soundscape Web.
-   - Web first: choose **Create a new passphrase**, save and copy it, then paste
-     it into **Pair with Soundscape Web…** and choose **Use This Passphrase**.
+   - Web first: choose **Create new passphrase**, save and copy it, then paste
+     it into **Pair with Soundscape Web…** and confirm it.
 3. Store the passphrase in a password manager or another secure place. Scrape
    history is tied to it, and losing it means losing access to that history.
 4. Log into RateYourMusic in the debug Chrome profile if prompted.

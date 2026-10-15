@@ -14,7 +14,6 @@ import type {
   Artist,
   TopTrack,
   TopAlbum,
-  EveryNoiseGenre,
 } from '@soundscape/types';
 import {
   fetchRecentTracks,
@@ -22,7 +21,6 @@ import {
   fetchTopTracks,
   fetchTopAlbums,
   fetchSimilarArtists,
-  fetchEveryNoiseGenre,
 } from '@soundscape/utils';
 
 function normalizeError(error: unknown): Error {
@@ -222,27 +220,6 @@ export function createTopAlbumsResource(
   return {
     albums: (): TopAlbum[] => data.latest?.topalbums.album || [],
     totalAlbums: () => data.latest?.topalbums['@attr'].total || '0',
-    isLoading: () => data.loading,
-    error,
-    refetch: controls.refetch,
-    mutate: controls.mutate,
-  };
-}
-
-/**
- * Create a resource for fetching EveryNoise genre data
- */
-export function createEveryNoiseResource(artistName: () => string) {
-  const { data, error, controls } = createHandledResource(
-    () => {
-      const artist = artistName();
-      return artist?.trim() ? artist : null;
-    },
-    async (artist) => fetchEveryNoiseGenre(artist)
-  );
-
-  return {
-    genre: (): EveryNoiseGenre | null => data.latest || null,
     isLoading: () => data.loading,
     error,
     refetch: controls.refetch,
