@@ -1,228 +1,118 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import test, { after, before } from 'node:test';
-import postgres from 'postgres';
-import {
-  hashToken,
-  createScrapesDb,
-  type CreateQueuedScrapeArgs,
-} from './client.js';
+import { Miniflare } from 'miniflare';
+import { hashToken, createScrapesDb, type CreateQueuedScrapeArgs, type Database } from './client.js';
+
+const mf = new Miniflare({ modules: true, script: 'export default { fetch() { return new Response("ok") } }', d1Databases: ['DB'] });
+let database: D1Database;
+let db: Database;
+const userId = 'user-a';
+const otherUserId = 'user-b';
+
+before(async () => {
+  database = await mf.getD1Database('DB');
+  const schema = (await readFile(new URL('../schema.sql', import.meta.url), 'utf8'))
+    .split('\n').filter(line => !line.trimStart().startsWith('--')).join('\n');
+  await database.batch(schema.split(';').filter(sql => sql.trim()).map(sql => database.prepare(sql)));
+  db = createScrapesDb(database);
+});
+after(async () => { await mf.dispose(); });
+
+async function queue(ownerId = userId, options: Partial<CreateQueuedScrapeArgs> = {}) {
+  return db.createQueued({ id: randomUUID(), userId: ownerId, source: 'rym', url: `https://rateyourmusic.com/~${randomUUID()}`, ...options });
+}
 
 test('hashToken returns deterministic lowercase SHA-256', () => {
-  const result = hashToken('abc');
-  assert.match(result, /^[0-9a-f]{64}$/);
-  assert.equal(result, hashToken('abc'));
-  assert.notEqual(result, hashToken('xyz'));
+  assert.match(hashToken('abc'), /^[0-9a-f]{64}$/);
+  assert.equal(hashToken('abc'), hashToken('abc'));
+  assert.notEqual(hashToken('abc'), hashToken('xyz'));
 });
 
-const dbUrl = process.env.SCRAPES_TEST_DATABASE_URL;
+test('one passphrase provisions one user, sessions expire and remain isolated', async () => {
+  const tokenHash = hashToken('pairing-passphrase');
+  const [first, second] = await Promise.all([
+    db.getOrCreateUserByAgentTokenHash({ id: 'auth-a', tokenHash }),
+    db.getOrCreateUserByAgentTokenHash({ id: 'auth-b', tokenHash }),
+  ]);
+  assert.equal(first.id, second.id);
+  assert.ok(first.created_at instanceof Date);
+  await db.createSession({ tokenHash: 'valid-session', userId: first.id, expiresAt: new Date(Date.now() + 60_000) });
+  await db.createSession({ tokenHash: 'expired-session', userId: first.id, expiresAt: new Date(Date.now() - 60_000) });
+  assert.equal((await db.getUserBySession('valid-session'))?.id, first.id);
+  assert.equal(await db.getUserBySession('expired-session'), null);
+  assert.equal(await db.getUserBySession('other-session'), null);
+  await db.deleteSession('valid-session');
+  assert.equal(await db.getUserBySession('valid-session'), null);
+});
 
-if (!dbUrl) {
-  console.log('SCRAPES_TEST_DATABASE_URL not set — skipping DB-backed tests');
-} else {
-  const userId = `user-${randomUUID()}`;
-  const otherUserId = `other-user-${randomUUID()}`;
-  const testIds: string[] = [];
-  const authUserIds: string[] = [];
-  const db = createScrapesDb(dbUrl);
+test('idempotency is isolated per user and JSON/boolean/date values round-trip', async () => {
+  const input = { idempotencyKey: 'repeat', force: true, query: { artist: 'A', kind: 'artist' } } as Partial<CreateQueuedScrapeArgs>;
+  const first = await queue(userId, input);
+  const replay = await queue(userId, input);
+  const other = await queue(otherUserId, input);
+  assert.equal(replay.created, false);
+  assert.equal(replay.row.id, first.row.id);
+  assert.notEqual(other.row.id, first.row.id);
+  assert.equal(first.row.force, true);
+  assert.deepEqual(first.row.query, input.query);
+  assert.ok(first.row.expires_at instanceof Date);
+});
 
-  async function queue(
-    source: 'rym' | 'bandcamp' = 'rym',
-    url = `https://rateyourmusic.com/~${randomUUID()}`,
-    options: Partial<
-      Omit<CreateQueuedScrapeArgs, 'id' | 'userId' | 'source' | 'url'>
-    > = {},
-    ownerId = userId
-  ) {
-    const input: CreateQueuedScrapeArgs = {
-      ...options,
-      id: randomUUID(),
-      userId: ownerId,
-      source,
-      url,
-    };
-    testIds.push(input.id);
-    return db.createQueued(input);
-  }
+test('concurrent atomic claims select distinct jobs; only the current lease owner may finish', async () => {
+  const ownerId = `claim-${randomUUID()}`;
+  await queue(ownerId);
+  await queue(ownerId);
+  const [a, b] = await Promise.all([
+    db.claimNext({ userId: ownerId, agentId: 'agent-a', leaseMs: 60_000 }),
+    db.claimNext({ userId: ownerId, agentId: 'agent-b', leaseMs: 60_000 }),
+  ]);
+  assert.ok(a && b);
+  assert.notEqual(a.id, b.id);
+  assert.equal(a.attempts, 1);
+  const data = { kind: 'rym' as const, entries: [] };
+  assert.equal(await db.complete({ id: a.id, agentId: 'agent-b', data }), false);
+  assert.equal(await db.fail({ id: a.id, agentId: 'agent-b', error: 'wrong' }), false);
+  assert.equal(await db.complete({ id: a.id, agentId: 'agent-a', data }), true);
+  assert.equal((await db.getById(a.id))?.status, 'done');
+  assert.deepEqual((await db.getById(a.id))?.data, data);
+});
 
-  before(async () => {
-    await db.init();
-  });
+test('expired leases can be reclaimed and stale owner results rejected', async () => {
+  const ownerId = `reclaim-${randomUUID()}`;
+  const job = await queue(ownerId);
+  await db.claimNext({ userId: ownerId, agentId: 'old', leaseMs: -1 });
+  const reclaimed = await db.claimNext({ userId: ownerId, agentId: 'new', leaseMs: 60_000 });
+  assert.equal(reclaimed?.id, job.row.id);
+  assert.equal(reclaimed?.attempts, 2);
+  assert.equal(await db.fail({ id: job.row.id, agentId: 'old', error: 'late' }), false);
+  assert.equal(await db.fail({ id: job.row.id, agentId: 'new', error: 'browser' }), true);
+});
 
-  test('init creates the passwordless queue and auth schema', { concurrency: false }, async () => {
-    await db.init();
-    const sql = postgres(dbUrl);
-    const legacyColumns = await sql<{ column_name: string }[]>`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND table_name = 'users'
-        AND column_name IN ('username', 'password_hash')
-    `;
-    await sql.end();
-    assert.equal(legacyColumns.length, 0);
-  });
+test('cache and listing never expose another user’s jobs', async () => {
+  const ownerId = `cache-${randomUUID()}`;
+  const url = `https://rateyourmusic.com/release/album/${randomUUID()}`;
+  const job = await queue(ownerId, { url });
+  const data = { kind: 'rym' as const, entries: [] };
+  await db.markCached({ id: job.row.id, data });
+  assert.deepEqual((await db.getFresh({ userId: ownerId, source: 'rym', url, maxAgeMs: 60_000 }))?.data, data);
+  assert.equal(await db.getFresh({ userId: otherUserId, source: 'rym', url, maxAgeMs: 60_000 }), null);
+  assert.equal((await db.listByUser({ userId: otherUserId, limit: 20 })).some(row => row.id === job.row.id), false);
+});
 
-  test('agent passphrases atomically provision one user', { concurrency: false }, async () => {
-    const tokenHash = hashToken(`agent-${randomUUID()}`);
-    const firstId = `auth-${randomUUID()}`;
-    const secondId = `auth-${randomUUID()}`;
-    authUserIds.push(firstId);
-
-    const first = await db.getOrCreateUserByAgentTokenHash({
-      id: firstId,
-      tokenHash,
-    });
-    const second = await db.getOrCreateUserByAgentTokenHash({
-      id: secondId,
-      tokenHash,
-    });
-    assert.equal(first.id, firstId);
-    assert.equal(second.id, firstId);
-
-    await db.createSession({
-      tokenHash: hashToken(`session-${randomUUID()}`),
-      userId: first.id,
-      expiresAt: new Date(Date.now() + 60_000),
-    });
-  });
-
-  test('createQueued inserts a queued row with lease fields clear', { concurrency: false }, async () => {
-    const { row, created } = await queue();
-    assert.equal(created, true);
-    assert.equal(row.user_id, userId);
-    assert.equal(row.status, 'queued');
-    assert.equal(row.attempts, 0);
-    assert.equal(row.lease_owner, null);
-    assert.equal(row.data, null);
-  });
-
-  test('idempotency returns the existing row for one user', { concurrency: false }, async () => {
-    const key = `retry-${randomUUID()}`;
-    const first = await queue('rym', undefined, { idempotencyKey: key });
-    const second = await queue('rym', undefined, { idempotencyKey: key });
-    assert.equal(second.created, false);
-    assert.equal(second.row.id, first.row.id);
-  });
-
-  test('claim and complete transition a job for the owning agent', { concurrency: false }, async () => {
-    const ownerId = `claim-user-${randomUUID()}`;
-    const queued = await queue('rym', undefined, {}, ownerId);
-    const claimed = await db.claimNext({
-      userId: ownerId,
-      agentId: 'agent-a',
-      leaseMs: 60_000,
-    });
-    assert.equal(claimed?.id, queued.row.id);
-    assert.equal(claimed?.status, 'running');
-    assert.equal(claimed?.attempts, 1);
-
-    const data = { kind: 'rym' as const, entries: [] };
-    assert.equal(
-      await db.complete({ id: queued.row.id, agentId: 'agent-a', data }),
-      true
-    );
-    const row = await db.getById(queued.row.id);
-    assert.equal(row?.status, 'done');
-    assert.deepEqual(row?.data, data);
-  });
-
-  test('stale leases can be reclaimed by a reconnecting agent', { concurrency: false }, async () => {
-    const ownerId = `stale-user-${randomUUID()}`;
-    const queued = await queue('rym', undefined, {}, ownerId);
-    assert.equal(
-      (await db.claimNext({ userId: ownerId, agentId: 'agent-a', leaseMs: -1 }))
-        ?.id,
-      queued.row.id
-    );
-    const reclaimed = await db.claimNext({
-      userId: ownerId,
-      agentId: 'agent-b',
-      leaseMs: 60_000,
-    });
-    assert.equal(reclaimed?.id, queued.row.id);
-    assert.equal(reclaimed?.lease_owner, 'agent-b');
-    assert.equal(reclaimed?.attempts, 2);
-  });
-
-  test('completion and failure require the current lease owner', { concurrency: false }, async () => {
-    const ownerId = `lease-user-${randomUUID()}`;
-    const queued = await queue('rym', undefined, {}, ownerId);
-    await db.claimNext({ userId: ownerId, agentId: 'agent-a', leaseMs: 60_000 });
-    const data = { kind: 'rym' as const, entries: [] };
-    assert.equal(
-      await db.complete({ id: queued.row.id, agentId: 'agent-b', data }),
-      false
-    );
-    assert.equal(
-      await db.fail({
-        id: queued.row.id,
-        agentId: 'agent-b',
-        error: 'wrong agent',
-      }),
-      false
-    );
-    assert.equal(
-      await db.fail({
-        id: queued.row.id,
-        agentId: 'agent-a',
-        error: 'browser failed',
-      }),
-      true
-    );
-  });
-
-  test('listByUser isolates users and supports source and limit filters', { concurrency: false }, async () => {
-    const first = await queue('rym');
-    const second = await queue('bandcamp', 'https://bandcamp.com/filter');
-    const other = randomUUID();
-    testIds.push(other);
-    await db.createQueued({
-      id: other,
-      userId: otherUserId,
-      source: 'rym',
-      url: 'https://rateyourmusic.com/other',
-    });
-
-    const rows = await db.listByUser({ userId, source: 'rym', limit: 10 });
-    assert.ok(rows.some((row) => row.id === first.row.id));
-    assert.ok(!rows.some((row) => row.id === second.row.id));
-    assert.ok(!rows.some((row) => row.id === other));
-    assert.ok((await db.listByUser({ userId, limit: 1 })).length <= 1);
-  });
-
-  test('getFresh reads recent cache data by source and cache URL', { concurrency: false }, async () => {
-    const ownerId = `cache-user-${randomUUID()}`;
-    const url = `resolve:album:${randomUUID()}`;
-    const queued = await queue('rym', url, {}, ownerId);
-    const data = { kind: 'rym' as const, entries: [] };
-    await db.claimNext({ userId: ownerId, agentId: 'agent-a', leaseMs: 60_000 });
-    await db.complete({ id: queued.row.id, agentId: 'agent-a', data });
-
-    const result = await db.getFresh({
-      userId: ownerId,
-      source: 'rym',
-      url,
-      maxAgeMs: 60_000,
-    });
-    assert.deepEqual(result?.data, data);
-    assert.ok(result?.fetchedAt instanceof Date);
-    assert.equal(
-      await db.getFresh({
-        userId: ownerId,
-        source: 'bandcamp',
-        url,
-        maxAgeMs: 60_000,
-      }),
-      null
-    );
-  });
-
-  after(async () => {
-    const sql = postgres(dbUrl);
-    await sql`DELETE FROM scrapes WHERE id IN ${sql(testIds)}`;
-    await sql`DELETE FROM users WHERE id IN ${sql(authUserIds)}`;
-    await sql.end();
-    await db.close();
-  });
-}
+test('historical Bandcamp rows round-trip without dispatching or rewriting their data', async () => {
+  const ownerId = `legacy-${randomUUID()}`;
+  const legacyData = { kind: 'bandcamp' as const, releases: [{ title: 'Archived', url: 'https://artist.bandcamp.com/album/archived' }] };
+  const legacy = await queue(ownerId, { source: 'bandcamp', url: 'https://artist.bandcamp.com/album/archived' });
+  await db.markCached({ id: legacy.row.id, data: legacyData });
+  const pending = await queue(ownerId, { source: 'bandcamp', url: 'https://artist.bandcamp.com/album/pending' });
+  const unsupportedMode = await queue(ownerId, { mode: 'resolve', url: 'resolve:artist:Archived' });
+  const active = await queue(ownerId);
+  assert.equal((await db.claimNext({ userId: ownerId, agentId: 'agent', leaseMs: 60_000 }))?.id, active.row.id);
+  assert.equal(await db.claimNext({ userId: ownerId, agentId: 'agent', leaseMs: 60_000 }), null);
+  assert.equal((await db.getById(pending.row.id))?.status, 'queued');
+  assert.equal((await db.getById(unsupportedMode.row.id))?.status, 'queued');
+  assert.deepEqual((await db.getById(legacy.row.id))?.data, legacyData);
+  assert.deepEqual((await db.listByUser({ userId: ownerId, limit: 10 })).find(row => row.id === legacy.row.id)?.data, legacyData);
+});

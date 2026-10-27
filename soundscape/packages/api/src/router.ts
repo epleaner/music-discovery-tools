@@ -1,10 +1,8 @@
 import { router, publicProcedure } from './trpc.js';
 import { z } from 'zod';
-import { bandcampRouter } from './bandcamp-router.js';
 import { scrapeRouter } from './scrape-router.js';
 
 export const appRouter = router({
-  bandcamp: bandcampRouter,
   scrape: scrapeRouter,
   // Health check
   health: publicProcedure

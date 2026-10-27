@@ -7,15 +7,7 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
-import type {
-  BandcampAlbumDetail,
-  BandcampRelease,
-  RymAlbumDetail,
-  RymEntry,
-  ScrapeJob,
-  ScrapeQuery,
-  ScrapeSource,
-} from '@soundscape/types';
+import type { RymAlbumDetail, RymEntry, ScrapeJob } from '@soundscape/types';
 import { isScrapeUrlAllowed, normalizeCharacters } from '@soundscape/utils';
 import { listScrapeJobs, startScrapeJob } from '../lib/scrape-jobs';
 import Input from './Input';
@@ -25,7 +17,6 @@ import PanelTab from './PanelTab';
 import Select from './Select';
 import ControlGroup from './ControlGroup';
 import RymResults from './RymResults';
-import BandcampResults from './BandcampResults';
 import ShuffleIcon from './ShuffleIcon';
 import CacheAge from './CacheAge';
 import EmptyState from './EmptyState';
@@ -33,9 +24,7 @@ import ErrorMessage from './ErrorMessage';
 
 const ScrapeTool: Component = () => {
   const [url, setUrl] = createSignal('');
-  const [activeSource, setActiveSource] = createSignal<ScrapeSource | null>(
-    null
-  );
+  const [activeSource, setActiveSource] = createSignal<'rym' | null>(null);
   const [inputError, setInputError] = createSignal<string | null>(null);
   const [recentScrapes, setRecentScrapes] = createSignal<ScrapeJob[]>([]);
   const [recentError, setRecentError] = createSignal<string | null>(null);
@@ -46,22 +35,6 @@ const ScrapeTool: Component = () => {
   const [rymFetchedAt, setRymFetchedAt] = createSignal<string | Date | null>(
     null
   );
-
-  const [releases, setReleases] = createSignal<BandcampRelease[]>([]);
-  const [currentLabel, setCurrentLabel] = createSignal<{
-    name: string;
-    url: string;
-  } | null>(null);
-  const [album, setAlbum] = createSignal<BandcampAlbumDetail | null>(null);
-  const [bcStatus, setBcStatus] = createSignal<string | null>(null);
-  const [bcFetchedAt, setBcFetchedAt] = createSignal<string | Date | null>(
-    null
-  );
-  const [isLabelResult, setIsLabelResult] = createSignal(false);
-  const [isRelatedResult, setIsRelatedResult] = createSignal(false);
-  const [pendingMode, setPendingMode] = createSignal<
-    'label' | 'related' | undefined
-  >(undefined);
 
   let cancelScrape = () => {};
 
@@ -98,15 +71,6 @@ const ScrapeTool: Component = () => {
     return `https://rateyourmusic.com/charts/top/album/${period}/ge:${encodedGenreSlug}/`;
   });
 
-  const detectSource = (value: string): ScrapeSource | null => {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    for (const source of ['rym', 'bandcamp'] as const) {
-      if (isScrapeUrlAllowed(source, trimmed)) return source;
-    }
-    return null;
-  };
-
   const loadRecentScrapes = async () => {
     try {
       setRecentError(null);
@@ -123,8 +87,8 @@ const ScrapeTool: Component = () => {
   const recentResults = createMemo(() => {
     const seen = new Set<string>();
     return recentScrapes().filter((job) => {
-      if (job.status !== 'done' || job.data?.kind !== job.source) return false;
-      const key = `${job.source}:${job.mode ?? ''}:${job.targetUrl ?? job.url}`;
+      if (job.source !== 'rym' || job.status !== 'done' || job.data?.kind !== 'rym') return false;
+      const key = job.targetUrl ?? job.url;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -133,16 +97,6 @@ const ScrapeTool: Component = () => {
 
   const recentSummary = (job: ScrapeJob) => {
     const sourceUrl = job.targetUrl ?? job.url;
-    if (job.data?.kind === 'bandcamp') {
-      if (job.data.album) {
-        return `${job.data.album.artist} — ${job.data.album.title}`;
-      }
-      if (job.data.label) return `${job.data.label.name} label`;
-      const release = job.data.releases[0];
-      if (release)
-        return `${release.artist ? `${release.artist} — ` : ''}${release.title}`;
-    }
-
     if (job.data?.kind === 'rym') {
       try {
         const chart = new URL(sourceUrl).pathname.match(
@@ -224,25 +178,6 @@ const ScrapeTool: Component = () => {
     void loadRecentScrapes();
   };
 
-  const applyBandcampJob = (job: ScrapeJob) => {
-    setActiveSource('bandcamp');
-    if (job.status === 'queued') return setBcStatus('Queued for your Mac…');
-    if (job.status === 'running') return setBcStatus('Scraping on your Mac…');
-    if (job.status === 'error')
-      return setBcStatus(`Error: ${job.error ?? 'unknown'}`);
-    if (job.status === 'expired')
-      return setBcStatus('Expired before the local agent completed it.');
-    if (job.data?.kind !== 'bandcamp')
-      return setBcStatus('The agent returned an unexpected result.');
-    setReleases(job.data.releases);
-    setCurrentLabel(job.data.label ?? null);
-    setAlbum(job.data.album ?? null);
-    setBcFetchedAt(job.fetchedAt);
-    setBcStatus(null);
-    setIsLabelResult(pendingMode() === 'label' && !!job.data.label);
-    setIsRelatedResult(pendingMode() === 'related');
-    void loadRecentScrapes();
-  };
 
   const scrapeRym = (value: string, force = false) => {
     const target = value.trim();
@@ -259,89 +194,22 @@ const ScrapeTool: Component = () => {
     );
   };
 
-  const scrapeBandcampUrl = (
-    value: string,
-    mode?: 'label' | 'related',
-    force = false
-  ) => {
-    const target = value.trim();
-    cancelScrape();
-    setUrl(target);
-    setActiveSource('bandcamp');
-    setReleases([]);
-    setCurrentLabel(null);
-    setAlbum(null);
-    setIsLabelResult(false);
-    setIsRelatedResult(false);
-    setPendingMode(mode);
-    setBcStatus('Queueing scrape…');
-    cancelScrape = startScrapeJob(
-      { source: 'bandcamp', url: target, mode, force },
-      applyBandcampJob,
-      (message) => setBcStatus(`Error: ${message}`)
-    );
-  };
-
-  const scrapeBandcampQuery = (query: ScrapeQuery, force = false) => {
-    cancelScrape();
-    setActiveSource('bandcamp');
-    setReleases([]);
-    setCurrentLabel(null);
-    setAlbum(null);
-    setIsLabelResult(false);
-    setIsRelatedResult(false);
-    setPendingMode(undefined);
-    setUrl('');
-    setBcStatus(
-      `Resolving ${query.artist}${query.album ? ` — ${query.album}` : ''} on your Mac…`
-    );
-    cancelScrape = startScrapeJob(
-      { source: 'bandcamp', mode: 'resolve', query, force },
-      applyBandcampJob,
-      (message) => setBcStatus(`Error: ${message}`)
-    );
-  };
-
   const scrapeInput = () => {
     const target = url().trim();
-    const source = detectSource(target);
-    if (!source) {
+    const allowed = isScrapeUrlAllowed('rym', target);
+    if (!allowed) {
       setActiveSource(null);
-      setInputError('Enter an HTTPS Rate Your Music or Bandcamp URL.');
+      setInputError('Enter an HTTPS Rate Your Music URL.');
       return;
     }
     setInputError(null);
-    if (source === 'rym') scrapeRym(target);
-    else scrapeBandcampUrl(target);
+    scrapeRym(target);
   };
   const openRecent = (job: ScrapeJob) => {
     cancelScrape();
-    if (job.source === 'bandcamp' && job.mode === 'resolve' && job.query) {
-      scrapeBandcampQuery(job.query);
-      return;
-    }
-    const target = job.targetUrl ?? job.url;
-    setUrl(target);
-    if (job.source === 'rym') applyRymJob(job);
-    else {
-      setPendingMode(
-        job.mode === 'label' || job.mode === 'related' ? job.mode : undefined
-      );
-      applyBandcampJob(job);
-    }
+    setUrl(job.targetUrl ?? job.url);
+    applyRymJob(job);
   };
-
-  const isAlbumOrTrackUrl = () => {
-    const currentUrl = url();
-    return /\/album\/|\/track\//.test(currentUrl);
-  };
-
-  const activeFetchedAt = () =>
-    activeSource() === 'bandcamp'
-      ? bcFetchedAt()
-      : activeSource() === 'rym'
-        ? rymFetchedAt()
-        : null;
 
   onMount(() => void loadRecentScrapes());
   onCleanup(() => cancelScrape());
@@ -394,17 +262,6 @@ const ScrapeTool: Component = () => {
                           {' · '}
                           {job.data?.kind === 'rym'
                             ? `${job.data.entries.length} entries`
-                            : ''}
-                        </Show>
-                        <Show
-                          when={
-                            job.data?.kind === 'bandcamp' &&
-                            job.data.releases.length > 0
-                          }
-                        >
-                          {' · '}
-                          {job.data?.kind === 'bandcamp'
-                            ? `${job.data.releases.length} releases`
                             : ''}
                         </Show>
                       </div>
@@ -505,14 +362,14 @@ const ScrapeTool: Component = () => {
 
           <div class="toolbar">
             <label for="scrape-url" class="field-label basis-full">
-              RYM or Bandcamp URL
+              RYM URL
             </label>
             <Input
               id="scrape-url"
               aria-invalid={!!inputError()}
               aria-describedby={inputError() ? 'scrape-url-error' : undefined}
               type="url"
-              placeholder="https://rateyourmusic.com/... or https://artist.bandcamp.com/..."
+              placeholder="https://rateyourmusic.com/..."
               value={url()}
               onInput={(e) => {
                 setUrl(e.currentTarget.value);
@@ -523,12 +380,8 @@ const ScrapeTool: Component = () => {
               }}
               class="min-w-0 basis-full flex-1 sm:basis-auto"
             />
-            <Show when={detectSource(url())}>
-              {(source) => (
-                <span class="status">
-                  {source() === 'rym' ? 'RYM' : 'Bandcamp'}
-                </span>
-              )}
+            <Show when={isScrapeUrlAllowed('rym', url().trim())}>
+              <span class="status">RYM</span>
             </Show>
             <Button
               onClick={scrapeInput}
@@ -545,16 +398,13 @@ const ScrapeTool: Component = () => {
           </div>
         </div>
         <div class="panel-scroll">
-          <Show when={activeFetchedAt()}>
+          <Show when={rymFetchedAt()}>
             <div class="section-header justify-end">
               <CacheAge
-                fetchedAt={activeFetchedAt()}
+                fetchedAt={rymFetchedAt()}
                 onRefresh={() => {
                   const target = url();
-                  if (activeSource() === 'rym' && target)
-                    scrapeRym(target, true);
-                  if (activeSource() === 'bandcamp' && target)
-                    scrapeBandcampUrl(target, pendingMode(), true);
+                  if (target) scrapeRym(target, true);
                 }}
               />
             </div>
@@ -565,24 +415,6 @@ const ScrapeTool: Component = () => {
                 entries={entries()}
                 album={rymAlbum()}
                 status={rymStatus()}
-              />
-            </Show>
-            <Show when={activeSource() === 'bandcamp'}>
-              <BandcampResults
-                releases={releases()}
-                album={album()}
-                currentLabel={currentLabel()}
-                status={bcStatus()}
-                isLabelResult={isLabelResult()}
-                isRelatedResult={isRelatedResult()}
-                showExploreLabel={
-                  !!currentLabel() && !isLabelResult() && !isRelatedResult()
-                }
-                showRelated={
-                  isAlbumOrTrackUrl() && !isLabelResult() && !isRelatedResult()
-                }
-                onExploreLabel={() => scrapeBandcampUrl(url(), 'label')}
-                onRelated={() => scrapeBandcampUrl(url(), 'related')}
               />
             </Show>
             <Show when={!activeSource()}>

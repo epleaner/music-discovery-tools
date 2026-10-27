@@ -52,7 +52,7 @@ import { useTheme, type Theme, type ColorTheme } from './lib/use-theme';
 import { getSession, logout, type SessionUser } from './lib/auth';
 
 type View = 'recent' | 'top';
-type FocusView = 'similar' | 'rym' | 'bandcamp';
+type FocusView = 'similar' | 'rym';
 
 interface AppState extends Record<string, string> {
   username: string;
@@ -107,7 +107,7 @@ const Workspace: Component<{
   };
   const focusView = (): FocusView => {
     const view = state().focus;
-    return view === 'rym' || view === 'bandcamp' ? view : 'similar';
+    return view === 'rym' ? view : 'similar';
   };
   const focusSource = () => {
     const view = focusView();
@@ -123,7 +123,6 @@ const Workspace: Component<{
   const focusTabs: { id: FocusView; label: string }[] = [
     { id: 'similar', label: 'Similar' },
     { id: 'rym', label: 'RYM' },
-    { id: 'bandcamp', label: 'Bandcamp' },
   ];
   let focusScroll: HTMLDivElement | undefined;
   createEffect(
@@ -651,9 +650,7 @@ const Workspace: Component<{
                     when={props.user}
                     fallback={
                       <div hidden={focusView() === 'similar'}>
-                        {renderConnectNotice(
-                          'Connect for RYM and Bandcamp matches.'
-                        )}
+                        {renderConnectNotice('Connect for RYM matches.')}
                       </div>
                     }
                   >

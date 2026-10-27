@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { hashToken } from '@soundscape/scrapes-db';
 import type { ScrapeRow } from '@soundscape/scrapes-db';
 import type { ScrapeData } from '@soundscape/types';
-import { isScrapeUrlAllowed, scrapeCacheKey } from '@soundscape/utils';
+import { isScrapeUrlAllowed } from '@soundscape/utils';
 import { z } from 'zod';
 import { router, protectedProcedure } from './trpc.js';
 
@@ -15,31 +15,14 @@ const scrapeQuerySchema = z.object({
 
 const scrapeJobInputSchema = z
   .object({
-    source: z.enum(['rym', 'bandcamp']),
+    source: z.literal('rym'),
     url: z.string().url().optional(),
-    mode: z.enum(['label', 'related', 'resolve']).optional(),
     query: scrapeQuerySchema.optional(),
     force: z.boolean().default(false),
     idempotencyKey: z.string().min(1).max(200).optional(),
   })
+  .strict()
   .superRefine((input, ctx) => {
-    if (input.mode === 'resolve') {
-      if (!input.query) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['query'],
-          message: 'resolve jobs require a query',
-        });
-      }
-      if (input.url) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['url'],
-          message: 'resolve jobs cannot include a URL',
-        });
-      }
-      return;
-    }
     if (!input.url) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -115,18 +98,20 @@ export const scrapeRouter = router({
         });
       }
       const ownerKey = hashToken(ctx.user.id);
-      const cacheUrl = scrapeCacheKey(input);
+      const cacheUrl = input.url!;
       const created = await ctx.scrapesDb.createQueued({
         id: randomUUID(),
         userId: ctx.user.id,
         source: input.source,
         url: cacheUrl,
         targetUrl: input.url,
-        mode: input.mode,
         query: input.query,
         force: input.force,
         idempotencyKey: input.idempotencyKey,
       });
+      if (!created.created && created.row.source !== 'rym') {
+        throw new TRPCError({ code: 'CONFLICT', message: 'Job source is no longer supported' });
+      }
       if (!created.created) return mapJob(created.row);
 
       if (!input.force) {
@@ -175,7 +160,7 @@ export const scrapeRouter = router({
   listScrapes: protectedProcedure
     .input(
       z.object({
-        source: z.enum(['rym', 'bandcamp']).optional(),
+        source: z.literal('rym').optional(),
         limit: z.number().int().min(1).max(50).default(20),
       })
     )

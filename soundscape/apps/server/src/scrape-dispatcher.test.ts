@@ -33,7 +33,6 @@ function makeRow(overrides: Partial<ScrapeRow> = {}): ScrapeRow {
 
 function makeDb(row: ScrapeRow): ScrapesDb {
   return {
-    async init() {},
     async createQueued() {
       return { row, created: false };
     },
@@ -68,7 +67,6 @@ function makeDb(row: ScrapeRow): ScrapesDb {
     async getFresh() {
       return null;
     },
-    async close() {},
   };
 }
 

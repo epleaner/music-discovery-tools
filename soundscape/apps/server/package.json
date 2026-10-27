@@ -4,31 +4,34 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "pnpm --filter @soundscape/types build && pnpm --filter @soundscape/utils build && tsx src/index.ts",
-    "test": "tsx --test src/**/*.test.ts"
+    "dev": "cf dev --port 3001",
+    "build": "tsc --noEmit",
+    "build:worker": "cf build",
+    "stage:swagger": "mkdir -p ../web/dist/api && cp node_modules/swagger-ui-dist/index.css node_modules/swagger-ui-dist/swagger-ui.css node_modules/swagger-ui-dist/swagger-ui-bundle.js node_modules/swagger-ui-dist/swagger-ui-standalone-preset.js node_modules/swagger-ui-dist/favicon-16x16.png node_modules/swagger-ui-dist/favicon-32x32.png ../web/dist/api/",
+    "deploy": "cf deploy",
+    "start": "cf dev --port 3001",
+    "test": "tsx --test src/*.test.ts"
   },
   "dependencies": {
     "@soundscape/api": "workspace:*",
+    "@soundscape/scrapes-db": "workspace:*",
     "@soundscape/types": "workspace:*",
     "@soundscape/utils": "workspace:*",
-    "@soundscape/scrapes-db": "workspace:*",
     "@trpc/server": "^10.45.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "swagger-ui-express": "^5.0.1",
+    "swagger-ui-dist": "^5.30.2",
     "trpc-openapi": "^1.2.0",
     "tsx": "^4.7.0",
-    "ws": "^8.16.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "5.20261026.1",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^20.11.5",
-    "@types/swagger-ui-express": "^4.1.8",
-    "@types/ws": "^8.5.10",
-    "typescript": "^5.3.3"
+    "cf": "1.0.0-beta.20",
+    "typescript": "^5.3.3",
+    "wrangler": "4.152.0"
   }
 }

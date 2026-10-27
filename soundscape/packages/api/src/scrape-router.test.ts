@@ -40,7 +40,6 @@ function makeScrapesDb(
   fresh: { data: ScrapeData; fetchedAt: Date } | null = null
 ): ScrapesDb {
   return {
-    async init() {},
     async createQueued(input: CreateQueuedScrapeArgs) {
       const existing =
         input.idempotencyKey &&
@@ -95,7 +94,6 @@ function makeScrapesDb(
         )
         .slice(0, limit);
     },
-    async close() {},
   };
 }
 
@@ -169,6 +167,41 @@ test('scrape.createJob rejects an unapproved URL', async () => {
     }),
     /URL is not allowed/
   );
+});
+
+test('scrape.createJob rejects removed Bandcamp jobs and obsolete modes', async () => {
+  const rows: ScrapeRow[] = [];
+  const scrape = caller(makeScrapesDb(rows)).scrape;
+  await assert.rejects(
+    scrape.createJob({ source: 'bandcamp', url: 'https://artist.bandcamp.com/album/y' } as never),
+    /Invalid literal value/
+  );
+  await assert.rejects(
+    scrape.createJob({ source: 'rym', url: 'https://rateyourmusic.com/', mode: 'resolve' } as never),
+    /Unrecognized key/
+  );
+  assert.equal(rows.length, 0);
+});
+
+test('idempotency cannot reactivate a legacy source, but historical jobs remain readable', async () => {
+  const legacy = makeRow({
+    id: 'legacy',
+    source: 'bandcamp',
+    url: 'https://artist.bandcamp.com/album/archived',
+    idempotency_key: 'old-key',
+    status: 'done',
+    data: { kind: 'bandcamp', releases: [{ title: 'Archived', url: 'https://artist.bandcamp.com/album/archived' }] },
+  });
+  const rows = [legacy];
+  const scrape = caller(makeScrapesDb(rows)).scrape;
+  await assert.rejects(
+    scrape.createJob({ source: 'rym', url: 'https://rateyourmusic.com/', idempotencyKey: 'old-key' }),
+    /Job source is no longer supported/
+  );
+  assert.equal(rows.length, 1);
+  assert.deepEqual((await scrape.getJob({ requestId: 'legacy' }))?.data, legacy.data);
+  assert.equal((await scrape.listScrapes({}))[0]?.source, 'bandcamp');
+  await assert.rejects(scrape.listScrapes({ source: 'bandcamp' } as never), /Invalid literal value/);
 });
 
 test('idempotency is isolated per authenticated user', async () => {

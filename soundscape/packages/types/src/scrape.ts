@@ -86,9 +86,8 @@ export type ScrapeQuery = {
 };
 
 export interface ScrapeRequest {
-  source: ScrapeSource;
-  url?: string;
-  mode?: ScrapeMode;
+  source: 'rym';
+  url: string;
   query?: ScrapeQuery;
   force?: boolean;
 }
@@ -118,8 +117,8 @@ export type ScrapeMsg = ScrapeRequest & { type: 'scrape'; requestId: string };
 export type ScrapeResultMsg = {
   type: 'scrape_result';
   requestId: string;
-  source: ScrapeSource;
-  data: ScrapeData;
+  source: 'rym';
+  data: RymScrapeData;
 };
 export type ScrapeErrorMsg = {
   type: 'scrape_error';

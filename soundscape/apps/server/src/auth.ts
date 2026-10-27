@@ -21,8 +21,8 @@ const preparePassphraseSchema = z.object({
 });
 
 export interface AgentConnectionState {
-  isConnected(ownerKey: string): boolean;
-  unregisterOwner(ownerKey: string): void;
+  isConnected(ownerKey: string): Promise<boolean>;
+  rotate(userId: string, tokenHash: string): Promise<void>;
 }
 
 export function ownerKeyForUser(userId: string): string {
@@ -44,8 +44,9 @@ export function getCookie(req: Request, name: string): string | null {
 }
 
 function setSessionCookie(res: Response, token: string): void {
-  const secure = process.env.NODE_ENV === 'production';
-  const sameSite = secure ? 'SameSite=None' : 'SameSite=Lax';
+  const secure = res.req?.headers['x-forwarded-proto'] === 'https' ||
+    !/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(res.req?.headers.host ?? '');
+  const sameSite = 'SameSite=Lax';
   res.setHeader(
     'Set-Cookie',
     `${SESSION_COOKIE}=${encodeURIComponent(token)}; Max-Age=${Math.floor(
@@ -140,7 +141,7 @@ export function createAuthRouter(deps: {
     if (!user) return res.status(401).json({ message: 'not authenticated' });
     return res.json({
       configured: Boolean(user.agent_token_hash),
-      connected: deps.agentRegistry.isConnected(ownerKeyForUser(user.id)),
+      connected: await deps.agentRegistry.isConnected(ownerKeyForUser(user.id)),
       lastSeenAt: user.agent_last_seen_at,
     });
   });
@@ -157,15 +158,13 @@ export function createAuthRouter(deps: {
     }
 
     try {
-      await db.setAgentTokenHash(user.id, hashToken(parsed.data.passphrase));
-      deps.agentRegistry.unregisterOwner(ownerKeyForUser(user.id));
+      await deps.agentRegistry.rotate(user.id, hashToken(parsed.data.passphrase));
       return res.status(204).end();
     } catch (error) {
       if (
-        error &&
-        typeof error === 'object' &&
-        'code' in error &&
-        error.code === '23505'
+        error instanceof Error &&
+        ((('code' in error) && (error.code === '23505' || error.code === 'SQLITE_CONSTRAINT')) ||
+          error.message.includes('UNIQUE constraint failed: users.agent_token_hash'))
       ) {
         return res
           .status(409)

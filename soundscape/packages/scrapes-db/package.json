@@ -15,10 +15,11 @@
     "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
-    "@soundscape/types": "workspace:*",
-    "postgres": "^3.4.5"
+    "@soundscape/types": "workspace:*"
   },
   "devDependencies": {
+    "miniflare": "4.20260730.0",
+    "@cloudflare/workers-types": "5.20261026.1",
     "tsx": "^4.20.6",
     "typescript": "^5.3.3"
   }
