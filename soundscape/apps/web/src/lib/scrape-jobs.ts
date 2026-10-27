@@ -1,5 +1,5 @@
 import { createSignal } from 'solid-js';
-import type { ScrapeJob, ScrapeRequest, ScrapeSource } from '@soundscape/types';
+import type { ScrapeJob, ScrapeRequest } from '@soundscape/types';
 import { trpc } from './trpc';
 
 const POLL_INTERVAL_MS = 1_000;
@@ -20,7 +20,7 @@ async function getJob(requestId: string): Promise<ScrapeJob | null> {
 }
 
 export function listScrapeJobs(
-  source?: ScrapeSource,
+  source?: 'rym',
   limit = 20
 ): Promise<ScrapeJob[]> {
   return trpc.scrape.listScrapes.query({ source, limit });

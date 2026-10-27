@@ -9,27 +9,29 @@ cd soundscape
 pnpm install
 ```
 
-### 2. Configure Environment Variables
+### 2. Configure Cloudflare local D1
 
-**Web App** - Create `apps/web/.env.local`:
-
-```bash
-VITE_LASTFM_API_KEY=your_lastfm_api_key
-VITE_API_URL=http://localhost:3001
-```
+Run Cloudflare commands from `soundscape/apps/server/`, where
+`cloudflare.config.ts` lives. Apply `../../packages/scrapes-db/schema.sql`
+to the local `epleaner-soundscape` D1 before starting the Worker. Production
+uses the same schema, with preserved users, sessions and scrape rows imported
+by the deployment owner. No PostgreSQL URL or retired Last.fm key is required.
+In production, no `VITE_API_URL` is needed (same-origin Worker assets and API).
+Local Vite development intentionally defaults to `http://localhost:3001`.
 
 ### 3. Start Development
 
-**Option A: Everything together**
+**Option A: Build assets, then run both servers**
 
 ```bash
+pnpm build
 pnpm dev
 ```
 
 **Option B: Individual services** (recommended for debugging)
 
 ```bash
-# Terminal 1 - Backend
+# Terminal 1 - Worker (D1, HTTP API and WebSocket broker)
 pnpm dev:server
 
 # Terminal 2 - Web App
@@ -65,7 +67,7 @@ Open http://localhost:3001/health - should see `{"status":"ok",...}`
 
 ### Test scrape job communication
 
-1. Start the API with `DATABASE_URL` configured.
+1. Start the Worker with the local D1 schema applied.
 2. Create the pairing passphrase from either side. Both clients call
    `POST /auth/passphrase`:
    - Menu bar first: choose **Pair with Soundscape Web…**, generate and copy a
@@ -104,7 +106,7 @@ placeholders without committing the token.
 - Confirm `SCRAPE_AGENT_WS_URL` points to the API `/ws` endpoint.
 - Confirm `SCRAPE_AGENT_TOKEN` matches the passphrase entered on Soundscape Web.
 - Confirm the agent uses the intended warm browser profile.
-- Jobs created while it is offline remain queued in PostgreSQL.
+- Jobs created while it is offline remain queued in D1.
 
 ### Type errors in web app
 

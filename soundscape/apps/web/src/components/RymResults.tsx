@@ -128,21 +128,6 @@ const RymResults: Component<RymResultsProps> = (props) => {
                   <Show when={entry.mediaLinks?.length}>
                     <RymLinkList links={entry.mediaLinks} />
                   </Show>
-                  <Show
-                    when={
-                      entry.bandcampUrl &&
-                      !entry.mediaLinks?.some(
-                        (link) => link.url === entry.bandcampUrl
-                      )
-                    }
-                  >
-                    <SourceLink
-                      href={entry.bandcampUrl}
-                      base="https://bandcamp.com"
-                    >
-                      Bandcamp
-                    </SourceLink>
-                  </Show>
                 </div>
               </article>
             )}

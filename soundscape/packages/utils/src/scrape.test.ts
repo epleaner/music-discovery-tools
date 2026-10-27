@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isScrapeUrlAllowed, scrapeCacheKey } from './scrape.js';
+import { isScrapeUrlAllowed } from './scrape.js';
 
 test('isScrapeUrlAllowed accepts source hosts and rejects suffix attacks', () => {
   assert.equal(
@@ -13,7 +13,7 @@ test('isScrapeUrlAllowed accepts source hosts and rejects suffix attacks', () =>
   );
   assert.equal(
     isScrapeUrlAllowed('bandcamp', 'https://artist.bandcamp.com/album/y'),
-    true
+    false
   );
   assert.equal(
     isScrapeUrlAllowed('rym', 'https://rateyourmusic.com.evil.com/x'),
@@ -25,13 +25,6 @@ test('isScrapeUrlAllowed accepts source hosts and rejects suffix attacks', () =>
   );
 });
 
-test('scrapeCacheKey keeps modes and resolve queries distinct', () => {
-  const url = 'https://bandcamp.com/tag/ambient';
-  assert.equal(scrapeCacheKey({ url }), url);
-  assert.equal(scrapeCacheKey({ url, mode: 'label' }), `${url}#label`);
-  assert.equal(scrapeCacheKey({ url, mode: 'related' }), `${url}#related`);
-  assert.equal(
-    scrapeCacheKey({ mode: 'resolve', query: { artist: 'A', kind: 'artist' } }),
-    'resolve:artist:A'
-  );
+test('isScrapeUrlAllowed rejects non-HTTPS RYM URLs', () => {
+  assert.equal(isScrapeUrlAllowed('rym', 'http://rateyourmusic.com/'), false);
 });

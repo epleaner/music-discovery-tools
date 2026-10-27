@@ -1,8 +1,10 @@
 {
   "name": "soundscape",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "turbo build",
+    "build:cloudflare": "pnpm build && pnpm --filter @soundscape/server stage:swagger && pnpm --filter @soundscape/server build:worker",
     "test": "pnpm --filter @soundscape/api test && pnpm --filter @soundscape/server test && pnpm --filter @soundscape/scrapes-db test && pnpm --filter @soundscape/web test",
     "dev": "turbo dev",
     "dev:server": "pnpm --filter @soundscape/server dev",
@@ -17,11 +19,17 @@
     "cheerio": "^1.1.2",
     "prettier": "^3.6.2",
     "tsx": "^4.7.0",
-    "turbo": "^1.11.2",
+    "turbo": "1.13.4",
     "typescript": "^5.3.0"
   },
   "packageManager": "pnpm@9.15.4",
+  "pnpm": {
+    "overrides": {
+      "raw-body@2.5.2>iconv-lite": "^0.6.3",
+      "body-parser@1.20.3>iconv-lite": "^0.6.3"
+    }
+  },
   "engines": {
-    "node": ">=20"
+    "node": "^24.22.0"
   }
 }

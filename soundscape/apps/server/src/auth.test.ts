@@ -7,7 +7,7 @@ import {
   type Database,
   type UserRecord,
 } from '@soundscape/scrapes-db';
-import { createAuthRouter } from './auth.js';
+import { createAuthRouter, ownerKeyForUser } from './auth.js';
 
 class UniqueViolation extends Error {
   code = '23505';
@@ -17,7 +17,6 @@ function makeDb(): Database {
   const users = new Map<string, UserRecord>();
   const sessions = new Map<string, string>();
   return {
-    async init() {},
     async getOrCreateUserByAgentTokenHash({ id, tokenHash }) {
       const existing = [...users.values()].find(
         (user) => user.agent_token_hash === tokenHash
@@ -86,7 +85,6 @@ function makeDb(): Database {
     async getFresh() {
       return null;
     },
-    async close() {},
   };
 }
 
@@ -100,8 +98,8 @@ async function startAuthServer() {
     createAuthRouter({
       getDb: () => db,
       agentRegistry: {
-        isConnected: (ownerKey) => connected.has(ownerKey),
-        unregisterOwner: (ownerKey) => connected.delete(ownerKey),
+        isConnected: async (ownerKey) => connected.has(ownerKey),
+        rotate: async (userId, tokenHash) => { await db.setAgentTokenHash(userId, tokenHash); connected.delete(ownerKeyForUser(userId)); },
       },
     })
   );

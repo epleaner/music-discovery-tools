@@ -8,7 +8,7 @@ export function resolveApiUrl(
   apiUrl: string | undefined,
   browserHostname = globalThis.location?.hostname
 ): string {
-  const resolved = apiUrl ?? 'http://localhost:3001';
+  const resolved = apiUrl ?? (browserHostname && !loopbackHosts.has(browserHostname) ? globalThis.location?.origin ?? `https://${browserHostname}` : 'http://localhost:3001');
   if (!browserHostname || !loopbackHosts.has(browserHostname)) return resolved;
 
   const url = new URL(resolved);

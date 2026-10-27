@@ -122,10 +122,13 @@ In Soundscape Web, **Account → Browser helper** shows the download link,
 installation steps and connection status. Wait for **Connected** before using
 **Scrape**, and keep the app and its Chrome window running.
 
-The app defaults to `ws://localhost:3001/ws`. For a different API, the web
-installation steps show a `SCRAPE_AGENT_WS_URL` launch command using that web
-client's configured backend. Quit the app before running the command and keep
-Terminal open while the helper runs.
+The app defaults to `ws://localhost:3001/ws` for local development. For
+production Soundscape at `https://tunes.elipleaner.com`, quit the app and
+launch it with `SCRAPE_AGENT_WS_URL=wss://tunes.elipleaner.com/ws`. For
+testing, use the exact alternate Worker origin shown in the web installation steps.
+The helper derives `/auth/passphrase` from that same WebSocket host. Keep
+Terminal open while the helper runs; the macOS Chrome/browser agent stays
+local and does not run in Cloudflare.
 
 ---
 

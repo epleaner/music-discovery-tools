@@ -32,17 +32,12 @@ export class ScrapeDispatcher {
         agentId: agent.agentId,
         leaseMs: this.options.leaseMs,
       });
-      if (!row) return null;
+      if (!row || row.source !== 'rym') return null;
       const message: ScrapeMsg = {
         type: 'scrape',
         requestId: row.id,
         source: row.source,
-        url:
-          row.target_url ??
-          (row.mode === 'resolve'
-            ? undefined
-            : row.url.replace(/#(?:label|related)$/, '')),
-        mode: row.mode ?? undefined,
+        url: row.target_url ?? row.url,
         query: row.query ?? undefined,
         force: row.force,
       };
@@ -63,6 +58,7 @@ export class ScrapeDispatcher {
     const row = await db.getById(message.requestId);
     if (
       !row ||
+      row.source !== 'rym' ||
       row.lease_owner !== agent.agentId ||
       ('source' in message && row.source !== message.source)
     ) {

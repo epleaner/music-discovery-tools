@@ -7,10 +7,6 @@ export type RestoreRef =
       type: 'scrape';
       requestId: string;
       title: string;
-      source?: 'rym' | 'bandcamp';
-      url?: string;
-      mode?: 'label' | 'related' | 'resolve';
-      query?: { artist: string; album?: string; kind: 'album' | 'artist' };
     }
   | {
       type: 'item';

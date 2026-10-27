@@ -1,21 +1,9 @@
 import { createHash } from 'node:crypto';
-import postgres from 'postgres';
-import type { JSONValue } from 'postgres';
-import type {
-  ScrapeData,
-  ScrapeMode,
-  ScrapeQuery,
-  ScrapeSource,
-  ScrapeStatus,
-} from '@soundscape/types';
+import type { ScrapeData, ScrapeMode, ScrapeQuery, ScrapeSource, ScrapeStatus } from '@soundscape/types';
+import type { D1Database } from '@cloudflare/workers-types';
 
 export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
-}
-
-function asJsonValue(value: unknown): JSONValue {
-  // Scrape payloads are JSON-compatible domain values; postgres's JSONValue type cannot express their interfaces.
-  return value as JSONValue;
 }
 
 export interface UserRecord {
@@ -24,18 +12,8 @@ export interface UserRecord {
   agent_last_seen_at: Date | null;
   created_at: Date;
 }
-
-export interface CreateAgentUserArgs {
-  id: string;
-  tokenHash: string;
-}
-
-export interface CreateSessionArgs {
-  tokenHash: string;
-  userId: string;
-  expiresAt: Date;
-}
-
+export interface CreateAgentUserArgs { id: string; tokenHash: string }
+export interface CreateSessionArgs { tokenHash: string; userId: string; expiresAt: Date }
 export interface UserAuthDb {
   getOrCreateUserByAgentTokenHash(a: CreateAgentUserArgs): Promise<UserRecord>;
   getUserBySession(tokenHash: string): Promise<UserRecord | null>;
@@ -45,13 +23,11 @@ export interface UserAuthDb {
   getUserByAgentTokenHash(tokenHash: string): Promise<UserRecord | null>;
   touchAgent(userId: string): Promise<void>;
 }
-
 export interface ScrapeRow {
   id: string;
   user_id: string | null;
   token_hash: string;
   source: ScrapeSource;
-  /** Cache key, including mode/query identity when needed. */
   url: string;
   target_url: string | null;
   mode: ScrapeMode | null;
@@ -69,7 +45,6 @@ export interface ScrapeRow {
   updated_at: Date;
   fetched_at: Date;
 }
-
 export interface CreateQueuedScrapeArgs {
   id: string;
   userId: string;
@@ -82,384 +57,114 @@ export interface CreateQueuedScrapeArgs {
   idempotencyKey?: string;
   expiresAt?: Date;
 }
-
 export interface ScrapesDb {
-  init(): Promise<void>;
-  createQueued(
-    a: CreateQueuedScrapeArgs
-  ): Promise<{ row: ScrapeRow; created: boolean }>;
-  markCached(a: {
-    id: string;
-    data: ScrapeData;
-    fetchedAt?: Date;
-  }): Promise<void>;
-  claimNext(a: {
-    userId: string;
-    agentId: string;
-    leaseMs: number;
-  }): Promise<ScrapeRow | null>;
-  complete(a: {
-    id: string;
-    agentId: string;
-    data: ScrapeData;
-    fetchedAt?: Date;
-  }): Promise<boolean>;
+  createQueued(a: CreateQueuedScrapeArgs): Promise<{ row: ScrapeRow; created: boolean }>;
+  markCached(a: { id: string; data: ScrapeData; fetchedAt?: Date }): Promise<void>;
+  claimNext(a: { userId: string; agentId: string; leaseMs: number }): Promise<ScrapeRow | null>;
+  complete(a: { id: string; agentId: string; data: ScrapeData; fetchedAt?: Date }): Promise<boolean>;
   fail(a: { id: string; agentId: string; error: string }): Promise<boolean>;
   getById(id: string): Promise<ScrapeRow | null>;
-  listByUser(a: {
-    userId: string;
-    source?: ScrapeSource;
-    limit: number;
-  }): Promise<ScrapeRow[]>;
-  getFresh(a: {
-    userId: string;
-    source: ScrapeSource;
-    url: string;
-    maxAgeMs: number;
-  }): Promise<{ data: ScrapeData; fetchedAt: Date } | null>;
-  close(): Promise<void>;
+  listByUser(a: { userId: string; source?: ScrapeSource; limit: number }): Promise<ScrapeRow[]>;
+  getFresh(a: { userId: string; source: ScrapeSource; url: string; maxAgeMs: number }): Promise<{ data: ScrapeData; fetchedAt: Date } | null>;
 }
-
 export interface Database extends ScrapesDb, UserAuthDb {}
 
-export function createScrapesDb(connectionString: string): Database {
-  // Railway private networking and local dev DBs speak plaintext; only a
-  // genuine public host needs TLS, and its certificate is not trusted by node.
-  const host = (() => {
-    try {
-      return new URL(connectionString).hostname;
-    } catch {
-      return '';
-    }
-  })();
-  const isPlaintextHost =
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host.endsWith('.railway.internal');
-  const sql = postgres(connectionString, {
-    ssl: isPlaintextHost ? false : { rejectUnauthorized: false },
-  });
+type RawUser = Omit<UserRecord, 'created_at' | 'agent_last_seen_at'> & {
+  created_at: string; agent_last_seen_at: string | null;
+};
+type RawScrape = Omit<ScrapeRow, 'force' | 'query' | 'data' | 'lease_until' | 'expires_at' | 'created_at' | 'updated_at' | 'fetched_at'> & {
+  force: number; query: string | null; data: string | null; lease_until: string | null;
+  expires_at: string; created_at: string; updated_at: string; fetched_at: string;
+};
+function user(row: RawUser | null): UserRecord | null {
+  return row && { ...row, created_at: new Date(row.created_at), agent_last_seen_at: row.agent_last_seen_at ? new Date(row.agent_last_seen_at) : null };
+}
+function scrape(row: RawScrape | null): ScrapeRow | null {
+  return row && {
+    ...row, force: Boolean(row.force), query: row.query ? JSON.parse(row.query) : null,
+    data: row.data ? JSON.parse(row.data) : null,
+    lease_until: row.lease_until ? new Date(row.lease_until) : null,
+    expires_at: new Date(row.expires_at), created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at), fetched_at: new Date(row.fetched_at),
+  };
+}
 
+/** Schema is deployed separately from schema.sql, before accepting traffic. */
+export function createScrapesDb(db: D1Database): Database {
+  const row = (sql: string, ...args: (string | number | null)[]) => db.prepare(sql).bind(...args).first<RawScrape>();
+  const expire = (where: string, value: string) => db.prepare(`UPDATE scrapes SET status = 'expired', lease_owner = NULL, lease_until = NULL, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE ${where} AND status IN ('queued', 'running') AND expires_at <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`).bind(value).run();
   return {
-    async init() {
-      const transient = new Set([
-        'ENOTFOUND',
-        'ECONNRESET',
-        'ECONNREFUSED',
-        'ETIMEDOUT',
-      ]);
-      const maxAttempts = 8;
-      for (let attempt = 1; ; attempt++) {
-        try {
-          await sql`
-            CREATE TABLE IF NOT EXISTS users (
-              id                   text PRIMARY KEY,
-              agent_token_hash     text UNIQUE,
-              agent_last_seen_at   timestamptz,
-              created_at           timestamptz NOT NULL DEFAULT now()
-            )
-          `;
-          await sql`ALTER TABLE users DROP COLUMN IF EXISTS username`;
-          await sql`ALTER TABLE users DROP COLUMN IF EXISTS password_hash`;
-          await sql`
-            CREATE TABLE IF NOT EXISTS sessions (
-              token_hash  text PRIMARY KEY,
-              user_id     text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-              expires_at  timestamptz NOT NULL,
-              created_at  timestamptz NOT NULL DEFAULT now()
-            )
-          `;
-          await sql`
-            CREATE INDEX IF NOT EXISTS sessions_user_expires_idx
-              ON sessions (user_id, expires_at)
-          `;
-          await sql`
-            CREATE TABLE IF NOT EXISTS scrapes (
-              id              uuid PRIMARY KEY,
-              user_id         text,
-              token_hash      text NOT NULL,
-              source          text NOT NULL,
-              url             text NOT NULL,
-              target_url      text,
-              mode            text,
-              query           jsonb,
-              force           boolean NOT NULL DEFAULT false,
-              status          text NOT NULL,
-              attempts        integer NOT NULL DEFAULT 0,
-              lease_owner     text,
-              lease_until     timestamptz,
-              idempotency_key text,
-              expires_at      timestamptz NOT NULL DEFAULT (now() + interval '24 hours'),
-              data            jsonb,
-              error           text,
-              created_at      timestamptz NOT NULL DEFAULT now(),
-              updated_at      timestamptz NOT NULL DEFAULT now(),
-              fetched_at      timestamptz NOT NULL DEFAULT now()
-            )
-          `;
-          await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS user_id text`;
-          await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS target_url text`;
-          await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS mode text`;
-          await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS query jsonb`;
-          await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS force boolean NOT NULL DEFAULT false`;
-          await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS attempts integer NOT NULL DEFAULT 0`;
-          await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS lease_owner text`;
-          await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS lease_until timestamptz`;
-          await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS idempotency_key text`;
-          await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS expires_at timestamptz NOT NULL DEFAULT (now() + interval '24 hours')`;
-          await sql`ALTER TABLE scrapes ADD COLUMN IF NOT EXISTS fetched_at timestamptz NOT NULL DEFAULT now()`;
-          await sql`UPDATE scrapes SET status = 'queued' WHERE status = 'pending'`;
-          await sql`
-            CREATE INDEX IF NOT EXISTS scrapes_user_status_created_idx
-              ON scrapes (user_id, status, created_at)
-          `;
-          await sql`
-            CREATE INDEX IF NOT EXISTS scrapes_token_status_created_idx
-              ON scrapes (token_hash, status, created_at)
-          `;
-          await sql`
-            CREATE INDEX IF NOT EXISTS scrapes_source_url_fetched_idx
-              ON scrapes (source, url, fetched_at DESC)
-          `;
-          await sql`
-            CREATE UNIQUE INDEX IF NOT EXISTS scrapes_user_idempotency_idx
-              ON scrapes (user_id, idempotency_key)
-              WHERE user_id IS NOT NULL AND idempotency_key IS NOT NULL
-          `;
-          await sql`
-            CREATE UNIQUE INDEX IF NOT EXISTS scrapes_token_idempotency_idx
-              ON scrapes (token_hash, idempotency_key)
-              WHERE idempotency_key IS NOT NULL
-          `;
-          return;
-        } catch (err) {
-          const code = (err as { code?: string })?.code;
-          if (attempt >= maxAttempts || !code || !transient.has(code))
-            throw err;
-          const delayMs = Math.min(1000 * 2 ** (attempt - 1), 8000);
-          console.warn(
-            `[scrapes-db] init attempt ${attempt} failed (${code}); retrying in ${delayMs}ms`
-          );
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
-      }
-    },
-
     async getOrCreateUserByAgentTokenHash({ id, tokenHash }) {
-      const rows = await sql<UserRecord[]>`
-        INSERT INTO users (id, agent_token_hash)
-        VALUES (${id}, ${tokenHash})
-        ON CONFLICT (agent_token_hash)
-        DO UPDATE SET agent_token_hash = EXCLUDED.agent_token_hash
-        RETURNING *
-      `;
-      return rows[0];
+      // UNIQUE token hash, including concurrent first sign-ins. Never overwrite the original user ID.
+      await db.prepare('INSERT INTO users (id, agent_token_hash) VALUES (?, ?) ON CONFLICT(agent_token_hash) DO NOTHING').bind(id, tokenHash).run();
+      return user(await db.prepare('SELECT * FROM users WHERE agent_token_hash = ?').bind(tokenHash).first<RawUser>())!;
     },
-
     async getUserBySession(tokenHash) {
-      const rows = await sql<UserRecord[]>`
-        SELECT u.*
-        FROM users u
-        JOIN sessions s ON s.user_id = u.id
-        WHERE s.token_hash = ${tokenHash} AND s.expires_at > now()
-        LIMIT 1
-      `;
-      return rows[0] ?? null;
+      return user(await db.prepare(`SELECT u.* FROM users u JOIN sessions s ON s.user_id = u.id WHERE s.token_hash = ? AND s.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`).bind(tokenHash).first<RawUser>());
     },
-
     async createSession({ tokenHash, userId, expiresAt }) {
-      await sql`
-        INSERT INTO sessions (token_hash, user_id, expires_at)
-        VALUES (${tokenHash}, ${userId}, ${expiresAt})
-      `;
+      await db.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)').bind(tokenHash, userId, expiresAt.toISOString()).run();
     },
-
-    async deleteSession(tokenHash) {
-      await sql`DELETE FROM sessions WHERE token_hash = ${tokenHash}`;
-    },
-
+    async deleteSession(tokenHash) { await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(tokenHash).run(); },
     async setAgentTokenHash(userId, tokenHash) {
-      const rows = await sql<UserRecord[]>`
-        UPDATE users
-        SET agent_token_hash = ${tokenHash}, agent_last_seen_at = NULL
-        WHERE id = ${userId}
-        RETURNING *
-      `;
-      if (!rows[0]) throw new Error('user was not found');
-      return rows[0];
+      const changed = await db.prepare('UPDATE users SET agent_token_hash = ?, agent_last_seen_at = NULL WHERE id = ? RETURNING *').bind(tokenHash, userId).first<RawUser>();
+      if (!changed) throw new Error('user was not found');
+      return user(changed)!;
     },
-
-    async getUserByAgentTokenHash(tokenHash) {
-      const rows = await sql<UserRecord[]>`
-        SELECT * FROM users WHERE agent_token_hash = ${tokenHash} LIMIT 1
-      `;
-      return rows[0] ?? null;
+    async getUserByAgentTokenHash(tokenHash) { return user(await db.prepare('SELECT * FROM users WHERE agent_token_hash = ?').bind(tokenHash).first<RawUser>()); },
+    async touchAgent(userId) { await db.prepare(`UPDATE users SET agent_last_seen_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`).bind(userId).run(); },
+    async createQueued(a) {
+      const inserted = await row(`INSERT INTO scrapes (id, user_id, token_hash, source, url, target_url, mode, query, force, status, idempotency_key, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)
+        ON CONFLICT DO NOTHING RETURNING *`,
+        a.id, a.userId, hashToken(a.userId), a.source, a.url, a.targetUrl ?? null, a.mode ?? null,
+        a.query ? JSON.stringify(a.query) : null, a.force ? 1 : 0, a.idempotencyKey ?? null,
+        (a.expiresAt ?? new Date(Date.now() + 24 * 60 * 60 * 1000)).toISOString());
+      if (inserted) return { row: scrape(inserted)!, created: true };
+      const existing = await row('SELECT * FROM scrapes WHERE user_id = ? AND idempotency_key = ?', a.userId, a.idempotencyKey ?? null);
+      if (!existing) throw new Error('scrape job was not inserted');
+      return { row: scrape(existing)!, created: false };
     },
-
-    async touchAgent(userId) {
-      await sql`
-        UPDATE users SET agent_last_seen_at = now() WHERE id = ${userId}
-      `;
-    },
-
-    async createQueued({
-      id,
-      userId,
-      source,
-      url,
-      targetUrl,
-      mode,
-      query,
-      force = false,
-      idempotencyKey,
-      expiresAt,
-    }) {
-      const tokenHash = hashToken(userId);
-      const inserted = await sql<ScrapeRow[]>`
-        INSERT INTO scrapes (
-          id, user_id, token_hash, source, url, target_url, mode, query, force,
-          status, idempotency_key, expires_at
-        )
-        VALUES (
-          ${id}, ${userId}, ${tokenHash}, ${source}, ${url}, ${targetUrl ?? null}, ${mode ?? null},
-          ${query ? sql.json(asJsonValue(query)) : null}, ${force}, 'queued', ${idempotencyKey ?? null},
-          COALESCE(${expiresAt ?? null}::timestamptz, now() + interval '24 hours')
-        )
-        ON CONFLICT (user_id, idempotency_key)
-          WHERE user_id IS NOT NULL AND idempotency_key IS NOT NULL
-          DO NOTHING
-        RETURNING *
-      `;
-      if (inserted[0]) return { row: inserted[0], created: true };
-
-      const existing = await sql<ScrapeRow[]>`
-        SELECT * FROM scrapes
-        WHERE user_id = ${userId} AND idempotency_key = ${idempotencyKey ?? null}
-        LIMIT 1
-      `;
-      if (!existing[0]) throw new Error('scrape job was not inserted');
-      return { row: existing[0], created: false };
-    },
-
     async markCached({ id, data, fetchedAt }) {
-      await sql`
-        UPDATE scrapes
-        SET status = 'done', data = ${sql.json(asJsonValue(data))}, error = NULL,
-            lease_owner = NULL, lease_until = NULL, updated_at = now(),
-            fetched_at = COALESCE(${fetchedAt ?? null}, now())
-        WHERE id = ${id} AND status = 'queued'
-      `;
+      await db.prepare(`UPDATE scrapes SET status = 'done', data = ?, error = NULL, lease_owner = NULL, lease_until = NULL, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), fetched_at = ? WHERE id = ? AND status = 'queued'`)
+        .bind(JSON.stringify(data), (fetchedAt ?? new Date()).toISOString(), id).run();
     },
-
     async claimNext({ userId, agentId, leaseMs }) {
-      const rows = await sql<ScrapeRow[]>`
-        WITH candidate AS (
-          SELECT id
-          FROM scrapes
-          WHERE user_id = ${userId}
-            AND expires_at > now()
-            AND (
-              status = 'queued'
-              OR (status = 'running' AND lease_until IS NOT NULL AND lease_until <= now())
-            )
-          ORDER BY created_at ASC
-          LIMIT 1
-          FOR UPDATE SKIP LOCKED
-        )
-        UPDATE scrapes AS s
-        SET status = 'running', attempts = s.attempts + 1,
-            lease_owner = ${agentId},
-            lease_until = now() + (${leaseMs}::bigint * interval '1 millisecond'),
-            updated_at = now()
-        FROM candidate
-        WHERE s.id = candidate.id
-        RETURNING s.*
-      `;
-      await sql`
-        UPDATE scrapes
-        SET status = 'expired', lease_owner = NULL, lease_until = NULL, updated_at = now()
-        WHERE user_id = ${userId}
-          AND status IN ('queued', 'running')
-          AND expires_at <= now()
-      `;
-      return rows[0] ?? null;
+      // The subquery and conditional UPDATE RETURNING are ONE D1 statement: competing claims
+      // cannot both observe a queued candidate, unlike a SELECT followed by UPDATE.
+      const claimed = await row(`UPDATE scrapes SET status = 'running', attempts = attempts + 1,
+        lease_owner = ?, lease_until = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        WHERE id = (SELECT id FROM scrapes WHERE user_id = ? AND source = 'rym' AND mode IS NULL AND expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          AND (status = 'queued' OR (status = 'running' AND lease_until IS NOT NULL AND lease_until <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now')))
+          ORDER BY created_at ASC LIMIT 1)
+        AND user_id = ? AND source = 'rym' AND mode IS NULL AND expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        AND (status = 'queued' OR (status = 'running' AND lease_until IS NOT NULL AND lease_until <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now')))
+        RETURNING *`, agentId, new Date(Date.now() + leaseMs).toISOString(), userId, userId);
+      await expire('user_id = ?', userId);
+      return scrape(claimed);
     },
-
     async complete({ id, agentId, data, fetchedAt }) {
-      const rows = await sql`
-        UPDATE scrapes
-        SET status = 'done', data = ${sql.json(asJsonValue(data))}, error = NULL,
-            lease_owner = NULL, lease_until = NULL, updated_at = now(),
-            fetched_at = COALESCE(${fetchedAt ?? null}, now())
-        WHERE id = ${id} AND status = 'running' AND lease_owner = ${agentId}
-        RETURNING id
-      `;
-      return rows.length > 0;
+      const changed = await db.prepare(`UPDATE scrapes SET status = 'done', data = ?, error = NULL, lease_owner = NULL, lease_until = NULL, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), fetched_at = ? WHERE id = ? AND status = 'running' AND lease_owner = ? RETURNING id`)
+        .bind(JSON.stringify(data), (fetchedAt ?? new Date()).toISOString(), id, agentId).first();
+      return Boolean(changed);
     },
-
     async fail({ id, agentId, error }) {
-      const rows = await sql`
-        UPDATE scrapes
-        SET status = 'error', error = ${error}, lease_owner = NULL,
-            lease_until = NULL, updated_at = now()
-        WHERE id = ${id} AND status = 'running' AND lease_owner = ${agentId}
-        RETURNING id
-      `;
-      return rows.length > 0;
+      const changed = await db.prepare(`UPDATE scrapes SET status = 'error', error = ?, lease_owner = NULL, lease_until = NULL, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND status = 'running' AND lease_owner = ? RETURNING id`)
+        .bind(error, id, agentId).first();
+      return Boolean(changed);
     },
-
-    async getById(id) {
-      await sql`
-        UPDATE scrapes
-        SET status = 'expired', lease_owner = NULL, lease_until = NULL, updated_at = now()
-        WHERE id = ${id}
-          AND status IN ('queued', 'running')
-          AND expires_at <= now()
-      `;
-      const rows = await sql<
-        ScrapeRow[]
-      >`SELECT * FROM scrapes WHERE id = ${id}`;
-      return rows[0] ?? null;
-    },
-
+    async getById(id) { await expire('id = ?', id); return scrape(await row('SELECT * FROM scrapes WHERE id = ?', id)); },
     async listByUser({ userId, source, limit }) {
-      await sql`
-        UPDATE scrapes
-        SET status = 'expired', lease_owner = NULL, lease_until = NULL, updated_at = now()
-        WHERE user_id = ${userId}
-          AND status IN ('queued', 'running')
-          AND expires_at <= now()
-      `;
-      if (source !== undefined) {
-        return sql<ScrapeRow[]>`
-          SELECT * FROM scrapes
-          WHERE user_id = ${userId} AND source = ${source}
-          ORDER BY created_at DESC
-          LIMIT ${limit}
-        `;
-      }
-      return sql<ScrapeRow[]>`
-        SELECT * FROM scrapes
-        WHERE user_id = ${userId}
-        ORDER BY created_at DESC
-        LIMIT ${limit}
-      `;
+      await expire('user_id = ?', userId);
+      const statement = source === undefined
+        ? db.prepare('SELECT * FROM scrapes WHERE user_id = ? ORDER BY created_at DESC LIMIT ?').bind(userId, limit)
+        : db.prepare('SELECT * FROM scrapes WHERE user_id = ? AND source = ? ORDER BY created_at DESC LIMIT ?').bind(userId, source, limit);
+      return (await statement.all<RawScrape>()).results.map(r => scrape(r)!);
     },
-
     async getFresh({ userId, source, url, maxAgeMs }) {
-      const rows = await sql<{ data: ScrapeData; fetched_at: Date }[]>`
-        SELECT data, fetched_at FROM scrapes
-        WHERE user_id = ${userId} AND source = ${source} AND url = ${url} AND status = 'done'
-          AND fetched_at > now() - (${maxAgeMs}::bigint * interval '1 millisecond')
-        ORDER BY fetched_at DESC
-        LIMIT 1
-      `;
-      const row = rows[0];
-      return row ? { data: row.data, fetchedAt: row.fetched_at } : null;
-    },
-
-    async close() {
-      await sql.end();
+      const result = await db.prepare(`SELECT data, fetched_at FROM scrapes WHERE user_id = ? AND source = ? AND url = ? AND status = 'done' AND fetched_at > ? ORDER BY fetched_at DESC LIMIT 1`)
+        .bind(userId, source, url, new Date(Date.now() - maxAgeMs).toISOString()).first<{ data: string; fetched_at: string }>();
+      return result ? { data: JSON.parse(result.data) as ScrapeData, fetchedAt: new Date(result.fetched_at) } : null;
     },
   };
 }
